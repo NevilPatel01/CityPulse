@@ -4,11 +4,11 @@ services:
     image: postgres:15-alpine
     container_name: citypulse-postgres-dev
     environment:
-      POSTGRES_USER:  user
+      POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: citypulse_dev
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     networks:
@@ -23,12 +23,12 @@ services:
     environment:
       NODE_ENV: development
       PORT: 5000
-      DATABASE_URL: postgresql:// user:password@postgres:5432/citypulse_dev
+      DATABASE_URL: postgresql://user:password@postgres:5432/citypulse_dev
     ports:
       - "5001:5000"
     volumes:
-      - ./backend/src:/workspace/backend/src
-      - ./shared/src:/workspace/shared/src
+      - ./backend:/workspace/backend
+      - ./shared:/workspace/shared
       - backend_node_modules:/workspace/node_modules
     depends_on:
       - postgres

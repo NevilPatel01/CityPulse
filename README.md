@@ -5,7 +5,6 @@
 
 ## 🌍 Project Tasks
 
-
 ### Week 1 (Sept 8) 
 #### Milestone 1:
 - [x] Setup Project Repo
@@ -50,6 +49,12 @@ NOTE: I will add as I go.
 - `/login` - User authentication
 - `/reset-password` - Reset Password
 - `/dashboard` - Primary landing page after login
+
+## Localhost URL
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5001
+- PostgreSQL: localhost:5433
+- Prisma Studio: http://localhost:5555
 
 *CityPulse - Connecting Travelers, Sharing Experiences, Building Communities* 🌍✈️
 
