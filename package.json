@@ -10,7 +10,12 @@
         "build": "pnpm run build:shared && pnpm run build:frontend && pnpm run build:backend",
         "build:frontend": "pnpm --filter frontend build",
         "build:backend": "pnpm --filter backend build",
-        "build:shared": "pnpm --filter shared build"
+        "build:shared": "pnpm --filter shared build",
+        "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
+        "docker:dev:down": "docker-compose -f docker-compose.dev.yml down",
+        "docker:prod": "docker-compose -f docker-compose.prod.yml up --build -d",
+        "docker:prod:down": "docker-compose -f docker-compose.prod.yml down",
+        "docker:clean": "docker system prune -f"
     },
     "keywords": [
         "travel",

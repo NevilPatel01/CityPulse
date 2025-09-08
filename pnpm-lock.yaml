@@ -10,6 +10,9 @@ importers:
 
   backend:
     dependencies:
+      '@citypulse/shared':
+        specifier: workspace:*
+        version: link:../shared
       express:
         specifier: ^5.1.0
         version: 5.1.0
@@ -29,6 +32,9 @@ importers:
 
   frontend:
     dependencies:
+      '@citypulse/shared':
+        specifier: workspace:*
+        version: link:../shared
       react:
         specifier: ^19.1.1
         version: 19.1.1

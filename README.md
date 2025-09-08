@@ -9,10 +9,10 @@
 ### Week 1 (Sept 8) 
 #### Milestone 1:
 - [x] Setup Project Repo
-- [ ] configure development environment
-- [ ] Setup PostgreSQL database connection
+- [x] configure development environment
+- [x] Set up Git repository with initial commit
+- [x] Setup PostgreSQL database connection
 - [ ] Create basic project structure (routes, controllers, models folders)
-- [ ] Set up Git repository with initial commit
 - [ ] Implement basic user authentication (JWT, bcrypt, sessions, Google OAuth2)
 - [ ] complete frontend with auth forms (login/reset/signup)
 - [ ] Mobile-first responsive design setup with TailwindCSS
