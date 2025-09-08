@@ -1,0 +1,435 @@
+NOTE: Copy pasted this content from the dbdiagram where I created Database schema.
+
+// CityPulse - Travel Social Network Database Schema
+// Organized by functional groups for better readability
+
+// =====================================================
+// 1. USER MANAGEMENT & AUTHENTICATION
+// =====================================================
+
+Table users {
+  id integer [primary key]
+  username varchar(50) [unique, not null]
+  email varchar(100) [unique, not null]
+  password_hash varchar(255) [note: 'bcrypt hashed password, null for Google login']
+  full_name varchar(100) [not null]
+  bio text
+  current_location varchar(100)
+  hometown varchar(100)
+  phone varchar(20)
+  is_google_user boolean [default: false]
+  google_id varchar(100) [unique]
+  role varchar(20) [default: 'user', note: 'user, moderator']
+  account_status varchar(20) [default: 'active', note: 'active, suspended, banned, deactivated']
+  email_verified boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  last_login timestamp
+}
+
+Table user_profiles {
+  id integer [primary key]
+  user_id integer [not null, unique]
+  profile_photo_url varchar(255)
+  cover_photo_url varchar(255)
+  instagram_url varchar(255)
+  facebook_url varchar(255)
+  whatsapp_contact varchar(50)
+  profile_visibility varchar(20) [default: 'public', note: 'public, private']
+  location_sharing boolean [default: true]
+  social_links_visible boolean [default: true]
+  travel_buddy_requests_enabled boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table travel_preferences {
+  id integer [primary key]
+  user_id integer [not null, unique]
+  travel_style varchar(50) [note: 'budget, luxury, adventure, cultural']
+  activity_level varchar(20) [note: 'low, medium, high']
+  preferred_difficulty varchar(20) [note: 'easy, moderate, hard']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 2. INTERESTS & CATEGORIES
+// =====================================================
+
+Table interest_categories {
+  id integer [primary key]
+  name varchar(50) [not null, unique]
+  description text
+  icon_url varchar(255)
+  created_at timestamp [default: `now()`]
+}
+
+Table user_interests {
+  id integer [primary key]
+  user_id integer [not null]
+  interest_category_id integer [not null]
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 3. LOCATION & GEOGRAPHY
+// =====================================================
+
+Table cities {
+  id integer [primary key]
+  name varchar(100) [not null]
+  country varchar(100) [not null]
+  state_province varchar(100)
+  latitude decimal(10,8)
+  longitude decimal(11,8)
+  timezone varchar(50)
+  cover_image_url varchar(255)
+  description text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table user_city_visits {
+  id integer [primary key]
+  user_id integer [not null]
+  city_id integer [not null]
+  visit_date date
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 4. RECOMMENDATIONS SYSTEM
+// =====================================================
+
+Table recommendation_categories {
+  id integer [primary key]
+  name varchar(50) [not null, unique]
+  description text
+  icon_url varchar(255)
+  created_at timestamp [default: `now()`]
+}
+
+Table recommendations {
+  id integer [primary key]
+  user_id integer [not null]
+  title varchar(200) [not null]
+  description text [not null]
+  category_id integer [not null]
+  price_range_min decimal(10,2)
+  price_range_max decimal(10,2)
+  difficulty_level varchar(20) [note: 'easy, moderate, hard']
+  address text
+  latitude decimal(10,8)
+  longitude decimal(11,8)
+  best_time_to_visit varchar(100)
+  duration_suggestion varchar(50)
+  user_rating integer [note: '1-5 stars']
+  status varchar(20) [default: 'active', note: 'active, reported, removed']
+  report_reason text
+  views_count integer [default: 0]
+  likes_count integer [default: 0]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table recommendation_cities {
+  id integer [primary key]
+  recommendation_id integer [not null]
+  city_id integer [not null]
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 5. TAGS & MEDIA FOR RECOMMENDATIONS
+// =====================================================
+
+Table recommendation_tags {
+  id integer [primary key]
+  name varchar(50) [not null, unique]
+  created_at timestamp [default: `now()`]
+}
+
+Table recommendation_tag_links {
+  id integer [primary key]
+  recommendation_id integer [not null]
+  tag_id integer [not null]
+  created_at timestamp [default: `now()`]
+}
+
+Table recommendation_photos {
+  id integer [primary key]
+  recommendation_id integer [not null]
+  photo_url varchar(255) [not null]
+  caption text
+  file_size integer [note: 'in bytes']
+  width integer
+  height integer
+  is_primary boolean [default: false]
+  upload_date timestamp [default: `now()`]
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 6. RATINGS & INTERACTIONS
+// =====================================================
+
+Table recommendation_ratings {
+  id integer [primary key]
+  recommendation_id integer [not null]
+  user_id integer [not null]
+  rating integer [not null, note: '1-5 stars']
+  review text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table recommendation_likes {
+  id integer [primary key]
+  recommendation_id integer [not null]
+  user_id integer [not null]
+  created_at timestamp [default: `now()`]
+}
+
+Table user_favorites {
+  id integer [primary key]
+  user_id integer [not null]
+  recommendation_id integer [not null]
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 7. SOCIAL CONNECTIONS & TRAVEL BUDDIES
+// =====================================================
+
+Table travel_buddy_connections {
+  id integer [primary key]
+  requester_id integer [not null]
+  requested_id integer [not null]
+  status varchar(20) [default: 'pending', note: 'pending, accepted, declined, blocked']
+  request_message text
+  response_message text
+  requested_at timestamp [default: `now()`]
+  responded_at timestamp
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 8. TRIP PLANNING & MANAGEMENT
+// =====================================================
+
+Table trips {
+  id integer [primary key]
+  creator_id integer [not null]
+  title varchar(200) [not null]
+  description text
+  start_date date
+  end_date date
+  budget_min decimal(10,2)
+  budget_max decimal(10,2)
+  max_companions integer
+  status varchar(20) [default: 'planning', note: 'planning, active, completed, cancelled']
+  is_public boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table trip_cities {
+  id integer [primary key]
+  trip_id integer [not null]
+  city_id integer [not null]
+  arrival_date date
+  departure_date date
+  created_at timestamp [default: `now()`]
+}
+
+Table trip_companions {
+  id integer [primary key]
+  trip_id integer [not null]
+  user_id integer [not null]
+  status varchar(20) [default: 'invited', note: 'invited, accepted, declined']
+  role varchar(20) [default: 'companion', note: 'creator, companion']
+  invited_at timestamp [default: `now()`]
+  responded_at timestamp
+  created_at timestamp [default: `now()`]
+}
+
+Table trip_itinerary {
+  id integer [primary key]
+  trip_id integer [not null]
+  recommendation_id integer
+  day_number integer [not null]
+  time_slot varchar(20) [note: 'morning, afternoon, evening, night']
+  custom_activity varchar(200)
+  notes text
+  order_index integer [default: 0]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 9. GAMIFICATION & ACHIEVEMENTS
+// =====================================================
+
+Table achievements {
+  id integer [primary key]
+  name varchar(100) [not null, unique]
+  description text [not null]
+  badge_icon_url varchar(255)
+  achievement_type varchar(50) [note: 'cities_visited, recommendations_created, ratings_received, etc.']
+  target_value integer [note: 'target number to achieve']
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+}
+
+Table user_achievements {
+  id integer [primary key]
+  user_id integer [not null]
+  achievement_id integer [not null]
+  current_progress integer [default: 0]
+  is_completed boolean [default: false]
+  completed_at timestamp
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 10. SEARCH & PERSONALIZATION
+// =====================================================
+
+Table search_history {
+  id integer [primary key]
+  user_id integer [not null]
+  search_query varchar(255) [not null]
+  filters_applied json [note: 'JSON object containing filter criteria']
+  results_count integer
+  clicked_result_id integer [note: 'recommendation_id if user clicked on a result']
+  search_date timestamp [default: `now()`]
+}
+
+Table saved_searches {
+  id integer [primary key]
+  user_id integer [not null]
+  search_name varchar(100) [not null]
+  search_query varchar(255) [not null]
+  filters_applied json
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// 11. NOTIFICATIONS SYSTEM
+// =====================================================
+
+Table notifications {
+  id integer [primary key]
+  user_id integer [not null]
+  title varchar(200) [not null]
+  message text [not null]
+  notification_type varchar(50) [note: 'buddy_request, new_recommendation, achievement, trip_invite, etc.']
+  related_id integer [note: 'ID of related entity (trip, recommendation, etc.)']
+  is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+  read_at timestamp
+}
+
+// =====================================================
+// 12. MODERATION & CONTENT SAFETY
+// =====================================================
+
+Table moderator_actions {
+  id integer [primary key]
+  moderator_id integer [not null]
+  action_type varchar(50) [note: 'content_removed, user_warned, user_suspended, etc.']
+  target_type varchar(50) [note: 'recommendation, user, comment']
+  target_id integer [not null]
+  reason text [not null]
+  notes text
+  created_at timestamp [default: `now()`]
+}
+
+Table user_warnings {
+  id integer [primary key]
+  user_id integer [not null]
+  moderator_id integer [not null]
+  warning_type varchar(50) [note: 'inappropriate_content, spam, harassment']
+  message text [not null]
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+}
+
+Table content_reports {
+  id integer [primary key]
+  reporter_id integer [not null]
+  reported_content_type varchar(50) [note: 'recommendation, user, comment']
+  reported_content_id integer [not null]
+  report_reason varchar(100) [not null]
+  description text
+  status varchar(20) [default: 'pending', note: 'pending, reviewed, resolved']
+  reviewed_by integer [note: 'moderator_id']
+  reviewed_at timestamp
+  created_at timestamp [default: `now()`]
+}
+
+// =====================================================
+// RELATIONSHIPS - ORGANIZED BY GROUPS
+// =====================================================
+
+// User Management Relationships
+Ref: user_profiles.user_id > users.id
+Ref: travel_preferences.user_id > users.id
+Ref: user_interests.user_id > users.id
+Ref: user_interests.interest_category_id > interest_categories.id
+Ref: user_city_visits.user_id > users.id
+Ref: user_city_visits.city_id > cities.id
+
+// Recommendations Relationships
+Ref: recommendations.user_id > users.id
+Ref: recommendations.category_id > recommendation_categories.id
+Ref: recommendation_cities.recommendation_id > recommendations.id
+Ref: recommendation_cities.city_id > cities.id
+Ref: recommendation_tag_links.recommendation_id > recommendations.id
+Ref: recommendation_tag_links.tag_id > recommendation_tags.id
+Ref: recommendation_photos.recommendation_id > recommendations.id
+
+// Ratings & Interactions Relationships
+Ref: recommendation_ratings.recommendation_id > recommendations.id
+Ref: recommendation_ratings.user_id > users.id
+Ref: recommendation_likes.recommendation_id > recommendations.id
+Ref: recommendation_likes.user_id > users.id
+Ref: user_favorites.user_id > users.id
+Ref: user_favorites.recommendation_id > recommendations.id
+
+// Social & Travel Buddy Relationships
+Ref: travel_buddy_connections.requester_id > users.id
+Ref: travel_buddy_connections.requested_id > users.id
+
+// Trip Management Relationships
+Ref: trips.creator_id > users.id
+Ref: trip_cities.trip_id > trips.id
+Ref: trip_cities.city_id > cities.id
+Ref: trip_companions.trip_id > trips.id
+Ref: trip_companions.user_id > users.id
+Ref: trip_itinerary.trip_id > trips.id
+Ref: trip_itinerary.recommendation_id > recommendations.id
+
+// Gamification Relationships
+Ref: user_achievements.user_id > users.id
+Ref: user_achievements.achievement_id > achievements.id
+
+// Search & Personalization Relationships
+Ref: search_history.user_id > users.id
+Ref: search_history.clicked_result_id > recommendations.id
+Ref: saved_searches.user_id > users.id
+
+// Notifications Relationships
+Ref: notifications.user_id > users.id
+
+// Moderation Relationships
+Ref: moderator_actions.moderator_id > users.id
+Ref: user_warnings.user_id > users.id
+Ref: user_warnings.moderator_id > users.id
+Ref: content_reports.reporter_id > users.id
+Ref: content_reports.reviewed_by > users.id
+

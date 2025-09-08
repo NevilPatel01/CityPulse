@@ -8,7 +8,7 @@
 
 ### Week 1 (Sept 8) 
 #### Milestone 1:
-- [ ] Setup Project Repo
+- [x] Setup Project Repo
 - [ ] configure development environment
 - [ ] Setup PostgreSQL database connection
 - [ ] Create basic project structure (routes, controllers, models folders)
