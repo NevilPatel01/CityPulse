@@ -1,14 +1,8 @@
 import './App.css'
+import LandingPage from './components/landing/LandingPage'
 
 function App() {
-
-  return (
-    <>
-      <p className="bg-gray-800 text-white">
-        TailwindCSS is working! 
-      </p>
-    </>
-  )
+  return <LandingPage />
 }
 
 export default App
