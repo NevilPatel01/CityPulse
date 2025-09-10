@@ -11,7 +11,7 @@
 - [x] configure development environment
 - [x] Set up Git repository with initial commit
 - [x] Setup PostgreSQL database connection
-- [ ] Create basic project structure (routes, controllers, models folders)
+- [x] Create basic project structure (routes, controllers, models folders)
 - [ ] Implement basic user authentication (JWT, bcrypt, sessions, Google OAuth2)
 - [ ] complete frontend with auth forms (login/reset/signup)
 - [ ] Mobile-first responsive design setup with TailwindCSS

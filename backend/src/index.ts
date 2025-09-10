@@ -1,15 +1,10 @@
-import express from 'express';
+import { createApp } from './app';
 
-const app = express();
+const app = createApp();
 const PORT = process.env.PORT || 5000;
-
-app.use(express.json());
-
-// Health check endpoint for testing server status
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'CityPulse API is running' });
-});
 
 app.listen(PORT, () => {
     console.log(`🚀 CityPulse API server running on port ${PORT}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
 });

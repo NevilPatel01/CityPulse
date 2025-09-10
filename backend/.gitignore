@@ -10,6 +10,7 @@ build/
 .env.local
 .env.development.local
 .env.test.local
+.env.test
 .env.production.local
 
 # Logs
@@ -33,6 +34,9 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
+
+# Jest
+.jest/
 
 # IDE files
 .vscode/
