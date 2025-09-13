@@ -1,20 +1,18 @@
-import './LandingPage.css';
-import Header from './Header';
-import Hero from './Hero';
-import Features from './Features';
-import Footer from './Footer';
+import { Header, Footer } from '../layout';
+import { Hero, FeatureGrid, CTASection } from '../sections';
 
-const LandingPage = () => {
+export default function LandingPage() {
   return (
-    <div className="landing-page">
+    <div className='min-h-screen bg-base text-primary'>
       <Header />
-      <main className="landing-main">
+      
+      <main>
         <Hero />
-        <Features />
+        <FeatureGrid />
+        <CTASection />
       </main>
+
       <Footer />
     </div>
   );
-};
-
-export default LandingPage;
+}

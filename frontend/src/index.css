@@ -1,52 +1,85 @@
-/* Import common styles with variables and utilities */
-@import './styles/common.css';
+@import "tailwindcss";
 
-:root {
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+@layer base {
+  :root {
+    /* neutrals */
+    --base: #0b0e11;
+    --surface-glass: rgba(255, 255, 255, 0.08);
+
+    /* text */
+    --text-primary: #f2f5f7;
+    --text-muted: #8c9aa5;
+
+    /* brand + accents */
+    --pulse: #ffb547;
+    --pulse-fg: #e0f5ff;
+    --accent-teal: #009688;
+    --accent-amber: #ffb547;
+    
+    /* semantic states */
+    --success: #1db981;
+    --error: #f44336;
+
+    /* subtle border */
+    --border-subtle: rgba(255, 255, 255, 0.12);
+  }
 }
 
-a {
-    font-weight: 500;
-    color: var(--primary);
-    text-decoration: inherit;
-    transition: color var(--transition-fast);
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    background-color: var(--base);
+    color: var(--text-primary);
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
+  }
 }
 
-a:hover {
-    color: var(--primary-hover);
+/* Clean utility classes */
+.bg-base {
+  background-color: var(--base);
 }
 
-h1 {
-    font-size: var(--text-5xl);
-    line-height: 1.1;
-    font-weight: 700;
+.bg-surface-glass {
+  background-color: var(--surface-glass);
 }
 
-h2 {
-    font-size: var(--text-4xl);
-    line-height: 1.2;
-    font-weight: 600;
+.text-primary {
+  color: var(--text-primary);
 }
 
-h3 {
-    font-size: var(--text-2xl);
-    line-height: 1.3;
-    font-weight: 600;
+.text-muted {
+  color: var(--text-muted);
 }
 
-/* Additional utility classes */
-.primary {
-    background-color: var(--primary);
+.text-pulse {
+  color: var(--pulse);
 }
 
-.primary:hover {
-    background-color: var(--primary-hover);
+.text-pulse-fg {
+  color: var(--pulse-fg);
 }
 
-.bg-glass {
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
+.bg-pulse {
+  background-color: var(--pulse);
+}
+
+.bg-success {
+  background-color: var(--success);
+}
+
+.border-subtle {
+  border-color: var(--border-subtle);
+}
+
+.backdrop-blur-glass {
+  backdrop-filter: blur(16px);
+}
+
+.shadow-glass {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
