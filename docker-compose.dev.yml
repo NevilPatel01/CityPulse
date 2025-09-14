@@ -13,6 +13,12 @@ services:
       - postgres_data_dev:/var/lib/postgresql/data
     networks:
       - citypulse-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d citypulse_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Backend Service
   backend:
@@ -54,6 +60,7 @@ services:
       - "3001:3000"
     volumes:
       - ./frontend/src:/workspace/frontend/src:cached
+      - ./frontend/.env.local:/workspace/frontend/.env.local:ro
       - ./frontend/index.html:/workspace/frontend/index.html:cached
       - ./frontend/public:/workspace/frontend/public:cached
       - ./shared/src:/workspace/shared/src:cached

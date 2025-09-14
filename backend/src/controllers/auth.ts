@@ -11,6 +11,15 @@ import {
     TokenPayload
 } from '../utils/auth';
 
+// Google OAuth user interface
+interface GoogleOAuthUser {
+    googleId: string;
+    email: string;
+    name: string;
+    picture?: string;
+    accessToken: string;
+}
+
 // User registration
 export const register = async (req: Request, res: Response) => {
     try {
@@ -376,6 +385,122 @@ export const changePassword = async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error'
+        });
+    }
+};
+
+// Google OAuth authentication
+export const googleOAuth = async (req: Request, res: Response) => {
+    try {
+        const { googleId, email, name, picture, accessToken }: GoogleOAuthUser = req.body;
+
+        console.log('🔧 Google OAuth request received:', { googleId, email, name, picture: !!picture });
+
+        // Validate required fields
+        if (!googleId || !email || !name) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required Google OAuth data'
+            });
+        }
+
+        // Check if user already exists (by email or google ID)
+        const existingUserResult = await query(
+            'SELECT * FROM users WHERE email = $1 OR google_id = $2',
+            [email, googleId]
+        );
+
+        let user;
+
+        if (existingUserResult.rows.length > 0) {
+            // User exists - update Google info if needed
+            user = existingUserResult.rows[0];
+            console.log('✅ Existing user found:', user.id);
+
+            // Update Google ID if not set or update last login
+            await query(
+                `UPDATE users SET 
+                    google_id = $1, 
+                    is_google_user = true, 
+                    last_login = NOW(), 
+                    updated_at = NOW()
+                WHERE id = $2`,
+                [googleId, user.id]
+            );
+
+        } else {
+            // Create new user
+            console.log('🔧 Creating new user from Google OAuth');
+
+            // Extract username from email (before @)
+            const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 8);
+
+            const userResult = await query(
+                `INSERT INTO users (
+                    username, email, full_name, google_id, is_google_user, 
+                    role, account_status, email_verified
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING id, username, email, full_name, google_id, is_google_user, role, account_status, email_verified, created_at`,
+                [
+                    username,
+                    email,
+                    name,
+                    googleId,
+                    true,
+                    'user',
+                    'active',
+                    true // Google users are email verified
+                ]
+            );
+
+            user = userResult.rows[0];
+            console.log('✅ New user created:', user.id);
+        }
+
+        // Check account status
+        if (user.account_status !== 'active') {
+            return res.status(403).json({
+                success: false,
+                message: 'Account is suspended or deactivated'
+            });
+        }
+
+        // Generate JWT tokens
+        const tokenPayload: TokenPayload = {
+            userId: user.id,
+            email: user.email,
+            username: user.username,
+            role: user.role
+        };
+
+        const jwtAccessToken = generateAccessToken(tokenPayload);
+        const refreshToken = generateRefreshToken(tokenPayload);
+
+        // Set cookies
+        setTokenCookies(res, jwtAccessToken, refreshToken);
+
+        console.log('✅ Google OAuth authentication successful for user:', user.id);
+
+        res.json({
+            success: true,
+            message: 'Google OAuth authentication successful',
+            data: {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username,
+                    fullName: user.full_name
+                },
+                accessToken: jwtAccessToken,
+                refreshToken
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Google OAuth error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error during Google OAuth'
         });
     }
 };

@@ -6,6 +6,8 @@ import FeaturesPage from './pages/FeaturesPage.tsx';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
+import Dashboard from './pages/Dashboard.tsx';
 
 function App() {
   return (
@@ -17,6 +19,9 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/*" element={<Dashboard />} />
       </Routes>
     </Router>
   );

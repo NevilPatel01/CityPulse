@@ -23,7 +23,10 @@ export const createApp = (): express.Express => {
     // Added CORS configuration
     // Credentials true allows cookies/auth headers, origin restricts to frontend URL
     app.use(cors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:3001', // Updated for Docker frontend port, later need to add in env variable
+        origin: [
+            process.env.FRONTEND_URL || 'http://localhost:3001', 
+            // 'http://localhost:3000',  // Vite dev server default port
+        ],
         credentials: true,                 
         optionsSuccessStatus: 200       
     }));

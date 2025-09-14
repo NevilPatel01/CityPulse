@@ -6,7 +6,8 @@ import {
     logout,
     refreshToken,
     getProfile,
-    changePassword
+    changePassword,
+    googleOAuth
 } from '../controllers/auth';
 import {
     registerSchema,
@@ -44,6 +45,7 @@ const generalLimiter = rateLimit({
 // Public routes
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/google', authLimiter, googleOAuth); // Google OAuth endpoint
 router.post('/logout', generalLimiter, logout);
 router.post('/refresh', generalLimiter, refreshToken); // TODO: Token refresh endpoint needs to be protected
 

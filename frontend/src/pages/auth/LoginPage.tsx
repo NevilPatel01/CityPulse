@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { Input, Button } from '../../components/ui';
-import { apiEndpoints, apiRequest } from '../../config/api';
+import { GoogleOAuthButton } from '../../components/auth/GoogleOAuthButton';
+import { AuthDivider } from '../../components/auth/AuthDivider';
+import { useAuth } from '../../hooks/useAuth';
 
 interface LoginFormData {
   email: string;
@@ -15,23 +17,9 @@ interface LoginFormErrors {
   general?: string;
 }
 
-interface LoginResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: {
-      id: string;
-      email: string;
-      username: string;
-      fullName: string;
-    };
-    accessToken: string;
-    refreshToken: string;
-  };
-}
-
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -88,22 +76,10 @@ const LoginPage = () => {
     setErrors({});
 
     try {
-      const data = await apiRequest<LoginResponse>(
-        apiEndpoints.auth.login,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      // Store JWT token
-      localStorage.setItem('authToken', data.data.accessToken);
+      await login(formData.email, formData.password);
       
-      // Redirect to dashboard or home
-      navigate('/');
+      // Redirect to dashboard after successful login
+      navigate('/dashboard');
     } catch (error) {
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -171,9 +147,19 @@ const LoginPage = () => {
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
         </Button>
+      </form>
 
-        {/* Sign up link */}
-        <div className="text-center pt-4 border-t border-subtle">
+      {/* OAuth Section */}
+      <div className="mt-6">
+        <AuthDivider text="or continue with" />
+        
+        <GoogleOAuthButton 
+          text="Sign in with Google"
+        />
+      </div>
+
+      {/* Sign up link */}
+      <div className="text-center pt-6 mt-6 border-t border-subtle">
           <p className="text-muted text-sm">
             Don't have an account?{' '}
             <Link
@@ -184,7 +170,6 @@ const LoginPage = () => {
             </Link>
           </p>
         </div>
-      </form>
     </AuthLayout>
   );
 };

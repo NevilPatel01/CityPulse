@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { Input, Button } from '../../components/ui';
-import { apiEndpoints, apiRequest } from '../../config/api';
+import { GoogleOAuthButton } from '../../components/auth/GoogleOAuthButton';
+import { AuthDivider } from '../../components/auth/AuthDivider';
+import { useAuth } from '../../hooks/useAuth';
 
 interface SignupFormData {
   email: string;
@@ -23,23 +25,9 @@ interface SignupFormErrors {
   general?: string;
 }
 
-interface SignupResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: {
-      id: string;
-      email: string;
-      username: string;
-      fullName: string;
-    };
-    accessToken: string;
-    refreshToken: string;
-  };
-}
-
 const SignupPage = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [formData, setFormData] = useState<SignupFormData>({
     email: '',
     password: '',
@@ -134,27 +122,15 @@ const SignupPage = () => {
     setErrors({});
 
     try {
-      const data = await apiRequest<SignupResponse>(
-        apiEndpoints.auth.register,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-            username: formData.username,
-            fullName: formData.fullName,
-          }),
-        }
-      );
-
-      // Store JWT token
-      localStorage.setItem('authToken', data.data.accessToken);
+      await register({
+        email: formData.email,
+        password: formData.password,
+        username: formData.username,
+        fullName: formData.fullName,
+      });
       
-      // Redirect to dashboard or home
-      navigate('/');
+      // Redirect to dashboard after successful registration
+      navigate('/dashboard');
     } catch (error) {
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -280,9 +256,19 @@ const SignupPage = () => {
         >
           {isLoading ? 'Creating account...' : 'Create account'}
         </Button>
+      </form>
 
-        {/* Sign in link */}
-        <div className="text-center pt-4 border-t border-subtle">
+      {/* OAuth Section */}
+      <div className="mt-6">
+        <AuthDivider text="or sign up with" />
+        
+        <GoogleOAuthButton 
+          text="Sign up with Google"
+        />
+      </div>
+
+      {/* Sign in link */}
+      <div className="text-center pt-6 mt-6 border-t border-subtle">
           <p className="text-muted text-sm">
             Already have an account?{' '}
             <Link
@@ -293,7 +279,6 @@ const SignupPage = () => {
             </Link>
           </p>
         </div>
-      </form>
     </AuthLayout>
   );
 };

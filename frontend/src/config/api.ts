@@ -59,6 +59,7 @@ export const apiEndpoints = {
         resetPassword: buildApiUrl('api/auth/reset-password'),
         profile: buildApiUrl('api/auth/profile'),
         refresh: buildApiUrl('api/auth/refresh'),
+        googleOAuth: buildApiUrl('api/auth/google'),
     },
 
     // Health check
