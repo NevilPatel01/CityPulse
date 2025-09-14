@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, TokenPayload } from '../utils/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { query } from '../lib/database';
 
 // This extends the Request interface to include user
 declare global {
@@ -46,17 +44,12 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         }
 
         // Get user from database to check current status
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                role: true,
-                accountStatus: true,
-                emailVerified: true
-            }
-        });
+        const userResult = await query(
+            'SELECT id, username, email, role, account_status, email_verified FROM users WHERE id = $1',
+            [decoded.userId]
+        );
+
+        const user = userResult.rows[0];
 
         if (!user) {
             return res.status(401).json({
@@ -66,7 +59,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         }
 
         // Check if account is active
-        if (user.accountStatus !== 'active') {
+        if (user.account_status !== 'active') {
             return res.status(403).json({
                 success: false,
                 message: 'Account is deactivated'
@@ -76,8 +69,8 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         // Add user info to request
         req.user = {
             ...decoded,
-            accountStatus: user.accountStatus,
-            emailVerified: user.emailVerified
+            accountStatus: user.account_status,
+            emailVerified: user.email_verified
         };
 
         next();
@@ -111,23 +104,18 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
             return next(); // Continue without user
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                role: true,
-                accountStatus: true,
-                emailVerified: true
-            }
-        });
+        const userResult = await query(
+            'SELECT id, username, email, role, account_status, email_verified FROM users WHERE id = $1',
+            [decoded.userId]
+        );
 
-        if (user && user.accountStatus === 'active') {
+        const user = userResult.rows[0];
+
+        if (user && user.account_status === 'active') {
             req.user = {
                 ...decoded,
-                accountStatus: user.accountStatus,
-                emailVerified: user.emailVerified
+                accountStatus: user.account_status,
+                emailVerified: user.email_verified
             };
         }
 

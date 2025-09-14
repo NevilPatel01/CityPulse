@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { query } from '../lib/database';
 import {
     hashPassword,
     comparePassword,
@@ -10,8 +10,6 @@ import {
     verifyToken,
     TokenPayload
 } from '../utils/auth';
-
-const prisma = new PrismaClient();
 
 // User registration
 export const register = async (req: Request, res: Response) => {
@@ -28,16 +26,13 @@ export const register = async (req: Request, res: Response) => {
         } = req.body;
 
         // Check if user already exists
-        const existingUser = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { email },
-                    { username }
-                ]
-            }
-        });
+        const existingUserResult = await query(
+            'SELECT id, email, username FROM users WHERE email = $1 OR username = $2',
+            [email, username]
+        );
 
-        if (existingUser) {
+        if (existingUserResult.rows.length > 0) {
+            const existingUser = existingUserResult.rows[0];
             const field = existingUser.email === email ? 'email' : 'username';
             return res.status(409).json({
                 success: false,
@@ -49,36 +44,27 @@ export const register = async (req: Request, res: Response) => {
         const passwordHash = await hashPassword(password);
 
         // Create user
-        const user = await prisma.user.create({
-            data: {
+        const userResult = await query(
+            `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone, is_google_user, role, account_status, email_verified)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             RETURNING id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at`,
+            [
                 username,
                 email,
                 passwordHash,
                 fullName,
-                bio: bio || null,
-                currentLocation: currentLocation || null,
-                hometown: hometown || null,
-                phone: phone || null,
-                isGoogleUser: false,
-                role: 'user',
-                accountStatus: 'active',
-                emailVerified: false // In production, this would require email verification and google OAuth integration as well
-            },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                fullName: true,
-                bio: true,
-                currentLocation: true,
-                hometown: true,
-                phone: true,
-                role: true,
-                accountStatus: true,
-                emailVerified: true,
-                createdAt: true
-            }
-        });
+                bio || null,
+                currentLocation || null,
+                hometown || null,
+                phone || null,
+                false, // is_google_user
+                'user', // role
+                'active', // account_status
+                false // email_verified
+            ]
+        );
+
+        const user = userResult.rows[0];
 
         // Generate tokens
         const tokenPayload: TokenPayload = {
@@ -119,11 +105,14 @@ export const login = async (req: Request, res: Response) => {
         const { email, password } = req.body;
 
         // Find user
-        const user = await prisma.user.findUnique({
-            where: { email }
-        });
+        const userResult = await query(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
 
-        if (!user || !user.passwordHash) {
+        const user = userResult.rows[0];
+
+        if (!user || !user.password_hash) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -131,7 +120,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         // Check password
-        const isValidPassword = await comparePassword(password, user.passwordHash);
+        const isValidPassword = await comparePassword(password, user.password_hash);
         if (!isValidPassword) {
             return res.status(401).json({
                 success: false,
@@ -140,7 +129,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         // Check account status
-        if (user.accountStatus !== 'active') {
+        if (user.account_status !== 'active') {
             return res.status(403).json({
                 success: false,
                 message: 'Account is suspended or deactivated'
@@ -148,10 +137,10 @@ export const login = async (req: Request, res: Response) => {
         }
 
         // Update last login
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { lastLogin: new Date() }
-        });
+        await query(
+            'UPDATE users SET last_login = NOW() WHERE id = $1',
+            [user.id]
+        );
 
         // Generate tokens
         const tokenPayload: TokenPayload = {
@@ -171,16 +160,16 @@ export const login = async (req: Request, res: Response) => {
             id: user.id,
             username: user.username,
             email: user.email,
-            fullName: user.fullName,
+            fullName: user.full_name,
             bio: user.bio,
-            currentLocation: user.currentLocation,
+            currentLocation: user.current_location,
             hometown: user.hometown,
             phone: user.phone,
             role: user.role,
-            accountStatus: user.accountStatus,
-            emailVerified: user.emailVerified,
-            createdAt: user.createdAt,
-            lastLogin: user.lastLogin
+            accountStatus: user.account_status,
+            emailVerified: user.email_verified,
+            createdAt: user.created_at,
+            lastLogin: user.last_login
         };
 
         res.json({
@@ -245,11 +234,14 @@ export const refreshToken = async (req: Request, res: Response) => {
         }
 
         // Get current user data
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.userId }
-        });
+        const userResult = await query(
+            'SELECT * FROM users WHERE id = $1',
+            [decoded.userId]
+        );
 
-        if (!user || user.accountStatus !== 'active') {
+        const user = userResult.rows[0];
+
+        if (!user || user.account_status !== 'active') {
             clearTokenCookies(res);
             return res.status(401).json({
                 success: false,
@@ -300,25 +292,13 @@ export const getProfile = async (req: Request, res: Response) => {
             });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.userId },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                fullName: true,
-                bio: true,
-                currentLocation: true,
-                hometown: true,
-                phone: true,
-                role: true,
-                accountStatus: true,
-                emailVerified: true,
-                createdAt: true,
-                updatedAt: true,
-                lastLogin: true
-            }
-        });
+        const userResult = await query(
+            `SELECT id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at, updated_at, last_login 
+             FROM users WHERE id = $1`,
+            [req.user.userId]
+        );
+
+        const user = userResult.rows[0];
 
         if (!user) {
             return res.status(404).json({
@@ -354,11 +334,14 @@ export const changePassword = async (req: Request, res: Response) => {
         const { currentPassword, newPassword } = req.body;
 
         // Get user with password hash
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.userId }
-        });
+        const userResult = await query(
+            'SELECT * FROM users WHERE id = $1',
+            [req.user.userId]
+        );
 
-        if (!user || !user.passwordHash) {
+        const user = userResult.rows[0];
+
+        if (!user || !user.password_hash) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found or invalid account'
@@ -366,7 +349,7 @@ export const changePassword = async (req: Request, res: Response) => {
         }
 
         // Verify current password
-        const isCurrentPasswordValid = await comparePassword(currentPassword, user.passwordHash);
+        const isCurrentPasswordValid = await comparePassword(currentPassword, user.password_hash);
         if (!isCurrentPasswordValid) {
             return res.status(400).json({
                 success: false,
@@ -378,13 +361,10 @@ export const changePassword = async (req: Request, res: Response) => {
         const newPasswordHash = await hashPassword(newPassword);
 
         // Update password
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                passwordHash: newPasswordHash,
-                updatedAt: new Date()
-            }
-        });
+        await query(
+            'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+            [newPasswordHash, user.id]
+        );
 
         res.json({
             success: true,

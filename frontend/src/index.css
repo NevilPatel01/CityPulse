@@ -11,7 +11,7 @@
     --text-muted: #8c9aa5;
 
     /* brand + accents */
-    --pulse: #ffb547;
+    --pulse: #ff9900;
     --pulse-fg: #e0f5ff;
     --accent-teal: #009688;
     --accent-amber: #ffb547;
@@ -82,4 +82,40 @@
 
 .shadow-glass {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Interactive effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.click-scale {
+  transition: transform 0.1s ease;
+}
+
+.click-scale:active {
+  transform: scale(0.98);
+}
+
+/* Pulse glow effect */
+.pulse-glow {
+  box-shadow: 0 0 0 0 rgba(255, 181, 71, 0.4);
+  animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 181, 71, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 181, 71, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 181, 71, 0);
+  }
 }

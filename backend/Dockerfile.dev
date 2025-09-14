@@ -6,13 +6,17 @@ RUN corepack enable pnpm
 
 WORKDIR /workspace
 
-# Copy workspace files
-COPY package.json pnpm-workspace.yaml ./
+# Copy workspace configuration and package files first for better caching
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY shared/package.json ./shared/package.json
+COPY backend/package.json ./backend/package.json
+
+# Install dependencies first (this layer will be cached if package.json doesn't change)
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
 COPY shared/ ./shared/
 COPY backend/ ./backend/
-
-# Install all workspace dependencies
-RUN pnpm install
 
 WORKDIR /workspace/backend
 

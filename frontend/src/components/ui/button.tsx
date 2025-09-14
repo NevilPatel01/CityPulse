@@ -14,13 +14,13 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse disabled:pointer-events-none disabled:opacity-50';
+    'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse disabled:pointer-events-none disabled:opacity-50 active:scale-95 cursor-pointer';
 
   const variantClasses = {
-    default: 'bg-pulse text-white hover:bg-pulse/90',
-    outline: 'border border-subtle bg-transparent hover:bg-surface-glass',
-    ghost: 'hover:bg-surface-glass hover:text-primary',
-    secondary: 'bg-surface-glass text-primary hover:bg-surface-glass/80',
+    default: 'bg-pulse text-pulse-fg hover:opacity-90 hover:shadow-lg hover:shadow-pulse/25 active:opacity-75',
+    outline: 'border border-subtle bg-transparent hover:bg-surface-glass hover:border-pulse text-primary active:bg-pulse/10',
+    ghost: 'hover:bg-surface-glass hover:text-pulse text-primary active:bg-pulse/10',
+    secondary: 'bg-surface-glass text-primary hover:bg-surface-glass/80 hover:text-pulse active:bg-surface-glass/60',
   };
 
   const sizeClasses = {

@@ -24,14 +24,19 @@ services:
       NODE_ENV: development
       PORT: 5000
       DATABASE_URL: postgresql://user:password@postgres:5432/citypulse_dev
+      JWT_SECRET: dev-jwt-secret-key-will-change-in-production
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:3001
     ports:
       - "5001:5000"
     volumes:
-      - ./backend:/workspace/backend
-      - ./shared:/workspace/shared
-      - backend_node_modules:/workspace/node_modules
+      - ./backend/src:/workspace/backend/src:cached
+      - ./backend/sql:/workspace/backend/sql:cached
+      - ./shared/src:/workspace/shared/src:cached
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - citypulse-network
     command: pnpm run dev
@@ -44,22 +49,22 @@ services:
     container_name: citypulse-frontend-dev
     environment:
       NODE_ENV: development
-      VITE_API_URL: http://localhost:5001/api
+      VITE_API_URL: http://localhost:5001
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
-      - ./frontend/src:/workspace/frontend/src
-      - ./frontend/index.html:/workspace/frontend/index.html
-      - ./shared/src:/workspace/shared/src
-      - frontend_node_modules:/workspace/node_modules
+      - ./frontend/src:/workspace/frontend/src:cached
+      - ./frontend/index.html:/workspace/frontend/index.html:cached
+      - ./frontend/public:/workspace/frontend/public:cached
+      - ./shared/src:/workspace/shared/src:cached
+    depends_on:
+      - backend
     networks:
       - citypulse-network
     command: pnpm run dev
 
 volumes:
   postgres_data_dev:
-  backend_node_modules:
-  frontend_node_modules:
 
 networks:
   citypulse-network:

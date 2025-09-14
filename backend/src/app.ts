@@ -20,10 +20,10 @@ export const createApp = (): express.Express => {
         crossOriginEmbedderPolicy: false       // for Production need to enable
     }));
 
-    // Added CORS configuration - Enables cross-origin requests from frontend
+    // Added CORS configuration
     // Credentials true allows cookies/auth headers, origin restricts to frontend URL
     app.use(cors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Frontend URL from env or dev default
+        origin: process.env.FRONTEND_URL || 'http://localhost:3001', // Updated for Docker frontend port, later need to add in env variable
         credentials: true,                 
         optionsSuccessStatus: 200       
     }));
@@ -51,14 +51,6 @@ export const createApp = (): express.Express => {
     // Global error handler - it catches all unhandled errors and formats responses
     app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
         console.error('Global error handler:', err);
-
-        //  It handles Prisma database constraint errors
-        if (err.code === 'P2002') {
-            return res.status(409).json({
-                success: false,
-                message: 'A record with this information already exists'
-            });
-        }
 
         //  It handles validation errors from Zod or other validation libraries
         if (err.name === 'ValidationError') {
