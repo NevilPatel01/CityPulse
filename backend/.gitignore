@@ -54,11 +54,6 @@ Thumbs.db
 *.sqlite
 *.db
 
-# Prisma
-prisma/migrations/dev.db*
-
 # Temporary folders
 tmp/
 temp/
-
-/src/generated/prisma

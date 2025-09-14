@@ -41,6 +41,7 @@ export const Input = reactForwardRef<HTMLInputElement, InputProps>(
             }
             ${className}
           `}
+          style={{ color: 'var(--text-primary)' }}
           {...props}
         />
 

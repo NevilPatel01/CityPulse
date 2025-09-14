@@ -54,7 +54,6 @@ NOTE: I will add as I go.
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5001
 - PostgreSQL: localhost:5433
-- Prisma Studio: http://localhost:5555
 
 *CityPulse - Connecting Travelers, Sharing Experiences, Building Communities* 🌍✈️
 

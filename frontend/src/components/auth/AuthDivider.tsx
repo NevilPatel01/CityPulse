@@ -6,15 +6,17 @@ interface AuthDividerProps {
 
 export const AuthDivider: React.FC<AuthDividerProps> = ({ text = 'or' }) => {
   return (
-    <div className='relative my-6'>
-      <div className='absolute inset-0 flex items-center'>
-        <div className='w-full border-t border-subtle/30' />
-      </div>
-      <div className='relative flex justify-center text-sm'>
-        <span className='bg-surface-glass backdrop-blur-glass px-6 text-muted font-medium'>
-          {text}
-        </span>
-      </div>
+    <div className='flex items-center my-6'>
+      {/* Left line */}
+      <div className='flex-1 border-t border-subtle/30'></div>
+      
+      {/* Text in the middle */}
+      <span className='px-6 text-primary font-medium text-sm' style={{ color: 'var(--text-primary)' }}>
+        {text}
+      </span>
+      
+      {/* Right line */}
+      <div className='flex-1 border-t border-subtle/30'></div>
     </div>
   );
 };

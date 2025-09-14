@@ -1,29 +1,16 @@
-import { PrismaClient } from '@prisma/client';
-
 // Global test setup
-const prisma = new PrismaClient();
-
 beforeAll(async () => {
-    // Setup test database
+    // Setup test environment
     console.log('🧪 Setting up test environment...');
 });
 
 afterAll(async () => {
-    // Clean up test database
+    // Clean up test environment
     console.log('🧹 Cleaning up test environment...');
-    await prisma.$disconnect();
 });
 
-// Helper function to clean database between tests
+// Helper function for cleanup between tests (no-op without database)
 export const cleanupDatabase = async () => {
-    await prisma.user.deleteMany({
-        where: {
-            email: {
-                contains: 'test'
-            }
-        }
-    });
+    // No database cleanup needed - tests should be stateless
+    console.log('🧽 Test cleanup completed');
 };
-
-// Export prisma for use in tests
-export { prisma };
