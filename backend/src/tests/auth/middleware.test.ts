@@ -1,6 +1,7 @@
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Request, Response, NextFunction } from 'express';
-import { authenticateToken, requireRole } from '../../src/middleware/auth';
-import { generateAccessToken } from '../../src/utils/auth';
+import { authenticateToken, requireRole } from '../../middleware/auth';
+import { generateAccessToken } from '../../utils/auth';
 
 // Mock Express request and response objects
 const mockRequest = (headers: any = {}, user: any = null) => {
@@ -13,8 +14,8 @@ const mockRequest = (headers: any = {}, user: any = null) => {
 
 const mockResponse = () => {
     const res = {} as Response;
-    res.status = jest.fn().mockReturnValue(res);
-    res.json = jest.fn().mockReturnValue(res);
+    res.status = jest.fn().mockReturnValue(res) as any;
+    res.json = jest.fn().mockReturnValue(res) as any;
     return res;
 };
 

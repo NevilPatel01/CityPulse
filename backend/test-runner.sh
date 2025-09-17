@@ -16,21 +16,21 @@ echo ""
 
 # Run validation tests
 echo "📋 Validation Schema Tests"
-pnpm test tests/auth/validation.test.ts --silent
+pnpm test src/tests/auth/validation.test.ts --silent
 
 # Run utility tests  
 echo "🛠️  Utility Function Tests"
-pnpm test tests/auth/utils.test.ts --silent
+pnpm test src/tests/auth/utils.test.ts --silent
 
 # Run middleware tests
 echo "🔒 Middleware Tests"  
-pnpm test tests/auth/middleware.test.ts --silent
+pnpm test src/tests/auth/middleware.test.ts --silent
 
 echo ""
 echo "✅ Unit Tests Complete!"
 echo ""
 echo "📝 Note: Integration tests are available but may require rate limit adjustments"
-echo "   To run integration tests: pnpm test tests/auth/auth.test.ts"
+echo "   To run integration tests: pnpm test src/tests/auth/auth.test.ts"
 echo ""
 echo "🎉 Authentication Test Suite Summary:"
 echo "   • Zod Validation Schemas: ✅ Working"

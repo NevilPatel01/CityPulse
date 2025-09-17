@@ -1,8 +1,13 @@
+import { describe, it, expect } from '@jest/globals';
+
+
 import {
     registerSchema,
     loginSchema,
     changePasswordSchema
-} from '../../src/validators/auth'; describe('Auth Validation Schemas', () => {
+} from '../../validators/auth'; 
+
+    describe('Auth Validation Schemas', () => {
     describe('registerSchema', () => {
         const validData = {
             username: 'validuser123',

@@ -7,25 +7,46 @@ import {
     refreshToken,
     getProfile,
     changePassword,
-    googleOAuth
+    googleOAuth,
+    requestPasswordReset,
+    verifyResetCode,
+    resetPassword
 } from '../controllers/auth';
 import {
     registerSchema,
     loginSchema,
     changePasswordSchema,
+    resetPasswordRequestSchema,
+    verifyResetCodeSchema,
+    resetPasswordSchema,
     validate
 } from '../validators/auth';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
+// Check if we're in development mode
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 // Rate limiting for authentication routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 requests per windowMs
+    max: isDevelopment ? 50 : 5, // Much higher limit in development
     message: {
         success: false,
         message: 'Too many authentication attempts, please try again later'
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+// More lenient rate limiter for OAuth endpoints (callbacks can happen multiple times during dev)
+const oAuthLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: isDevelopment ? 100 : 20, // TODO: Very high limit in development for OAuth testing, for production it's need to change
+    message: {
+        success: false,
+        message: 'Too many OAuth attempts, please try again later'
     },
     standardHeaders: true,
     legacyHeaders: false
@@ -45,9 +66,24 @@ const generalLimiter = rateLimit({
 // Public routes
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
-router.post('/google', authLimiter, googleOAuth); // Google OAuth endpoint
+router.post('/google', oAuthLimiter, googleOAuth); // Google OAuth endpoint with more lenient rate limiting
 router.post('/logout', generalLimiter, logout);
 router.post('/refresh', generalLimiter, refreshToken); // TODO: Token refresh endpoint needs to be protected
+
+// Password reset routes
+router.post('/reset-password/request', authLimiter, validate(resetPasswordRequestSchema), requestPasswordReset);
+router.post('/reset-password/verify', authLimiter, validate(verifyResetCodeSchema), verifyResetCode);
+router.post('/reset-password/confirm', authLimiter, validate(resetPasswordSchema), resetPassword);
+
+// Handle wrong method calls to verify endpoint
+router.get('/reset-password/verify', (req, res) => {
+    res.status(405).json({
+        success: false,
+        message: 'Method Not Allowed. Use POST instead of GET for verification.',
+        correctMethod: 'POST',
+        correctPayload: { resetToken: 'string', securityCode: 'string' }
+    });
+});
 
 // Protected routes
 router.get('/profile', generalLimiter, authenticateToken, getProfile);

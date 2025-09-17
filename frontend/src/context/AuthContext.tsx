@@ -72,11 +72,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const checkAuthStatus = async () => {
         try {
             const token = localStorage.getItem('authToken');
+            
             if (!token) {
                 setIsLoading(false);
                 return;
             }
 
+            console.log('[AUTH] Verifying token with server...');
             // Verify token and get user data
             const data = await apiRequest<UserProfileResponse>(
                 apiEndpoints.auth.profile,
@@ -89,19 +91,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 },
             );
 
+            console.log('✅ [AUTH] Token valid, user authenticated:', data.data.user.email);
             setUser(data.data.user);
         } catch (error) {
             // Token is invalid or expired
-            console.error('Auth check failed:', error);
+            console.error('❌ [AUTH] Auth check failed:', error);
             localStorage.removeItem('authToken');
             setUser(null);
         } finally {
+            console.log('🏁 [AUTH] Auth check complete, loading finished');
             setIsLoading(false);
         }
     };
 
     // Login function
     const login = async (email: string, password: string) => {
+        
         const data = await apiRequest<AuthResponse>(apiEndpoints.auth.login, {
             method: 'POST',
             headers: {
@@ -110,6 +115,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             body: JSON.stringify({ email, password }),
         });
 
+        console.log('[AUTH] Login successful for:', data.data.user.email);
+        
         // Store token and user data
         localStorage.setItem('authToken', data.data.accessToken);
         setUser(data.data.user);
@@ -117,6 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Register function
     const register = async (userData: RegisterData) => {
+        
         const data = await apiRequest<AuthResponse>(apiEndpoints.auth.register, {
             method: 'POST',
             headers: {
@@ -125,6 +133,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             body: JSON.stringify(userData),
         });
 
+        console.log('[AUTH] Registration successful for:', data.data.user.email);
+
         // Store token and user data
         localStorage.setItem('authToken', data.data.accessToken);
         setUser(data.data.user);
@@ -132,6 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Logout function
     const logout = () => {
+        console.log(' [AUTH] User logging out:', user?.email);
         localStorage.removeItem('authToken');
         setUser(null);
         // Optionally call logout endpoint to invalidate token on server
@@ -139,6 +150,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Update user function
     const updateUser = (userData: Partial<User>) => {
+        console.log(' [AUTH] Updating user data:', userData);
+        
         if (user) {
             setUser({ ...user, ...userData });
         } else if (userData.id) {

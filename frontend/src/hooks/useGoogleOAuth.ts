@@ -38,14 +38,18 @@ export const useGoogleOAuth = () => {
      */
     const initiateGoogleOAuth = useCallback(() => {
         try {
+            console.log('[OAUTH] Initiating Google OAuth flow...');
             setState({ isLoading: true, error: null });
 
             const authUrl = getGoogleAuthUrl();
+            console.log('[OAUTH] Generated auth URL:', authUrl);
 
             // Store the current path to redirect back after OAuth
             localStorage.setItem('oauth_redirect_path', window.location.pathname);
+            console.log('[OAUTH] Stored redirect path:', window.location.pathname);
 
             // Open Google OAuth in the same window
+            console.log('[OAUTH] Redirecting to Google OAuth...');
             window.location.href = authUrl;
 
         } catch (error) {
@@ -63,17 +67,17 @@ export const useGoogleOAuth = () => {
         try {
             setState({ isLoading: true, error: null });
 
-            console.log('🔧 Step 1: Exchanging code for access token...');
+            console.log('Step 1: Exchanging code for access token...');
             // Exchange code for access token
             const tokenResponse = await exchangeCodeForToken(code);
-            console.log('✅ Token response received:', { ...tokenResponse, access_token: tokenResponse.access_token?.substring(0, 20) + '...' });
+            console.log('Token response received:', { ...tokenResponse, access_token: tokenResponse.access_token?.substring(0, 20) + '...' });
 
-            console.log('🔧 Step 2: Getting user info from Google...');
+            console.log('Step 2: Getting user info from Google...');
             // Get user info from Google
             const googleUser = await getGoogleUserInfo(tokenResponse.access_token);
-            console.log('✅ Google user info:', googleUser);
+            console.log('Google user info:', googleUser);
 
-            console.log('🔧 Step 3: Sending user data to backend at:', apiEndpoints.auth.googleOAuth);
+            console.log('Step 3: Sending user data to backend at:', apiEndpoints.auth.googleOAuth);
             // Send Google user data to our backend for authentication
             const authPayload = {
                 googleId: googleUser.id,
@@ -82,7 +86,7 @@ export const useGoogleOAuth = () => {
                 picture: googleUser.picture,
                 accessToken: tokenResponse.access_token,
             };
-            console.log('🔧 Auth payload:', authPayload);
+            console.log('Auth payload:', authPayload);
 
             const authResponse = await apiRequest<GoogleAuthResponse>(
                 apiEndpoints.auth.googleOAuth,
@@ -94,11 +98,11 @@ export const useGoogleOAuth = () => {
                     body: JSON.stringify(authPayload),
                 }
             );
-            console.log('✅ Backend auth response:', authResponse);
+            console.log('Backend auth response:', authResponse);
 
             // Store JWT token and user data
             localStorage.setItem('authToken', authResponse.data.accessToken);
-            console.log('✅ Auth token stored in localStorage');
+            console.log('Auth token stored in localStorage');
 
             // Update auth context with the user data
             updateUser(authResponse.data.user);
@@ -107,30 +111,30 @@ export const useGoogleOAuth = () => {
             // Get the stored redirect path or default to dashboard
             const redirectPath = localStorage.getItem('oauth_redirect_path') || '/dashboard';
             localStorage.removeItem('oauth_redirect_path');
-            console.log('✅ Redirecting to:', redirectPath);
+            console.log('Redirecting to:', redirectPath);
 
             // Add a small delay to ensure context update propagates
             setTimeout(() => {
                 // Navigate to dashboard
                 navigate(redirectPath);
                 setState({ isLoading: false, error: null });
-                console.log('✅ OAuth flow completed successfully!');
+                console.log('OAuth flow completed successfully!');
             }, 100);
 
         } catch (error) {
-            console.error('❌ OAuth callback error:', error);
+            console.error('OAuth callback error:', error);
             
             // Handle different types of errors gracefully
             const errorMessage = error instanceof Error ? error.message : 'Google OAuth authentication failed';
             
             if (errorMessage.includes('ERR_BLOCKED_BY_CLIENT')) {
-                console.log('ℹ️ Ad blocker detected - this is normal and won\'t affect login');
+                console.log('ℹAd blocker detected - this is normal and won\'t affect login');
                 return;
             }
             
             // Handle rate limiting (429 errors)
             if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests')) {
-                console.error('❌ Rate limit exceeded - too many OAuth attempts');
+                console.error('Rate limit exceeded - too many OAuth attempts');
                 setState({ isLoading: false, error: 'Too many login attempts. Please wait a moment and try again.' });
                 navigate('/login', {
                     state: { error: 'Too many login attempts. Please wait a few minutes before trying again.' }
@@ -139,10 +143,10 @@ export const useGoogleOAuth = () => {
             }
             
             if (errorMessage.includes('CORS') || errorMessage.includes('Access to fetch')) {
-                console.error('❌ CORS error detected - backend configuration issue');
+                console.error('CORS error detected - backend configuration issue');
                 setState({ isLoading: false, error: 'Server configuration error. Please try again.' });
             } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('net::ERR_FAILED')) {
-                console.error('❌ Network error - backend might be down');
+                console.error('Network error - backend might be down');
                 setState({ isLoading: false, error: 'Unable to connect to server. Please try again.' });
             } else {
                 setState({ isLoading: false, error: errorMessage });

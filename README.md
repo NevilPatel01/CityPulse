@@ -5,19 +5,19 @@
 
 ## 🌍 Project Tasks
 
-### Week 1 (Sept 8) 
-#### Milestone 1:
+### Milestone 1:
+#### Week 1 (Sept 8) 
 - [x] Setup Project Repo
 - [x] configure development environment
 - [x] Set up Git repository with initial commit
 - [x] Setup PostgreSQL database connection
 - [x] Create basic project structure (routes, controllers, models folders)
-- [ ] Implement basic user authentication (JWT, bcrypt, sessions, Google OAuth2)
-- [ ] complete frontend with auth forms (login/reset/signup)
-- [ ] Mobile-first responsive design setup with TailwindCSS
-- [ ] complete backend with auth api
-- [ ] complete unit tests for auth module using Jest
-- [ ] Basic user registration API endpoint with email validation
+- [x] Implement basic user authentication (JWT, bcrypt, sessions, Google OAuth2)
+- [x] complete frontend with auth forms (login/reset/signup)
+- [x] Mobile-first responsive design setup with TailwindCSS
+- [x] complete backend with auth api
+- [x] complete unit tests for auth module using Jest
+- [x] Basic user registration API endpoint with email validation
 - [ ] Begin accessibility tags (ARIA, alt text)
 
 NOTE: I will add as I go. 

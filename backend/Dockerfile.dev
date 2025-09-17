@@ -1,36 +1,24 @@
-# Development Dockerfile for Backend
 FROM node:20-alpine
 
-# Install pnpm
-RUN corepack enable pnpm
-
-# Create workspace directory and set permissions
-RUN mkdir -p /workspace && chown -R node:node /workspace
+RUN npm install -g pnpm@10.10.0 nodemon tsx
 
 WORKDIR /workspace
 
-# Copy workspace configuration and package files first for better caching
-COPY --chown=node:node package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY --chown=node:node shared/package.json ./shared/package.json
-COPY --chown=node:node backend/package.json ./backend/package.json
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY shared/package.json ./shared/package.json
+COPY backend/package.json ./backend/package.json
 
-# Install dependencies first (this layer will be cached if package.json doesn't change)
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
-COPY --chown=node:node shared/ ./shared/
-COPY --chown=node:node backend/ ./backend/
+# Copy source code with proper ownership
+COPY --chown=node:node shared ./shared
+COPY --chown=node:node backend ./backend
 
-# Create mount directories with proper permissions
-RUN mkdir -p /workspace/backend/src /workspace/backend/sql /workspace/shared/src && \
-    chown -R node:node /workspace
-
-# Switch to non-root user
 USER node
 
 WORKDIR /workspace/backend
 
 EXPOSE 5000
 
-# Start development server with hot reload
+# Start with tsx for better TypeScript support
 CMD ["pnpm", "run", "dev"]

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { cleanupDatabase } from '../setup';
 
 describe('Authentication Security (Unit Tests)', () => {

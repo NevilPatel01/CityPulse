@@ -55,6 +55,11 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Compiled JavaScript files (keep only TypeScript source)
+backend/src/**/*.js
+!backend/src/**/*.test.js
+!backend/src/**/*.spec.js
+
 # Optional npm cache directory
 .npm
 

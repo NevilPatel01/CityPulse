@@ -1,4 +1,4 @@
-import { Express } from 'express';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { cleanupDatabase } from '../setup';
 
 // Mock Express app for basic testing

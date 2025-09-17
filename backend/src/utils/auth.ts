@@ -3,7 +3,7 @@ import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
 import { Response } from 'express';
 
 // JWT Configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key'; // TODO: Need to change Secret to more secure value for production
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-key-will-change-in-production'; // Consistent with .env
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
 

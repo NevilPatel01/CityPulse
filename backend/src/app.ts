@@ -5,8 +5,10 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 
 export const createApp = (): express.Express => {
+    console.log('[APP] Creating Express application...');
     const app = express();
 
+    console.log('[APP] Setting up security middleware (Helmet)...');
     // Security middleware - I am using Helmet to adds security headers to prevent common attacks like XSS
     app.use(helmet({
         contentSecurityPolicy: {
@@ -20,25 +22,44 @@ export const createApp = (): express.Express => {
         crossOriginEmbedderPolicy: false       // for Production need to enable
     }));
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    console.log('[APP] Setting up CORS with frontend URL:', frontendUrl);
+    
     // Added CORS configuration
     // Credentials true allows cookies/auth headers, origin restricts to frontend URL
     app.use(cors({
         origin: [
-            process.env.FRONTEND_URL || 'http://localhost:3001', 
+            frontendUrl, 
             // 'http://localhost:3000',  // Vite dev server default port
         ],
         credentials: true,                 
         optionsSuccessStatus: 200       
     }));
 
+    console.log('[APP] Setting up body parsing middleware...');
     // Body parsing middleware - It handles incoming request data parsing
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use(cookieParser());
 
+    // Add request logging middleware
+    app.use((req, res, next) => {
+        console.log(`[API] ${req.method} ${req.url} - IP: ${req.ip}`);
+        if (req.body && Object.keys(req.body).length > 0) {
+            // Log body but hide sensitive data
+            const safeBody = { ...req.body };
+            if (safeBody.password) safeBody.password = '***hidden***';
+            if (safeBody.accessToken) safeBody.accessToken = '***hidden***';
+            console.log(`📦 [API] Request body:`, safeBody);
+        }
+        next();
+    });
+
+    console.log('[APP] Setting up health check endpoint...');
     // Health check endpoint - It provides server status for monitoring/testing
     // It returns JSON with server status, message, timestamp, and environment info
     app.get('/api/health', (req, res) => {
+        console.log('[API] Health check requested');
         res.json({
             status: 'OK',
             message: 'CityPulse API is running',
@@ -47,16 +68,19 @@ export const createApp = (): express.Express => {
         });
     });
 
+    console.log('[APP] Setting up authentication routes...');
     // Authentication routes - it has all auth endpoints are under /api/auth
     // It handles registration for new users, login, logout, profile, password change operations
     app.use('/api/auth', authRoutes);
 
+    console.log('[APP] Setting up error handlers...');
     // Global error handler - it catches all unhandled errors and formats responses
     app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-        console.error('Global error handler:', err);
+        console.error('[ERROR] Global error handler:', err);
 
         //  It handles validation errors from Zod or other validation libraries
         if (err.name === 'ValidationError') {
+            console.log('[ERROR] Validation error detected');
             return res.status(400).json({
                 success: false,
                 message: 'Validation failed',
@@ -73,11 +97,13 @@ export const createApp = (): express.Express => {
 
     // 404 Handler - it catches all undefined routes and returns JSON error
     app.use((req, res) => {
+        console.log(`[404] Route not found: ${req.method} ${req.url}`);
         res.status(404).json({
             success: false,
             message: 'Route not found'
         });
     });
 
+    console.log('[APP] Express application setup complete!');
     return app;
 };

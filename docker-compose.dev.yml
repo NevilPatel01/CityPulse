@@ -20,7 +20,6 @@ services:
       retries: 5
       start_period: 30s
 
-  # Backend Service
   backend:
     build:
       context: .
@@ -30,25 +29,31 @@ services:
       NODE_ENV: development
       PORT: 5000
       DATABASE_URL: postgresql://user:password@postgres:5432/citypulse_dev
-      JWT_SECRET: dev-jwt-secret-key-will-change-in-production
-      JWT_EXPIRES_IN: 15m
-      REFRESH_TOKEN_EXPIRES_IN: 7d
-      FRONTEND_URL: http://localhost:3001
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
+      FRONTEND_URL: ${FRONTEND_URL}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_SECURE: ${EMAIL_SECURE}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
     ports:
       - "5001:5000"
-    volumes:
-      - citypulse_backend_src:/workspace/backend/src
-      - citypulse_shared_src:/workspace/shared/src
-      - backend_node_modules:/workspace/node_modules
-      - backend_local_node_modules:/workspace/backend/node_modules
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - citypulse-network
+    stdin_open: true
+    tty: true
     restart: unless-stopped
 
-  # Frontend Service
+
   frontend:
     build:
       context: .
@@ -57,30 +62,21 @@ services:
     environment:
       NODE_ENV: development
       VITE_API_URL: http://localhost:5001
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+      VITE_GOOGLE_CLIENT_SECRET: ${VITE_GOOGLE_CLIENT_SECRET}
+      VITE_GOOGLE_REDIRECT_URI: ${VITE_GOOGLE_REDIRECT_URI}
     ports:
       - "3001:3000"
-    volumes:
-      - citypulse_frontend_src:/workspace/frontend/src
-      - citypulse_frontend_public:/workspace/frontend/public
-      - citypulse_shared_src:/workspace/shared/src
-      - frontend_node_modules:/workspace/node_modules
-      - frontend_local_node_modules:/workspace/frontend/node_modules
     depends_on:
       - backend
     networks:
       - citypulse-network
-    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
 
 volumes:
   postgres_data_dev:
-  backend_node_modules:
-  backend_local_node_modules:
-  frontend_node_modules:
-  frontend_local_node_modules:
-  citypulse_backend_src:
-  citypulse_frontend_src:
-  citypulse_frontend_public:
-  citypulse_shared_src:
 
 networks:
   citypulse-network:

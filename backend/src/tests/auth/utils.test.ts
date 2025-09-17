@@ -1,10 +1,12 @@
+import { describe, it, expect, beforeAll } from '@jest/globals';
+
 import {
     hashPassword,
     comparePassword,
     generateAccessToken,
     generateRefreshToken,
     verifyToken
-} from '../../src/utils/auth';
+} from '../../utils/auth';
 
 describe('Auth Utilities', () => {
     describe('Password Hashing', () => {

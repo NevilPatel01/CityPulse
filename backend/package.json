@@ -13,9 +13,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
-    "test:validation": "jest tests/auth/validation.test.ts",
-    "test:utils": "jest tests/auth/utils.test.ts",
-    "test:middleware": "jest tests/auth/middleware.test.ts"
+    "test:validation": "jest src/tests/auth/validation.test.ts",
+    "test:utils": "jest src/tests/auth/utils.test.ts",
+    "test:middleware": "jest src/tests/auth/middleware.test.ts"
   },
   "keywords": [
     "citypulse",
@@ -37,16 +37,19 @@
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.10.1",
     "pg": "^8.13.1",
     "zod": "^4.1.5"
   },
   "devDependencies": {
+    "@jest/globals": "^30.1.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.1",
+    "@types/nodemailer": "^6.4.19",
     "@types/pg": "^8.11.8",
     "@types/supertest": "^6.0.3",
     "jest": "^30.1.3",

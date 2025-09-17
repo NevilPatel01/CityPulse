@@ -10,6 +10,12 @@ import {
     verifyToken,
     TokenPayload
 } from '../utils/auth';
+import {
+    sendPasswordResetEmail,
+    sendPasswordResetSuccessEmail,
+    generateSecurityCode,
+    generateResetToken
+} from '../services/emailService';
 
 // Google OAuth user interface
 interface GoogleOAuthUser {
@@ -55,8 +61,8 @@ export const register = async (req: Request, res: Response) => {
         // Create user
         const userResult = await query(
             `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone, is_google_user, role, account_status, email_verified)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-             RETURNING id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at`,
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                RETURNING id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at`,
             [
                 username,
                 email,
@@ -454,7 +460,7 @@ export const googleOAuth = async (req: Request, res: Response) => {
             );
 
             user = userResult.rows[0];
-            console.log('✅ New user created:', user.id);
+            console.log('New user created:', user.id);
         }
 
         // Check account status
@@ -479,7 +485,7 @@ export const googleOAuth = async (req: Request, res: Response) => {
         // Set cookies
         setTokenCookies(res, jwtAccessToken, refreshToken);
 
-        console.log('✅ Google OAuth authentication successful for user:', user.id);
+        console.log('Google OAuth authentication successful for user:', user.id);
 
         res.json({
             success: true,
@@ -497,10 +503,271 @@ export const googleOAuth = async (req: Request, res: Response) => {
         });
 
     } catch (error) {
-        console.error('❌ Google OAuth error:', error);
+        console.error('Google OAuth error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error during Google OAuth'
+        });
+    }
+};
+
+// Request password reset - sends security code via email
+export const requestPasswordReset = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+
+        console.log('🔐 Password reset requested for:', email);
+
+        // Check if user exists
+        const userResult = await query(
+            'SELECT id, email, username, full_name, is_google_user FROM users WHERE email = $1',
+            [email]
+        );
+
+        // Always return success to prevent email enumeration
+        if (userResult.rows.length === 0) {
+            console.log('Password reset requested for non-existent email:', email);
+            return res.json({
+                success: true,
+                message: 'If an account with this email exists, you will receive a password reset code.'
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        // Allow Google OAuth users to set backup passwords
+        if (user.is_google_user) {
+            console.log('Password reset requested for Google OAuth user:', email);
+            console.log('Allowing backup password setup for OAuth user');
+        }
+
+        // Clean up any existing unused reset tokens for this user
+        await query(
+            'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used = FALSE',
+            [user.id]
+        );
+
+        // Generate security code and reset token
+        const securityCode = generateSecurityCode();
+        const resetToken = generateResetToken();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+
+        console.log('🔑 [RESET] Generated security code:', securityCode);
+        console.log('🔑 [RESET] Generated reset token:', resetToken);
+
+        // Store reset token in database
+        await query(
+            `INSERT INTO password_reset_tokens 
+                (user_id, email, security_code, reset_token, expires_at) 
+                VALUES ($1, $2, $3, $4, $5)`,
+            [user.id, email, securityCode, resetToken, expiresAt]
+        );
+
+        console.log('[RESET] Token stored in database successfully');
+
+        // Send email with security code
+        try {
+            await sendPasswordResetEmail(email, securityCode, user.username);
+            console.log('Password reset email sent to:', email);
+        } catch (emailError) {
+            console.error('Failed to send password reset email:', emailError);
+            // Clean up the token if email fails
+            await query(
+                'DELETE FROM password_reset_tokens WHERE reset_token = $1',
+                [resetToken]
+            );
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to send password reset email. Please try again later.'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'If an account with this email exists, you will receive a password reset code.',
+            resetToken // Frontend needs this to proceed to verification step
+        });
+
+        console.log('📤 [RESET] Response sent with resetToken:', resetToken);
+
+    } catch (error) {
+        console.error('❌ Password reset request error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Verify security code
+export const verifyResetCode = async (req: Request, res: Response) => {
+    try {
+        const { resetToken, securityCode } = req.body;
+
+        console.log('🔐 Verifying reset code for token:', resetToken?.substring(0, 8) + '...');
+
+        // Find the reset token
+        const tokenResult = await query(
+            `SELECT id, user_id, email, security_code, expires_at, used 
+                FROM password_reset_tokens 
+                WHERE reset_token = $1`,
+            [resetToken]
+        );
+
+        if (tokenResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired reset token.'
+            });
+        }
+
+        const resetData = tokenResult.rows[0];
+
+        // Check if token is already used
+        if (resetData.used) {
+            return res.status(400).json({
+                success: false,
+                message: 'This reset token has already been used.'
+            });
+        }
+
+        // Check if token is expired
+        if (new Date() > new Date(resetData.expires_at)) {
+            await query(
+                'DELETE FROM password_reset_tokens WHERE id = $1',
+                [resetData.id]
+            );
+            return res.status(400).json({
+                success: false,
+                message: 'Reset token has expired. Please request a new password reset.'
+            });
+        }
+
+        // Verify security code
+        if (resetData.security_code !== securityCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid security code. Please check your email and try again.'
+            });
+        }
+
+        console.log('Security code verified for user:', resetData.user_id);
+
+        res.json({
+            success: true,
+            message: 'Security code verified successfully. You can now reset your password.',
+            resetToken // Return the same token for the next step
+        });
+
+    } catch (error) {
+        console.error(' Verify reset code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Reset password with verified token
+export const resetPassword = async (req: Request, res: Response) => {
+    try {
+        const { resetToken, newPassword } = req.body;
+
+        console.log('🔐 Resetting password for token:', resetToken?.substring(0, 8) + '...');
+
+        // Find the reset token
+        const tokenResult = await query(
+            `SELECT id, user_id, email, security_code, expires_at, used 
+                FROM password_reset_tokens 
+                WHERE reset_token = $1`,
+            [resetToken]
+        );
+
+        if (tokenResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired reset token.'
+            });
+        }
+
+        const resetData = tokenResult.rows[0];
+
+        // Check if token is already used
+        if (resetData.used) {
+            return res.status(400).json({
+                success: false,
+                message: 'This reset token has already been used.'
+            });
+        }
+
+        // Check if token is expired
+        if (new Date() > new Date(resetData.expires_at)) {
+            await query(
+                'DELETE FROM password_reset_tokens WHERE id = $1',
+                [resetData.id]
+            );
+            return res.status(400).json({
+                success: false,
+                message: 'Reset token has expired. Please request a new password reset.'
+            });
+        }
+
+        // Get user details
+        const userResult = await query(
+            'SELECT id, username, full_name FROM users WHERE id = $1',
+            [resetData.user_id]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'User not found.'
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        // Hash the new password
+        const passwordHash = await hashPassword(newPassword);
+
+        // Update user's password
+        await query(
+            'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+            [passwordHash, resetData.user_id]
+        );
+
+        // Mark the reset token as used
+        await query(
+            'UPDATE password_reset_tokens SET used = TRUE, used_at = NOW() WHERE id = $1',
+            [resetData.id]
+        );
+
+        // Clean up any other unused tokens for this user
+        await query(
+            'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used = FALSE',
+            [resetData.user_id]
+        );
+
+        // Send success notification email
+        try {
+            await sendPasswordResetSuccessEmail(resetData.email, user.username);
+        } catch (emailError) {
+            console.error('Failed to send password reset success email:', emailError);
+            // Don't fail the request if success email fails
+        }
+
+        console.log('Password reset successful for user:', resetData.user_id);
+
+        res.json({
+            success: true,
+            message: 'Password reset successful. You can now sign in with your new password.'
+        });
+
+    } catch (error) {
+        console.error('Password reset error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
         });
     }
 };

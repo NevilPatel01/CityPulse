@@ -1,26 +1,40 @@
 module.exports = {
-    preset: 'ts-jest/presets/default',
+    preset: 'ts-jest',
     testEnvironment: 'node',
-    roots: ['<rootDir>/src', '<rootDir>/tests'],
+    roots: ['<rootDir>/src'],
     testMatch: [
         '**/__tests__/**/*.ts',
         '**/?(*.)+(spec|test).ts'
     ],
     transform: {
-        '^.+\\.ts$': 'ts-jest',
+        '^.+\\.ts$': ['ts-jest', {
+            tsconfig: './tsconfig.test.json'
+        }],
     },
-    moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
     collectCoverageFrom: [
         'src/**/*.ts',
         '!src/**/*.d.ts',
-        '!src/**/index.ts',
+        '!src/tests/**',
+        '!src/index.ts',
+        '!src/scripts/**'
     ],
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'html'],
-    setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-    testTimeout: 10000,
-    verbose: true,
-    forceExit: true,
+    setupFilesAfterEnv: [],
+    moduleFileExtensions: ['ts', 'js', 'json'],
     clearMocks: true,
     restoreMocks: true,
+    resetMocks: false,
+    testTimeout: 10000,
+    moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+    },
+    transformIgnorePatterns: [
+        'node_modules/(?!(.*\\.mjs$))'
+    ],
+    globals: {
+        'ts-jest': {
+            useESM: false
+        }
+    }
 };

@@ -45,3 +45,26 @@ CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- Password Reset Tokens Table
+-- =====================================================
+
+CREATE TABLE password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    security_code VARCHAR(6) NOT NULL,
+    reset_token VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    used_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Indexes for performance
+CREATE INDEX idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+CREATE INDEX idx_password_reset_tokens_email ON password_reset_tokens(email);
+CREATE INDEX idx_password_reset_tokens_security_code ON password_reset_tokens(security_code);
+CREATE INDEX idx_password_reset_tokens_reset_token ON password_reset_tokens(reset_token);
+CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);

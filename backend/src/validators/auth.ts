@@ -58,12 +58,22 @@ export const resetPasswordRequestSchema = z.object({
     email: z.email('Please provide a valid email address')
 });
 
+// Verify reset code validation schema
+export const verifyResetCodeSchema = z.object({
+    resetToken: z.string()
+        .min(1, 'Reset token is required'),
+    
+    securityCode: z.string()
+        .length(6, 'Security code must be exactly 6 digits')
+        .regex(/^\d{6}$/, 'Security code must contain only digits')
+});
+
 // Password reset validation schema
 export const resetPasswordSchema = z.object({
-    token: z.string()
+    resetToken: z.string()
         .min(1, 'Reset token is required'),
 
-    password: z.string()
+    newPassword: z.string()
         .min(8, 'Password must be at least 8 characters long')
         .regex(passwordRegex, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
 });
