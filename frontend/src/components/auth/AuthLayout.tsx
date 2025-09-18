@@ -13,7 +13,7 @@ export const AuthLayout = ({ children, title, subtitle }: AuthLayoutProps) => {
     <div className='min-h-screen bg-base text-primary flex flex-col'>
       <Header />
 
-      <main className='flex-1 flex items-center justify-center px-4 py-12'>
+      <main id="main-content" role="main" className='flex-1 flex items-center justify-center px-4 py-12'>
         <div className='w-full max-w-md'>
           {/* Background decorative elements */}
           <div className='absolute inset-0 overflow-hidden pointer-events-none'>

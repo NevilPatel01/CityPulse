@@ -115,7 +115,7 @@ const FeaturesPage = () => {
     <div className='min-h-screen bg-base text-primary'>
       <Header />
 
-      <main>
+      <main id="main-content" role="main">
         {/* Hero Section */}
         <section className='py-20 lg:py-32 px-4'>
           <div className='container mx-auto text-center'>

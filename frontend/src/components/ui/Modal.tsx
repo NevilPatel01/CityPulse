@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '../ui';
 
@@ -10,6 +10,10 @@ interface ModalProps {
     size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
     showCloseButton?: boolean;
     className?: string;
+    ariaLabelledBy?: string;
+    ariaDescribedBy?: string;
+    closeOnBackdropClick?: boolean;
+    closeOnEscape?: boolean;
 }
 
 const sizeClasses = {
@@ -20,6 +24,59 @@ const sizeClasses = {
     full: 'max-w-7xl mx-4',
 };
 
+// Focus trap hook
+const useFocusTrap = (isOpen: boolean, modalRef: React.RefObject<HTMLDivElement | null>) => {
+    const previousFocusRef = useRef<HTMLElement | null>(null);
+
+    useEffect(() => {
+        if (!isOpen || !modalRef.current) return;
+
+        // Store the previously focused element
+        previousFocusRef.current = document.activeElement as HTMLElement;
+
+        // Get all focusable elements in the modal
+        const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        // Focus the first element
+        if (firstElement) {
+            firstElement.focus();
+        }
+
+        // Handle tab key navigation
+        const handleTabKey = (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                if (e.shiftKey) {
+                    // Shift + Tab
+                    if (document.activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement?.focus();
+                    }
+                } else {
+                    // Tab
+                    if (document.activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement?.focus();
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleTabKey);
+
+        return () => {
+            document.removeEventListener('keydown', handleTabKey);
+            // Restore focus to previously focused element
+            if (previousFocusRef.current) {
+                previousFocusRef.current.focus();
+            }
+        };
+    }, [isOpen, modalRef]);
+};
+
 export const Modal = ({
     isOpen,
     onClose,
@@ -27,11 +84,21 @@ export const Modal = ({
     children,
     size = 'md',
     showCloseButton = true,
-    className = ''
+    className = '',
+    ariaLabelledBy,
+    ariaDescribedBy,
+    closeOnBackdropClick = true,
+    closeOnEscape = true
 }: ModalProps) => {
+    const modalRef = useRef<HTMLDivElement>(null);
+    const titleId = title ? `modal-title-${Math.random().toString(36).substr(2, 9)}` : ariaLabelledBy;
+
+    // Focus trap
+    useFocusTrap(isOpen, modalRef);
+
     // Handle escape key
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || !closeOnEscape) return;
 
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -41,12 +108,23 @@ export const Modal = ({
 
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, closeOnEscape]);
 
     // Prevent body scroll when modal is open
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            // Announce modal opening to screen readers
+            const announcement = document.createElement('div');
+            announcement.setAttribute('aria-live', 'assertive');
+            announcement.setAttribute('aria-atomic', 'true');
+            announcement.className = 'sr-only';
+            announcement.textContent = `Modal opened: ${title || 'Dialog'}`;
+            document.body.appendChild(announcement);
+            
+            setTimeout(() => {
+                document.body.removeChild(announcement);
+            }, 1000);
         } else {
             document.body.style.overflow = 'unset';
         }
@@ -54,29 +132,51 @@ export const Modal = ({
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [isOpen]);
+    }, [isOpen, title]);
 
     if (!isOpen) return null;
 
+    const handleBackdropClick = (e: React.MouseEvent) => {
+        if (e.target === e.currentTarget && closeOnBackdropClick) {
+            onClose();
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={ariaDescribedBy}
+            onClick={handleBackdropClick}
+        >
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
-                onClick={onClose}
+                aria-hidden="true"
             />
 
             {/* Modal */}
-            <div className={`
-        relative w-full ${sizeClasses[size]} bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl shadow-glass 
-        transform transition-all duration-300 animate-modal-in max-h-[90vh] overflow-hidden
-        ${className}
-      `}>
+            <div 
+                ref={modalRef}
+                className={`
+                    relative w-full ${sizeClasses[size]} bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl shadow-glass 
+                    transform transition-all duration-300 animate-modal-in max-h-[90vh] overflow-hidden
+                    ${className}
+                `}
+                role="document"
+            >
                 {/* Header */}
                 {(title || showCloseButton) && (
-                    <div className="flex items-center justify-between p-6 border-b border-subtle">
+                    <header className="flex items-center justify-between p-6 border-b border-subtle">
                         {title && (
-                            <h2 className="text-xl font-semibold text-primary">{title}</h2>
+                            <h2 
+                                id={titleId}
+                                className="text-xl font-semibold text-primary"
+                            >
+                                {title}
+                            </h2>
                         )}
                         {showCloseButton && (
                             <Button
@@ -84,17 +184,18 @@ export const Modal = ({
                                 size="sm"
                                 onClick={onClose}
                                 className="text-muted hover:text-primary hover:bg-surface-glass ml-auto"
+                                ariaLabel="Close modal"
                             >
-                                ✕
+                                <span aria-hidden="true">✕</span>
                             </Button>
                         )}
-                    </div>
+                    </header>
                 )}
 
                 {/* Content */}
-                <div className="overflow-y-auto max-h-[calc(90vh-8rem)]">
+                <main className="overflow-y-auto max-h-[calc(90vh-8rem)]">
                     {children}
-                </div>
+                </main>
             </div>
         </div>
     );
@@ -159,9 +260,21 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
     ];
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Quick Actions" size="lg">
+        <Modal 
+            isOpen={isOpen} 
+            onClose={onClose} 
+            title="Quick Actions" 
+            size="lg"
+            ariaDescribedBy="quick-actions-description"
+        >
             <div className="p-6">
-                <div className="grid md:grid-cols-2 gap-4">
+                <p 
+                    id="quick-actions-description" 
+                    className="sr-only"
+                >
+                    Choose from the following quick actions to interact with CityPulse
+                </p>
+                <div className="grid md:grid-cols-2 gap-4" role="grid">
                     {quickActions.map((action) => (
                         <button
                             key={action.id}
@@ -170,12 +283,18 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
                                 onClose();
                             }}
                             className="group p-4 rounded-xl bg-surface-glass border border-subtle hover:border-pulse/40 hover:shadow-lg transition-all duration-200 text-left"
+                            role="gridcell"
+                            aria-label={`${action.title}: ${action.description}`}
+                            tabIndex={0}
                         >
                             <div className="flex items-start gap-4">
-                                <div className={`
-                  w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white text-xl
-                  group-hover:scale-110 transition-transform duration-200
-                `}>
+                                <div 
+                                    className={`
+                                        w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white text-xl
+                                        group-hover:scale-110 transition-transform duration-200
+                                    `}
+                                    aria-hidden="true"
+                                >
                                     {action.icon}
                                 </div>
                                 <div className="flex-1">
@@ -186,7 +305,10 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
                                         {action.description}
                                     </p>
                                 </div>
-                                <div className="text-muted group-hover:text-pulse transition-colors">
+                                <div 
+                                    className="text-muted group-hover:text-pulse transition-colors"
+                                    aria-hidden="true"
+                                >
                                     →
                                 </div>
                             </div>

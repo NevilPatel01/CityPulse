@@ -310,7 +310,7 @@ export default function Dashboard() {
 
             {/* Mobile Layout */}
             <div className="lg:hidden">
-                <main className="pb-20 pt-16">
+                <main id="main-content" role="main" className="pb-20 pt-16">
                     <div className="space-y-6 p-4">
                         <QuickActionsCard />
                         <TrendingNowCard />
@@ -330,7 +330,7 @@ export default function Dashboard() {
 
             {/* Desktop Layout */}
             <div className="hidden lg:block">
-                <main className="pt-16">
+                <main id="main-content" role="main" className="pt-16">
                     <div className="grid grid-cols-[280px_1fr_320px] gap-6 container mx-auto px-4 py-6">
                         {/* Left Sidebar */}
                         <div className="space-y-6">
