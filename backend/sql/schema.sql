@@ -68,3 +68,34 @@ CREATE INDEX idx_password_reset_tokens_email ON password_reset_tokens(email);
 CREATE INDEX idx_password_reset_tokens_security_code ON password_reset_tokens(security_code);
 CREATE INDEX idx_password_reset_tokens_reset_token ON password_reset_tokens(reset_token);
 CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+
+-- =====================================================
+-- User Profiles Table
+-- =====================================================
+
+CREATE TABLE user_profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    profile_photo_url VARCHAR(255),
+    cover_photo_url VARCHAR(255),
+    instagram_url VARCHAR(255),
+    facebook_url VARCHAR(255),
+    whatsapp_contact VARCHAR(50),
+    profile_visibility VARCHAR(20) DEFAULT 'public' CHECK (profile_visibility IN ('public', 'private')),
+    location_sharing BOOLEAN DEFAULT TRUE,
+    social_links_visible BOOLEAN DEFAULT TRUE,
+    travel_buddy_requests_enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for user profiles
+CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+CREATE INDEX idx_user_profiles_visibility ON user_profiles(profile_visibility);
+CREATE INDEX idx_user_profiles_created_at ON user_profiles(created_at);
+
+-- Trigger to automatically update updated_at for user_profiles
+CREATE TRIGGER update_user_profiles_updated_at 
+    BEFORE UPDATE ON user_profiles 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();

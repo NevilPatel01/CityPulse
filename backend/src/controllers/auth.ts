@@ -324,7 +324,24 @@ export const getProfile = async (req: Request, res: Response) => {
 
         res.json({
             success: true,
-            data: { user }
+            data: { 
+                user: {
+                    id: user.id.toString(),
+                    username: user.username,
+                    email: user.email,
+                    fullName: user.full_name,
+                    bio: user.bio,
+                    currentLocation: user.current_location,
+                    hometown: user.hometown,
+                    phone: user.phone,
+                    role: user.role,
+                    accountStatus: user.account_status,
+                    emailVerified: user.email_verified,
+                    createdAt: user.created_at,
+                    updatedAt: user.updated_at,
+                    lastLogin: user.last_login
+                }
+            }
         });
 
     } catch (error) {

@@ -9,6 +9,8 @@ import SignupPage from './pages/auth/SignupPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard.tsx';
+import ProfilePage from './pages/ProfilePage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   useEffect(() => {
@@ -41,6 +43,8 @@ function App() {
         <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>
   );

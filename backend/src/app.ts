@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 import authRoutes from './routes/auth';
+import profileRoutes from './routes/profile';
 
 export const createApp = (): express.Express => {
     console.log('[APP] Creating Express application...');
@@ -72,6 +74,14 @@ export const createApp = (): express.Express => {
     // Authentication routes - it has all auth endpoints are under /api/auth
     // It handles registration for new users, login, logout, profile, password change operations
     app.use('/api/auth', authRoutes);
+
+    console.log('[APP] Setting up profile routes...');
+    // Profile routes - handles user profile management
+    app.use('/api/profile', profileRoutes);
+
+    console.log('[APP] Setting up static file serving for uploads...');
+    // Serve uploaded images statically
+    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
     console.log('[APP] Setting up error handlers...');
     // Global error handler - it catches all unhandled errors and formats responses

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import type { User } from '../context/AuthContext';
+import { Header } from '../components/layout/Header';
 
 // Types
 interface RecommendationCardProps {
@@ -13,33 +13,6 @@ interface RecommendationCardProps {
 }
 
 // Dashboard Components
-const DashboardHeader = ({ user, onLogout }: { user: User | null; onLogout: () => void }) => (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-base border-b border-subtle">
-        <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-pulse rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">CP</span>
-                </div>
-                <span className="text-primary font-semibold">CityPulse</span>
-            </div>
-
-            <div className="flex items-center gap-4">
-                <div className="w-8 h-8 bg-pulse rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">
-                        {user?.fullName?.charAt(0)?.toUpperCase() || '?'}
-                    </span>
-                </div>
-                <button
-                    onClick={onLogout}
-                    className="text-muted hover:text-primary text-sm"
-                >
-                    Logout
-                </button>
-            </div>
-        </div>
-    </header>
-);
-
 const QuickActionsCard = () => (
     <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
         <h3 className="font-semibold text-primary">Quick Actions</h3>
@@ -242,7 +215,7 @@ const BottomNav = () => {
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+    const { isAuthenticated, isLoading: authLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
 
     // Mock recommendations data
@@ -286,11 +259,6 @@ export default function Dashboard() {
         }
     }, [authLoading, isAuthenticated, navigate]);
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
-
     if (isLoading || authLoading) {
         return (
             <div className="min-h-screen bg-base flex items-center justify-center">
@@ -306,7 +274,7 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-base">
-            <DashboardHeader user={user} onLogout={handleLogout} />
+            <Header />
 
             {/* Mobile Layout */}
             <div className="lg:hidden">

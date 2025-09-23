@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../ui';
+import { useAuth } from '../../hooks/useAuth';
+import { UserDropdown } from './UserDropdown';
 
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  // Check if we're on an auth page (login, signup, reset-password)
+  const isAuthPage = ['/login', '/signup', '/reset-password'].includes(location.pathname);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -37,10 +43,15 @@ export const Header: React.FC = () => {
     };
   }, [isMobileMenuOpen]);
 
-  const navigationItems = [
-    { path: '/features', label: 'Features', icon: '✨' },
-    { path: '/about', label: 'About', icon: '📖' },
-  ];
+  // Navigation buttons only for unauthenticated pages
+  const unauthPages = ['/', '/login', '/signup', '/reset-password'];
+  const showNavButtons = unauthPages.includes(location.pathname);
+  const navigationItems = showNavButtons
+    ? [
+        { path: '/features', label: 'Features', icon: '✨' },
+        { path: '/about', label: 'About', icon: '📖' },
+      ]
+    : [];
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -68,48 +79,57 @@ export const Header: React.FC = () => {
             <span className='font-bold text-xl text-primary'>CityPulse</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className='hidden lg:flex items-center gap-8' role="navigation" aria-label="Main navigation">
-            {navigationItems.map(({ path, label, icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`text-primary hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 relative after:content-[""] after:absolute after:w-0 after:h-0.5 after:bg-pulse after:left-0 after:-bottom-1 after:transition-all after:duration-200 hover:after:w-full ${
-                  isActivePath(path) ? 'text-pulse after:w-full' : ''
-                }`}
-                aria-current={isActivePath(path) ? 'page' : undefined}
-              >
-                <span className="mr-1" aria-hidden="true">{icon}</span>
-                {label}
-              </Link>
-            ))}
-          </nav>
+          {/* Desktop Navigation (only on unauthenticated pages) */}
+          {showNavButtons && (
+            <nav className='hidden lg:flex items-center gap-8' role="navigation" aria-label="Main navigation">
+              {navigationItems.map(({ path, label, icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`text-primary hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 relative after:content-[""] after:absolute after:w-0 after:h-0.5 after:bg-pulse after:left-0 after:-bottom-1 after:transition-all after:duration-200 hover:after:w-full ${
+                    isActivePath(path) ? 'text-pulse after:w-full' : ''
+                  }`}
+                  aria-current={isActivePath(path) ? 'page' : undefined}
+                >
+                  <span className="mr-1" aria-hidden="true">{icon}</span>
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          )}
 
           {/* Action Buttons */}
           <div className='flex items-center gap-3'>
-            {/* Login Button - Always visible */}
-            <Link to="/login">
-              <Button
-                variant='ghost'
-                size="sm"
-                className='text-primary hover:bg-surface-glass hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-3'
-                aria-label="Login to your account"
-              >
-                <span className="mr-1 text-sm" aria-hidden="true">🔒</span>
-                <span className="text-sm">Login</span>
-              </Button>
-            </Link>
+            {isAuthenticated && !isAuthPage ? (
+              /* User Dropdown when authenticated and not on auth pages */
+              <UserDropdown />
+            ) : (
+              /* Login/Signup buttons when not authenticated or on auth pages */
+              <>
+                <Link to="/login">
+                  <Button
+                    variant='ghost'
+                    size="sm"
+                    className='text-primary hover:bg-surface-glass hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-3'
+                    aria-label="Login to your account"
+                  >
+                    <span className="mr-1 text-sm" aria-hidden="true">🔒</span>
+                    <span className="text-sm">Login</span>
+                  </Button>
+                </Link>
 
-            {/* Sign Up Button - Hidden on mobile to save space */}
-            <Link to="/signup" className="hidden md:block">
-              <Button 
-                size="sm"
-                className='bg-pulse text-pulse-fg hover:opacity-90 hover:shadow-lg hover:shadow-pulse/25 transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-4'
-                aria-label="Create new account"
-              >
-                <span className="text-sm">Sign Up</span>
-              </Button>
-            </Link>
+                {/* Sign Up Button - Hidden on mobile to save space */}
+                <Link to="/signup" className="hidden md:block">
+                  <Button 
+                    size="sm"
+                    className='bg-pulse text-pulse-fg hover:opacity-90 hover:shadow-lg hover:shadow-pulse/25 transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-4'
+                    aria-label="Create new account"
+                  >
+                    <span className="text-sm">Sign Up</span>
+                  </Button>
+                </Link>
+              </>
+            )}
 
             {/* Mobile Menu Button */}
             <button
