@@ -11,6 +11,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
+      - ./backend/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/sql/init-database.sh:/docker-entrypoint-initdb.d/02-init-database.sh
     networks:
       - citypulse-network
     healthcheck:

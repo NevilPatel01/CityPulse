@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { apiEndpoints, apiRequest } from '../config/api';
+import { useSafeToast } from '../hooks/useSafeToast';
 
 // User interface
 export interface User {
@@ -59,6 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const { showSuccess, showError } = useSafeToast();
 
     // Check if user is authenticated
     const isAuthenticated = !!user && !!localStorage.getItem('authToken');
@@ -106,45 +108,87 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Login function
     const login = async (email: string, password: string) => {
-        
-        const data = await apiRequest<AuthResponse>(apiEndpoints.auth.login, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-        });
+        try {
+            const data = await apiRequest<AuthResponse>(apiEndpoints.auth.login, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
 
-        console.log('[AUTH] Login successful for:', data.data.user.email);
-        
-        // Store token and user data
-        localStorage.setItem('authToken', data.data.accessToken);
-        setUser(data.data.user);
+            console.log('[AUTH] Login successful for:', data.data.user.email);
+            
+            // Store token and user data
+            localStorage.setItem('authToken', data.data.accessToken);
+            setUser(data.data.user);
+            
+            // Show success toast
+            showSuccess(
+                'Welcome back!',
+                `Hello ${data.data.user.fullName}, you've successfully logged in.`,
+                4000
+            );
+        } catch (error) {
+            console.error('[AUTH] Login failed:', error);
+            showError(
+                'Login Failed',
+                'Invalid email or password. Please try again.',
+                5000
+            );
+            throw error;
+        }
     };
 
     // Register function
     const register = async (userData: RegisterData) => {
-        
-        const data = await apiRequest<AuthResponse>(apiEndpoints.auth.register, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userData),
-        });
+        try {
+            const data = await apiRequest<AuthResponse>(apiEndpoints.auth.register, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData),
+            });
 
-        console.log('[AUTH] Registration successful for:', data.data.user.email);
+            console.log('[AUTH] Registration successful for:', data.data.user.email);
 
-        // Store token and user data
-        localStorage.setItem('authToken', data.data.accessToken);
-        setUser(data.data.user);
+            // Store token and user data
+            localStorage.setItem('authToken', data.data.accessToken);
+            setUser(data.data.user);
+            
+            // Show success toast
+            showSuccess(
+                'Account Created!',
+                `Welcome to CityPulse, ${data.data.user.fullName}! Your account has been created successfully.`,
+                5000
+            );
+        } catch (error) {
+            console.error('[AUTH] Registration failed:', error);
+            showError(
+                'Registration Failed',
+                'Unable to create account. Please try again.',
+                5000
+            );
+            throw error;
+        }
     };
 
     // Logout function
     const logout = () => {
         console.log(' [AUTH] User logging out:', user?.email);
+        const userName = user?.fullName || 'User';
+        
         localStorage.removeItem('authToken');
         setUser(null);
+        
+        // Show success toast
+        showSuccess(
+            'Logged Out Successfully',
+            `Goodbye ${userName}! You've been logged out successfully.`,
+            3000
+        );
+        
         // Optionally call logout endpoint to invalidate token on server
     };
 

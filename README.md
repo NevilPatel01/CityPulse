@@ -18,7 +18,22 @@
 - [x] complete backend with auth api
 - [x] complete unit tests for auth module using Jest
 - [x] Basic user registration API endpoint with email validation
-- [ ] Begin accessibility tags (ARIA, alt text)
+- [x] Begin accessibility tags (ARIA, alt text)
+
+### Week 2 (Sept 15)
+- [x] User Profile Management (Basic profile setup, photo upload)
+- [x] Image upload functionality with Multer
+- [x] Image optimization and compression implementation
+- [x] Add password reset & validation (regex, strong password)
+- [x] Secure routes with JWT middleware
+- [x] Parameterized SQL queries to prevent SQLi
+- [x] Frontend validation and form accessibility
+- [ ] Security tests: SQLi, XSS (OWASP ZAP)
+- [x] Profile photo and cover photo management
+- [x] Social media linking functionality
+- [x] API endpoints for profile CRUD operations
+- [x] Frontend React components for user registration and login
+
 
 NOTE: I will add as I go. 
 

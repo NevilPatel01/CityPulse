@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
 import request from 'supertest';
 import { createApp } from '../../app';
-import { cleanupDatabase } from '../setup';
+import { cleanupTestDatabase } from '../setup';
 
 const app = createApp();
 
 describe('Google OAuth Integration Tests', () => {
     beforeEach(async () => {
-        await cleanupDatabase();
+        await cleanupTestDatabase();
     });
 
     afterAll(async () => {
@@ -136,7 +136,7 @@ describe('Google OAuth Integration Tests', () => {
 
         it('should handle Google OAuth user account status checks', async () => {
             // This test would require setting up a user with inactive status
-            // For now, we test that active users can authenticate
+            // For now, I test that active users can authenticate
             const googleUser = {
                 googleId: 'google_active_user',
                 email: 'activeuser@gmail.com',

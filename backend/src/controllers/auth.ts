@@ -81,6 +81,18 @@ export const register = async (req: Request, res: Response) => {
 
         const user = userResult.rows[0];
 
+        // Create user_profiles record with default values
+        try {
+            await query(
+                `INSERT INTO user_profiles (user_id) VALUES ($1)`,
+                [user.id]
+            );
+            console.log(`[AUTH] User profiles record created for user: ${user.id}`);
+        } catch (profileError) {
+            console.error(`[AUTH] Error creating user_profiles record:`, profileError);
+            // Continue with registration even if profile creation fails
+        }
+
         // Generate tokens
         const tokenPayload: TokenPayload = {
             userId: user.id,
@@ -478,6 +490,18 @@ export const googleOAuth = async (req: Request, res: Response) => {
 
             user = userResult.rows[0];
             console.log('New user created:', user.id);
+
+            // Create user_profiles record for new Google OAuth user
+            try {
+                await query(
+                    `INSERT INTO user_profiles (user_id) VALUES ($1)`,
+                    [user.id]
+                );
+                console.log(`[GOOGLE_AUTH] User profiles record created for user: ${user.id}`);
+            } catch (profileError) {
+                console.error(`[GOOGLE_AUTH] Error creating user_profiles record:`, profileError);
+                // Continue with authentication even if profile creation fails
+            }
         }
 
         // Check account status

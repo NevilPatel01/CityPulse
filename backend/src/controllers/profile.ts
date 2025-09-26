@@ -10,14 +10,23 @@ export const getProfile = async (req: Request, res: Response) => {
         const currentUserId = req.user?.userId;
 
         console.log(`[PROFILE] Getting profile for username: ${username}`);
+        console.log(`[PROFILE] Current user ID: ${currentUserId}`);
 
-        // Get user basic info
+        // Get user basic info with profile data
         const userResult = await query(
             `SELECT u.id, u.username, u.email, u.full_name, u.bio, u.current_location, 
                     u.hometown, u.phone, u.created_at, u.last_login,
-                    up.profile_photo_url, up.cover_photo_url, up.instagram_url, 
-                    up.facebook_url, up.whatsapp_contact, up.profile_visibility,
-                    up.location_sharing, up.social_links_visible, up.travel_buddy_requests_enabled
+                    COALESCE(up.profile_photo_url, NULL) as profile_photo_url,
+                    COALESCE(up.cover_photo_url, NULL) as cover_photo_url,
+                    COALESCE(up.instagram_url, NULL) as instagram_url,
+                    COALESCE(up.facebook_url, NULL) as facebook_url,
+                    COALESCE(up.whatsapp_contact, NULL) as whatsapp_contact,
+                    COALESCE(up.website_url, NULL) as website_url,
+                    COALESCE(up.profile_visibility, 'public') as profile_visibility,
+                    COALESCE(up.location_sharing, true) as location_sharing,
+                    COALESCE(up.social_links_visible, true) as social_links_visible,
+                    COALESCE(up.travel_buddy_requests_enabled, true) as travel_buddy_requests_enabled,
+                    up.cities_visited
                 FROM users u
                 LEFT JOIN user_profiles up ON u.id = up.user_id
                 WHERE u.username = $1 AND u.account_status = 'active'`,
@@ -33,6 +42,71 @@ export const getProfile = async (req: Request, res: Response) => {
 
         const user = userResult.rows[0];
 
+        // Parse cities_visited JSON if it exists
+        let citiesVisited = [];
+        console.log('Raw cities_visited from DB:', user.cities_visited);
+        console.log('Type of cities_visited:', typeof user.cities_visited);
+        
+        if (user.cities_visited) {
+            try {
+                // Handle both JSON string and already parsed array
+                if (typeof user.cities_visited === 'string') {
+                    console.log('Cities_visited is string, value:', user.cities_visited);
+                    // Check if it's already a JSON string or needs parsing
+                    if (user.cities_visited.startsWith('[') || user.cities_visited.startsWith('{')) {
+                        citiesVisited = JSON.parse(user.cities_visited);
+                    } else {
+                        // If it's a single string, wrap it in an array
+                        citiesVisited = [user.cities_visited];
+                    }
+                } else if (Array.isArray(user.cities_visited)) {
+                    citiesVisited = user.cities_visited;
+                }
+            } catch (error) {
+                console.error('Error parsing cities_visited JSON:', error);
+                console.error('Raw cities_visited value:', user.cities_visited);
+                citiesVisited = [];
+            }
+        }
+
+        // If user_profiles record doesn't exist, create it with default values
+        if (!user.profile_photo_url && user.id === currentUserId) {
+            console.log(`[PROFILE] Creating user_profiles record for user: ${user.id}`);
+            try {
+                await query(
+                    `INSERT INTO user_profiles (user_id) VALUES ($1)`,
+                    [user.id]
+                );
+                console.log(`[PROFILE] User profiles record created for user: ${user.id}`);
+                
+                // Re-fetch user data with the new profile record
+                const updatedUserResult = await query(
+                    `SELECT u.id, u.username, u.email, u.full_name, u.bio, u.current_location, 
+                            u.hometown, u.phone, u.created_at, u.last_login,
+                            COALESCE(up.profile_photo_url, NULL) as profile_photo_url,
+                            COALESCE(up.cover_photo_url, NULL) as cover_photo_url,
+                            COALESCE(up.instagram_url, NULL) as instagram_url,
+                            COALESCE(up.facebook_url, NULL) as facebook_url,
+                            COALESCE(up.whatsapp_contact, NULL) as whatsapp_contact,
+                            COALESCE(up.profile_visibility, 'public') as profile_visibility,
+                            COALESCE(up.location_sharing, true) as location_sharing,
+                            COALESCE(up.social_links_visible, true) as social_links_visible,
+                            COALESCE(up.travel_buddy_requests_enabled, true) as travel_buddy_requests_enabled
+                        FROM users u
+                        LEFT JOIN user_profiles up ON u.id = up.user_id
+                        WHERE u.username = $1 AND u.account_status = 'active'`,
+                    [username]
+                );
+                
+                if (updatedUserResult.rows.length > 0) {
+                    Object.assign(user, updatedUserResult.rows[0]);
+                }
+            } catch (profileError) {
+                console.error(`[PROFILE] Error creating user_profiles record:`, profileError);
+                // Continue with default values if creation fails
+            }
+        }
+
         // Check privacy settings
         if (user.profile_visibility === 'private' && user.id !== currentUserId) {
             return res.status(403).json({
@@ -41,14 +115,14 @@ export const getProfile = async (req: Request, res: Response) => {
             });
         }
 
-        // Get user stats (for future implementation)
+        // Get user stats from actual tables - simplified for now
         const statsResult = await query(
             `SELECT 
                 0 as cities_count,
                 0 as recommendations_count,
                 0 as travel_buddies_count,
                 0 as points
-             WHERE $1 = $1`, // Placeholder query for now
+            FROM (SELECT $1::integer as user_id) u`,
             [user.id]
         );
 
@@ -59,7 +133,99 @@ export const getProfile = async (req: Request, res: Response) => {
             points: 0
         };
 
+        // Get user badges - simplified for now
+        const badgesResult = await query(
+            `SELECT 
+                id,
+                name,
+                description,
+                badge_icon_url,
+                achievement_type,
+                target_value,
+                0 as current_progress,
+                false as is_completed,
+                NULL as completed_at
+            FROM achievements 
+            WHERE is_active = true
+            ORDER BY created_at
+            LIMIT 3`,
+            []
+        );
+
+        const userBadges = badgesResult.rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            description: row.description,
+            badgeIconUrl: row.badge_icon_url,
+            achievementType: row.achievement_type,
+            targetValue: row.target_value,
+            currentProgress: row.current_progress,
+            isCompleted: row.is_completed,
+            completedAt: row.completed_at
+        }));
+
+        // Calculate profile completion status with proper null/undefined handling
+        const requiredFields = [
+            user.current_location,
+            user.hometown
+        ];
+        const optionalFields = [
+            user.bio,
+            user.profile_photo_url,
+            user.instagram_url,
+            user.facebook_url,
+            user.whatsapp_contact
+        ];
+
+        // Helper function to check if field has valid data
+        const hasValidData = (field: any): boolean => {
+            return field !== null && field !== undefined && field !== '' && field.trim() !== '';
+        };
+
+        const completedRequired = requiredFields.filter(hasValidData).length;
+        const completedOptional = optionalFields.filter(hasValidData).length;
+        const totalFields = requiredFields.length + optionalFields.length;
+        const completedFields = completedRequired + completedOptional;
+        const completionPercentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+        const isProfileComplete = completedRequired === requiredFields.length;
+
+        // Check if profile has minimum required data
+        const hasMinimumData = user.id && user.username && user.full_name;
+        const canDisplayProfile = hasMinimumData && isProfileComplete;
+
+        // For incomplete profiles, only show to the owner
+        console.log(`[PROFILE] Profile completion check: isComplete=${isProfileComplete}, user.id=${user.id}, currentUserId=${currentUserId}`);
+        
+        // Check if this is the user's own profile (by username match or user ID match)
+        const isOwnProfile = currentUserId ? user.id === currentUserId : false;
+        
+        // Special case: If user is not authenticated but profile is incomplete,
+        // I'll allow access but mark it as incomplete for the frontend to handle
+        if (!isProfileComplete && !currentUserId) {
+            console.log(`[PROFILE] Unauthenticated access to incomplete profile - allowing with completion form`);
+            // Don't block, let it continue to show the profile with completion status
+        } else if (!isProfileComplete && !isOwnProfile) {
+            console.log(`[PROFILE] Blocking incomplete profile for non-owner`);
+            return res.status(403).json({
+                success: false,
+                message: 'This user profile is incomplete and not available for viewing',
+                code: 'PROFILE_INCOMPLETE'
+            });
+        }
+        
+        // If profile is incomplete and it's the owner, allow access but mark as incomplete
+        if (!isProfileComplete && isOwnProfile) {
+            console.log(`[PROFILE] Incomplete profile for owner: ${user.id}, allowing access with completion form`);
+        }
+
         // Prepare response data
+        // Convert relative paths to full URLs for images
+        const baseUrl = process.env.API_BASE_URL || 'http://localhost:5001';
+        const profilePhotoUrl = user.profile_photo_url ? 
+            (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
+        const coverPhotoUrl = user.cover_photo_url ? 
+            (user.cover_photo_url.startsWith('http') ? user.cover_photo_url : `${baseUrl}${user.cover_photo_url}`) : null;
+
         const profileData = {
             id: user.id,
             username: user.username,
@@ -67,11 +233,30 @@ export const getProfile = async (req: Request, res: Response) => {
             bio: user.bio,
             currentLocation: user.current_location,
             hometown: user.hometown,
-            profilePhotoUrl: user.profile_photo_url,
-            coverPhotoUrl: user.cover_photo_url,
+            profilePhotoUrl: profilePhotoUrl,
+            coverPhotoUrl: coverPhotoUrl,
+            citiesVisited: citiesVisited,
+            instagramUrl: user.instagram_url,
+            facebookUrl: user.facebook_url,
+            whatsappContact: user.whatsapp_contact,
+            websiteUrl: user.website_url,
+            email: user.email,
             createdAt: user.created_at,
             lastLogin: user.last_login,
-            stats,
+            stats: {
+                cities: stats.cities_count,
+                recommendations: stats.recommendations_count,
+                travelBuddies: stats.travel_buddies_count,
+                points: stats.points
+            },
+            badges: userBadges,
+            profileCompletion: {
+                isComplete: isProfileComplete,
+                percentage: completionPercentage,
+                canBeDiscovered: canDisplayProfile,
+                hasMinimumData: hasMinimumData,
+                needsCompletion: !isProfileComplete
+            },
             // Only show sensitive data to profile owner
             ...(user.id === currentUserId && {
                 email: user.email,
@@ -100,11 +285,73 @@ export const getProfile = async (req: Request, res: Response) => {
             data: { user: profileData }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Get profile error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            hint: error.hint,
+            position: error.position
+        });
+        
+        // Handle specific database errors
+        if (error.code === 'ECONNREFUSED') {
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection failed. Please try again later.',
+                code: 'DATABASE_ERROR'
+            });
+        }
+        
+        if (error.code === '23505') { // Unique constraint violation
+            return res.status(409).json({
+                success: false,
+                message: 'Data conflict. Please try again.',
+                code: 'DATA_CONFLICT'
+            });
+        }
+
+        if (error.code === '23503') { // Foreign key constraint violation
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid data reference. Please check your request.',
+                code: 'INVALID_REFERENCE'
+            });
+        }
+
+        if (error.code === '42P01') { // Undefined table
+            return res.status(500).json({
+                success: false,
+                message: 'Database table not found. Please contact support.',
+                code: 'TABLE_NOT_FOUND'
+            });
+        }
+
+        if (error.code === '42703') { // Undefined column
+            return res.status(500).json({
+                success: false,
+                message: 'Database column not found. Please contact support.',
+                code: 'COLUMN_NOT_FOUND'
+            });
+        }
+
+        // Handle rate limiting
+        if (error.status === 429) {
+            return res.status(429).json({
+                success: false,
+                message: 'Too many requests. Please wait a moment before trying again.',
+                code: 'RATE_LIMITED',
+                retryAfter: 60 // seconds
+            });
+        }
+
+        // Generic server error
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error. Please try again later.',
+            code: 'INTERNAL_ERROR',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
@@ -128,18 +375,46 @@ export const updateProfile = async (req: Request, res: Response) => {
             instagramUrl,
             facebookUrl,
             whatsappContact,
+            websiteUrl,
             profileVisibility,
             locationSharing,
             socialLinksVisible,
-            travelBuddyRequestsEnabled
+            travelBuddyRequestsEnabled,
+            username,
+            citiesVisited
         } = req.body;
 
         console.log(`[PROFILE] Updating profile for user: ${userId}`);
 
+        // Validate username if provided
+        if (username !== undefined) {
+            // Check if username is valid format
+            if (!/^[a-zA-Z0-9_]+$/.test(username) || username.length < 3 || username.length > 50) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Username must be 3-50 characters and contain only letters, numbers, and underscores'
+                });
+            }
+
+            // Check if username is already taken by another user
+            const existingUser = await query(
+                'SELECT id FROM users WHERE username = $1 AND id != $2',
+                [username, userId]
+            );
+
+            if (existingUser.rows.length > 0) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Username already exists. Please choose a different username.'
+                });
+            }
+        }
+
         // Validate social media URLs
         const socialUrlErrors = validateSocialUrls({
             instagramUrl,
-            facebookUrl
+            facebookUrl,
+            websiteUrl
         });
 
         if (socialUrlErrors.length > 0) {
@@ -171,6 +446,10 @@ export const updateProfile = async (req: Request, res: Response) => {
             userUpdateFields.push(`phone = $${paramCount++}`);
             userUpdateValues.push(phone);
         }
+        if (username !== undefined) {
+            userUpdateFields.push(`username = $${paramCount++}`);
+            userUpdateValues.push(username);
+        }
 
         userUpdateFields.push(`updated_at = NOW()`);
         userUpdateValues.push(userId);
@@ -194,19 +473,21 @@ export const updateProfile = async (req: Request, res: Response) => {
             // Create new profile
             await query(
                 `INSERT INTO user_profiles (
-                    user_id, instagram_url, facebook_url, whatsapp_contact,
+                    user_id, instagram_url, facebook_url, whatsapp_contact, website_url,
                     profile_visibility, location_sharing, social_links_visible, 
-                    travel_buddy_requests_enabled
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    travel_buddy_requests_enabled, cities_visited
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
                 [
                     userId,
                     instagramUrl || null,
                     facebookUrl || null,
                     whatsappContact || null,
+                    websiteUrl || null,
                     profileVisibility || 'public',
                     locationSharing !== undefined ? locationSharing : true,
                     socialLinksVisible !== undefined ? socialLinksVisible : true,
-                    travelBuddyRequestsEnabled !== undefined ? travelBuddyRequestsEnabled : true
+                    travelBuddyRequestsEnabled !== undefined ? travelBuddyRequestsEnabled : true,
+                    citiesVisited ? JSON.stringify(citiesVisited) : '[]'
                 ]
             );
         } else {
@@ -227,6 +508,10 @@ export const updateProfile = async (req: Request, res: Response) => {
                 profileUpdateFields.push(`whatsapp_contact = $${paramCount++}`);
                 profileUpdateValues.push(whatsappContact || null);
             }
+            if (websiteUrl !== undefined) {
+                profileUpdateFields.push(`website_url = $${paramCount++}`);
+                profileUpdateValues.push(websiteUrl || null);
+            }
             if (profileVisibility !== undefined) {
                 profileUpdateFields.push(`profile_visibility = $${paramCount++}`);
                 profileUpdateValues.push(profileVisibility);
@@ -242,6 +527,12 @@ export const updateProfile = async (req: Request, res: Response) => {
             if (travelBuddyRequestsEnabled !== undefined) {
                 profileUpdateFields.push(`travel_buddy_requests_enabled = $${paramCount++}`);
                 profileUpdateValues.push(travelBuddyRequestsEnabled);
+            }
+            if (citiesVisited !== undefined) {
+                profileUpdateFields.push(`cities_visited = $${paramCount++}`);
+                // Ensure citiesVisited is properly formatted as JSON
+                const citiesJson = Array.isArray(citiesVisited) ? JSON.stringify(citiesVisited) : JSON.stringify([]);
+                profileUpdateValues.push(citiesJson);
             }
 
             if (profileUpdateFields.length > 0) {
@@ -347,11 +638,15 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
             await deleteOldImage(oldImageUrl);
         }
 
+        // Convert relative path to full URL
+        const baseUrl = process.env.API_BASE_URL || 'http://localhost:5001';
+        const fullImageUrl = `${baseUrl}${imagePath}`;
+
         res.json({
             success: true,
             message: `${type === 'profile' ? 'Profile' : 'Cover'} photo uploaded successfully`,
             data: {
-                imageUrl: imagePath,
+                imageUrl: fullImageUrl,
                 metadata: {
                     width: metadata.width,
                     height: metadata.height,
@@ -426,6 +721,178 @@ export const deleteProfilePhoto = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error('Delete profile photo error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Get user statistics
+export const getUserStats = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+
+        console.log(`[PROFILE] Getting stats for user: ${userId}`);
+
+        const statsResult = await query(
+            `SELECT 
+                COALESCE(cities_visited.count, 0) as cities_count,
+                COALESCE(recommendations.count, 0) as recommendations_count,
+                COALESCE(travel_buddies.count, 0) as travel_buddies_count,
+                COALESCE(user_points.points, 0) as points
+            FROM (SELECT $1 as user_id) u
+            LEFT JOIN (
+                SELECT COUNT(DISTINCT city) as count 
+                FROM user_trips 
+                WHERE user_id = $1 AND status = 'completed'
+            ) cities_visited ON true
+            LEFT JOIN (
+                SELECT COUNT(*) as count 
+                FROM recommendations 
+                WHERE user_id = $1 AND status = 'published'
+            ) recommendations ON true
+            LEFT JOIN (
+                SELECT COUNT(*) as count 
+                FROM travel_buddies 
+                WHERE (user_id = $1 OR buddy_user_id = $1) AND status = 'accepted'
+            ) travel_buddies ON true
+            LEFT JOIN (
+                SELECT COALESCE(SUM(points), 0) as points 
+                FROM user_activities 
+                WHERE user_id = $1
+            ) user_points ON true`,
+            [userId]
+        );
+
+        const stats = statsResult.rows[0] || {
+            cities_count: 0,
+            recommendations_count: 0,
+            travel_buddies_count: 0,
+            points: 0
+        };
+
+        res.json({
+            success: true,
+            data: {
+                cities: stats.cities_count,
+                recommendations: stats.recommendations_count,
+                travelBuddies: stats.travel_buddies_count,
+                points: stats.points
+            }
+        });
+
+    } catch (error) {
+        console.error('Get user stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Get user badges
+export const getUserBadges = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+
+        console.log(`[PROFILE] Getting badges for user: ${userId}`);
+
+        const badgesResult = await query(
+            `SELECT 
+                CASE 
+                    WHEN cities_visited.count >= 20 THEN 'globetrotter'
+                    WHEN cities_visited.count >= 10 THEN 'explorer'
+                    WHEN cities_visited.count >= 5 THEN 'traveler'
+                    ELSE NULL
+                END as travel_badge,
+                CASE 
+                    WHEN recommendations.count >= 50 THEN 'expert_recommender'
+                    WHEN recommendations.count >= 25 THEN 'active_recommender'
+                    WHEN recommendations.count >= 10 THEN 'contributor'
+                    ELSE NULL
+                END as recommendation_badge,
+                CASE 
+                    WHEN travel_buddies.count >= 20 THEN 'social_butterfly'
+                    WHEN travel_buddies.count >= 10 THEN 'connector'
+                    WHEN travel_buddies.count >= 5 THEN 'buddy_maker'
+                    ELSE NULL
+                END as social_badge,
+                CASE 
+                    WHEN user_points.points >= 10000 THEN 'elite'
+                    WHEN user_points.points >= 5000 THEN 'veteran'
+                    WHEN user_points.points >= 1000 THEN 'enthusiast'
+                    ELSE NULL
+                END as points_badge
+            FROM (SELECT $1 as user_id) u
+            LEFT JOIN (
+                SELECT COUNT(DISTINCT city) as count 
+                FROM user_trips 
+                WHERE user_id = $1 AND status = 'completed'
+            ) cities_visited ON true
+            LEFT JOIN (
+                SELECT COUNT(*) as count 
+                FROM recommendations 
+                WHERE user_id = $1 AND status = 'published'
+            ) recommendations ON true
+            LEFT JOIN (
+                SELECT COUNT(*) as count 
+                FROM travel_buddies 
+                WHERE (user_id = $1 OR buddy_user_id = $1) AND status = 'accepted'
+            ) travel_buddies ON true
+            LEFT JOIN (
+                SELECT COALESCE(SUM(points), 0) as points 
+                FROM user_activities 
+                WHERE user_id = $1
+            ) user_points ON true`,
+            [userId]
+        );
+
+        const badges = badgesResult.rows[0] || {};
+        const userBadges = Object.values(badges).filter(badge => badge !== null);
+
+        // Badge definitions with icons and descriptions
+        const badgeDefinitions = {
+            globetrotter: { icon: '🌍', label: 'Globetrotter', description: 'Visited 20+ cities' },
+            explorer: { icon: '🧭', label: 'Explorer', description: 'Visited 10+ cities' },
+            traveler: { icon: '✈️', label: 'Traveler', description: 'Visited 5+ cities' },
+            expert_recommender: { icon: '⭐', label: 'Expert', description: '50+ recommendations' },
+            active_recommender: { icon: '📝', label: 'Active', description: '25+ recommendations' },
+            contributor: { icon: '💡', label: 'Contributor', description: '10+ recommendations' },
+            social_butterfly: { icon: '🦋', label: 'Social Butterfly', description: '20+ travel buddies' },
+            connector: { icon: '🤝', label: 'Connector', description: '10+ travel buddies' },
+            buddy_maker: { icon: '👥', label: 'Buddy Maker', description: '5+ travel buddies' },
+            elite: { icon: '👑', label: 'Elite', description: '10,000+ points' },
+            veteran: { icon: '🏆', label: 'Veteran', description: '5,000+ points' },
+            enthusiast: { icon: '🔥', label: 'Enthusiast', description: '1,000+ points' }
+        };
+
+        const badgesWithDetails = userBadges.map(badge => ({
+            id: badge,
+            ...badgeDefinitions[badge as keyof typeof badgeDefinitions]
+        }));
+
+        res.json({
+            success: true,
+            data: { badges: badgesWithDetails }
+        });
+
+    } catch (error) {
+        console.error('Get user badges error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

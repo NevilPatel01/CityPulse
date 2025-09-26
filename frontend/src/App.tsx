@@ -1,5 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { PublicRoute } from './components/auth/PublicRoute';
 import LandingPage from './components/landing/LandingPage';
 
 import AboutPage from './pages/AboutPage.tsx';
@@ -10,6 +14,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard.tsx';
 import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -32,21 +37,61 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/features" element={<FeaturesPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard/*" element={<Dashboard />} />
-        <Route path="/profile/:username" element={<ProfilePage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Router>
+    <ToastProvider>
+      <AuthProvider>
+        <Router>
+        <Routes>
+          {/* Public routes - accessible without authentication */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          
+          {/* Auth routes - only accessible when NOT authenticated */}
+          <Route path="/login" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
+          <Route path="/signup" element={
+            <PublicRoute>
+              <SignupPage />
+            </PublicRoute>
+          } />
+          <Route path="/reset-password" element={
+            <PublicRoute>
+              <ResetPasswordPage />
+            </PublicRoute>
+          } />
+          <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
+          
+          {/* Protected routes - require authentication */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard/*" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile/:username" element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* 404 route */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Router>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

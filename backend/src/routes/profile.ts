@@ -4,7 +4,9 @@ import {
     getProfile,
     updateProfile,
     uploadProfilePhoto,
-    deleteProfilePhoto
+    deleteProfilePhoto,
+    getUserStats,
+    getUserBadges
 } from '../controllers/profile';
 import {
     updateProfileSchema,
@@ -78,6 +80,21 @@ router.delete(
     profileLimiter,
     authenticateToken,
     deleteProfilePhoto
+);
+
+// Statistics and badges routes
+router.get(
+    '/stats',
+    profileLimiter,
+    authenticateToken,
+    getUserStats
+);
+
+router.get(
+    '/badges',
+    profileLimiter,
+    authenticateToken,
+    getUserBadges
 );
 
 export default router;

@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
+import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
     console.log('[APP] Creating Express application...');
@@ -18,7 +19,7 @@ export const createApp = (): express.Express => {
                 defaultSrc: ["'self'"],           // Only load resources from same origin
                 styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for UI frameworks
                 scriptSrc: ["'self'"],           // Only scripts from same origin
-                imgSrc: ["'self'", "data:", "https:"], // Images from self, data URLs, and HTTPS
+                imgSrc: ["'self'", "data:", "https:", "http://localhost:5001"], // Images from self, data URLs, HTTPS, and backend
             },
         },
         crossOriginEmbedderPolicy: false       // for Production need to enable
@@ -57,18 +58,12 @@ export const createApp = (): express.Express => {
         next();
     });
 
-    console.log('[APP] Setting up health check endpoint...');
+    console.log('[APP] Setting up health check endpoints...');
     // Health check endpoint - It provides server status for monitoring/testing
-    // It returns JSON with server status, message, timestamp, and environment info
-    app.get('/api/health', (req, res) => {
-        console.log('[API] Health check requested');
-        res.json({
-            status: 'OK',
-            message: 'CityPulse API is running',
-            timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV || 'development'
-        });
-    });
+    app.get('/api/health', healthCheck);
+    
+    // Database schema check endpoint
+    app.get('/api/health/schema', schemaCheck);
 
     console.log('[APP] Setting up authentication routes...');
     // Authentication routes - it has all auth endpoints are under /api/auth

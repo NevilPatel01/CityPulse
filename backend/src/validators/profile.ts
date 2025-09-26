@@ -15,7 +15,13 @@ export const updateProfileSchema = z.object({
     }).optional(),
     locationSharing: z.boolean().optional(),
     socialLinksVisible: z.boolean().optional(),
-    travelBuddyRequestsEnabled: z.boolean().optional()
+    travelBuddyRequestsEnabled: z.boolean().optional(),
+    username: z.string()
+        .min(3, 'Username must be at least 3 characters')
+        .max(50, 'Username must be 50 characters or less')
+        .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+        .optional(),
+    citiesVisited: z.array(z.string()).optional()
 });
 
 // Username validation schema for profile viewing
@@ -97,6 +103,11 @@ export const validateSocialUrl = (url: string, platform: string): boolean => {
     try {
         const urlObj = new URL(url);
         
+        // Allow any valid URL for general social links
+        if (platform === 'website' || platform === 'linkedin' || platform === 'email') {
+            return true;
+        }
+        
         switch (platform) {
             case 'instagram':
                 return urlObj.hostname === 'www.instagram.com' || urlObj.hostname === 'instagram.com';
@@ -120,6 +131,11 @@ export const validateSocialUrls = (data: any) => {
     
     if (data.facebookUrl && !validateSocialUrl(data.facebookUrl, 'facebook')) {
         errors.push('Facebook URL must be a valid Facebook profile URL');
+    }
+    
+    // Allow any valid URL for website
+    if (data.websiteUrl && !validateSocialUrl(data.websiteUrl, 'website')) {
+        errors.push('Website URL must be a valid URL');
     }
     
     return errors;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import { Header } from '../components/layout/Header';
 
 // Types
@@ -216,6 +217,10 @@ const BottomNav = () => {
 export default function Dashboard() {
     const navigate = useNavigate();
     const { isAuthenticated, isLoading: authLoading } = useAuth();
+    
+    // Additional auth guard for extra protection
+    useAuthGuard({ requireAuth: true });
+    
     const [isLoading, setIsLoading] = useState(true);
 
     // Mock recommendations data

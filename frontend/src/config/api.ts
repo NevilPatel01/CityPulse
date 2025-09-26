@@ -72,6 +72,16 @@ export const apiEndpoints = {
     // Health check
     health: buildApiUrl('api/health'),
 
+    // Profile endpoints
+    profile: {
+        get: (username: string) => buildApiUrl(`api/profile/${username}`),
+        update: buildApiUrl('api/profile'),
+        uploadPhoto: buildApiUrl('api/profile/photo'),
+        deletePhoto: (type: string) => buildApiUrl(`api/profile/photo/${type}`),
+        getStats: buildApiUrl('api/profile/stats'),
+        getBadges: buildApiUrl('api/profile/badges'),
+    },
+
 };
 
 /**
@@ -83,9 +93,13 @@ export const apiRequest = async <T = unknown>(
 ): Promise<T> => {
     const { retries, timeout } = apiConfig;
 
+    // Get auth token from localStorage
+    const authToken = localStorage.getItem('authToken');
+    
     const defaultOptions: RequestInit = {
         headers: {
             'Content-Type': 'application/json',
+            ...(authToken && { Authorization: `Bearer ${authToken}` }),
             ...options.headers,
         },
         credentials: 'include', // Include cookies for auth
