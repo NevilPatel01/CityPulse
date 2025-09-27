@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     cover_photo_url VARCHAR(255),
     instagram_url VARCHAR(255),
     facebook_url VARCHAR(255),
+    linkedin_url VARCHAR(255),
     whatsapp_contact VARCHAR(50),
     website_url VARCHAR(255),
     cities_visited JSONB DEFAULT '[]'::JSONB,

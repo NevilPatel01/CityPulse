@@ -9,6 +9,8 @@ export const updateProfileSchema = z.object({
     phone: z.string().max(20, 'Phone number must be 20 characters or less').optional(),
     instagramUrl: z.string().url('Invalid Instagram URL').or(z.string().length(0)).optional(),
     facebookUrl: z.string().url('Invalid Facebook URL').or(z.string().length(0)).optional(),
+    linkedinUrl: z.string().url('Invalid LinkedIn URL').or(z.string().length(0)).optional(),
+    websiteUrl: z.string().url('Invalid Website URL').or(z.string().length(0)).optional(),
     whatsappContact: z.string().max(50, 'WhatsApp contact must be 50 characters or less').optional(),
     profileVisibility: z.enum(['public', 'private'], {
         message: 'Profile visibility must be either public or private'

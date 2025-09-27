@@ -34,6 +34,16 @@
 - [x] API endpoints for profile CRUD operations
 - [x] Frontend React components for user registration and login
 
+### Week 3 (Sept 22)
+- [ ] Create and submit progress report and demo video
+- [x] City and Category Management (Cities, Recommendation_Categories tables)
+- [ ] Basic recommendation creation functionality
+- [x] Recommendation CRUD API endpoints
+- [ ] photo upload for recommendations
+- [ ] Frontend forms for recommendation creation
+- [ ] Basic search functionality implementation
+- [ ] Integration tests for recommendation endpoints and E2E Test
+
 
 NOTE: I will add as I go. 
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { useAuth } from '../hooks/useAuth';
@@ -22,8 +22,42 @@ export default function ProfilePage() {
     profile?: string;
     cover?: string;
   }>({});
+  const [recommendationCount, setRecommendationCount] = useState(0);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
+
+  // Fetch recommendation count
+  useEffect(() => {
+    const fetchRecommendationCount = async () => {
+      try {
+        const apiUrl = import.meta.env.PROD 
+          ? '/api/recommendations' 
+          : 'http://localhost:5001/api/recommendations';
+        
+        const response = await fetch(`${apiUrl}?user_id=${profile?.id || ''}`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setRecommendationCount(data.pagination?.total || 0);
+        } else {
+          console.warn('Failed to fetch recommendation count:', response.status);
+          setRecommendationCount(0);
+        }
+      } catch (error) {
+        console.error('Error fetching recommendation count:', error);
+        setRecommendationCount(0);
+      }
+    };
+
+    if (profile?.id) {
+      fetchRecommendationCount();
+    }
+  }, [profile?.id]);
 
   const handleEditProfile = () => {
     setShowEditModal(true);
@@ -437,8 +471,63 @@ export default function ProfilePage() {
                 <div className="min-h-[400px]">
                   {activeTab === 0 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-primary mb-4">My Recommendations</h3>
-                      <p className="text-muted">Your recommendations will appear here...</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-primary">My Recommendations</h3>
+                        {isOwnProfile && recommendationCount > 0 && (
+                          <button
+                            onClick={() => navigate('/recommendations/create')}
+                            className="bg-pulse hover:bg-pulse/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 hover-lift"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Recommendation
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isOwnProfile ? (
+                        recommendationCount === 0 ? (
+                          <div className="text-center py-12">
+                            <div className="text-muted mb-4">
+                              <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
+                              </svg>
+                            </div>
+                            <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
+                            <p className="text-muted mb-4">Share your favorite places with the community</p>
+                            <button
+                              onClick={() => navigate('/recommendations/create')}
+                              className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                              Create Your First Recommendation
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="text-muted mb-4">
+                              <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
+                              </svg>
+                            </div>
+                            <h4 className="text-lg font-medium text-primary mb-2">Loading recommendations...</h4>
+                            <p className="text-muted">Fetching your recommendations</p>
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="text-muted mb-4">
+                            <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
+                          <p className="text-muted">This user hasn't shared any recommendations yet</p>
+                        </div>
+                      )}
                     </div>
                   )}
                   {activeTab === 1 && (

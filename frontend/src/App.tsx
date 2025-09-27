@@ -15,6 +15,9 @@ import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard.tsx';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import { RecommendationsPage } from './pages/RecommendationsPage';
+import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
+import { RecommendationDetailPage } from './pages/RecommendationDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -85,6 +88,14 @@ function App() {
               <SettingsPage />
             </ProtectedRoute>
           } />
+          
+          <Route path="/recommendations" element={<RecommendationsPage />} />
+          <Route path="/recommendations/create" element={
+            <ProtectedRoute>
+              <CreateRecommendationPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/recommendations/:id" element={<RecommendationDetailPage />} />
           
           {/* 404 route */}
           <Route path="*" element={<NotFoundPage />} />

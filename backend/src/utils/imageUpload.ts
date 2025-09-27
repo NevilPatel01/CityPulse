@@ -40,13 +40,40 @@ export const upload = multer({
     }
 });
 
+// Create multer upload instance for multiple files (recommendations)
+export const uploadMultiple = multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: MAX_FILE_SIZE,
+        files: 10 // Allow up to 10 files for recommendations
+    }
+});
+
 // Image processing and optimization
 export const processImage = async (
     buffer: Buffer,
-    type: 'profile' | 'cover',
+    type: 'profile' | 'cover' | 'recommendation',
     filename: string
 ): Promise<string> => {
-    const uploadsDir = path.join(process.cwd(), 'uploads', type === 'profile' ? 'profiles' : 'covers');
+    let uploadsDir: string;
+    let resizeOptions: { width: number; height: number; fit: 'cover' | 'inside'; position: string };
+    let jpegOptions: { quality: number; progressive: boolean };
+
+    if (type === 'profile') {
+        uploadsDir = path.join(process.cwd(), 'uploads', 'profiles');
+        resizeOptions = { width: 400, height: 400, fit: 'cover', position: 'center' };
+        jpegOptions = { quality: 90, progressive: true };
+    } else if (type === 'cover') {
+        uploadsDir = path.join(process.cwd(), 'uploads', 'covers');
+        resizeOptions = { width: 1200, height: 400, fit: 'cover', position: 'center' };
+        jpegOptions = { quality: 85, progressive: true };
+    } else {
+        // Recommendation photos: resize to 800x600, optimize
+        uploadsDir = path.join(process.cwd(), 'uploads', 'recommendations');
+        resizeOptions = { width: 800, height: 600, fit: 'cover', position: 'center' };
+        jpegOptions = { quality: 85, progressive: true };
+    }
     
     // Ensure directory exists
     await fs.mkdir(uploadsDir, { recursive: true });
@@ -54,33 +81,15 @@ export const processImage = async (
     const outputPath = path.join(uploadsDir, filename);
     
     try {
-        if (type === 'profile') {
-            // Profile photos: resize to 400x400, optimize
-            await sharp(buffer)
-                .resize(400, 400, {
-                    fit: 'cover',
-                    position: 'center'
-                })
-                .jpeg({
-                    quality: 90,
-                    progressive: true
-                })
-                .toFile(outputPath);
-        } else {
-            // Cover photos: resize to 1200x400, optimize
-            await sharp(buffer)
-                .resize(1200, 400, {
-                    fit: 'cover',
-                    position: 'center'
-                })
-                .jpeg({
-                    quality: 85,
-                    progressive: true
-                })
-                .toFile(outputPath);
-        }
+        await sharp(buffer)
+            .resize(resizeOptions.width, resizeOptions.height, {
+                fit: resizeOptions.fit,
+                position: resizeOptions.position
+            })
+            .jpeg(jpegOptions)
+            .toFile(outputPath);
         
-        return `/uploads/${type === 'profile' ? 'profiles' : 'covers'}/${filename}`;
+        return `/uploads/${type === 'profile' ? 'profiles' : type === 'cover' ? 'covers' : 'recommendations'}/${filename}`;
     } catch (error) {
         console.error('Error processing image:', error);
         throw new Error('Failed to process image');
@@ -88,7 +97,7 @@ export const processImage = async (
 };
 
 // Generate unique filename
-export const generateFilename = (originalName: string, userId: number, type: 'profile' | 'cover'): string => {
+export const generateFilename = (originalName: string, userId: number, type: 'profile' | 'cover' | 'recommendation'): string => {
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
     const extension = 'jpg'; // Always save as JPEG after processing

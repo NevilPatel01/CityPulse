@@ -374,6 +374,7 @@ export const updateProfile = async (req: Request, res: Response) => {
             phone,
             instagramUrl,
             facebookUrl,
+            linkedinUrl,
             whatsappContact,
             websiteUrl,
             profileVisibility,
@@ -473,14 +474,15 @@ export const updateProfile = async (req: Request, res: Response) => {
             // Create new profile
             await query(
                 `INSERT INTO user_profiles (
-                    user_id, instagram_url, facebook_url, whatsapp_contact, website_url,
+                    user_id, instagram_url, facebook_url, linkedin_url, whatsapp_contact, website_url,
                     profile_visibility, location_sharing, social_links_visible, 
                     travel_buddy_requests_enabled, cities_visited
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
                 [
                     userId,
                     instagramUrl || null,
                     facebookUrl || null,
+                    linkedinUrl || null,
                     whatsappContact || null,
                     websiteUrl || null,
                     profileVisibility || 'public',
@@ -503,6 +505,10 @@ export const updateProfile = async (req: Request, res: Response) => {
             if (facebookUrl !== undefined) {
                 profileUpdateFields.push(`facebook_url = $${paramCount++}`);
                 profileUpdateValues.push(facebookUrl || null);
+            }
+            if (linkedinUrl !== undefined) {
+                profileUpdateFields.push(`linkedin_url = $${paramCount++}`);
+                profileUpdateValues.push(linkedinUrl || null);
             }
             if (whatsappContact !== undefined) {
                 profileUpdateFields.push(`whatsapp_contact = $${paramCount++}`);
@@ -641,6 +647,10 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         // Convert relative path to full URL
         const baseUrl = process.env.API_BASE_URL || 'http://localhost:5001';
         const fullImageUrl = `${baseUrl}${imagePath}`;
+        
+        // Set CORS headers for the response
+        res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:3001');
+        res.header('Access-Control-Allow-Credentials', 'true');
 
         res.json({
             success: true,

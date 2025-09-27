@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
+import recommendationRoutes from './routes/recommendations';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -19,7 +20,7 @@ export const createApp = (): express.Express => {
                 defaultSrc: ["'self'"],           // Only load resources from same origin
                 styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for UI frameworks
                 scriptSrc: ["'self'"],           // Only scripts from same origin
-                imgSrc: ["'self'", "data:", "https:", "http://localhost:5001"], // Images from self, data URLs, HTTPS, and backend
+                imgSrc: ["'self'", "data:", "https:", "http://localhost:5001", "http://localhost:3000", "http://localhost:3001"], // Images from self, data URLs, HTTPS, and backend
             },
         },
         crossOriginEmbedderPolicy: false       // for Production need to enable
@@ -74,9 +75,19 @@ export const createApp = (): express.Express => {
     // Profile routes - handles user profile management
     app.use('/api/profile', profileRoutes);
 
+    console.log('[APP] Setting up recommendation routes...');
+    // Recommendation routes - handles recommendation CRUD operations
+    app.use('/api/recommendations', recommendationRoutes);
+
     console.log('[APP] Setting up static file serving for uploads...');
-    // Serve uploaded images statically
-    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+    // Serve uploaded images statically with CORS headers
+    app.use('/uploads', (req, res, next) => {
+        res.header('Access-Control-Allow-Origin', frontendUrl);
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+        next();
+    }, express.static(path.join(process.cwd(), 'uploads')));
 
     console.log('[APP] Setting up error handlers...');
     // Global error handler - it catches all unhandled errors and formats responses
