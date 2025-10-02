@@ -14,6 +14,7 @@ export function ProfileActions({ isOwnProfile, onSettings, onShareProfile }: Pro
         });
       } catch (error) {
         console.log('Share cancelled');
+        console.error(error);
       }
     } else {
       // Fallback: copy to clipboard

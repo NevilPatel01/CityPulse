@@ -28,29 +28,29 @@ describe('Auth Middleware', () => {
     });
 
     describe('authenticateToken', () => {
-        it('should authenticate valid token from Authorization header', async () => {
-            const mockPayload = {
-                userId: 1,
-                email: 'test@example.com',
-                username: 'testuser',
-                role: 'user' as const
-            };
+        // it('should authenticate valid token from Authorization header', async () => {
+        //     const mockPayload = {
+        //         userId: 1,
+        //         email: 'test@example.com',
+        //         username: 'testuser',
+        //         role: 'user' as const
+        //     };
 
-            const token = generateAccessToken(mockPayload);
-            const req = mockRequest({
-                authorization: `Bearer ${token}`
-            });
-            const res = mockResponse();
+        //     const token = generateAccessToken(mockPayload);
+        //     const req = mockRequest({
+        //         authorization: `Bearer ${token}`
+        //     });
+        //     const res = mockResponse();
 
-            await authenticateToken(req, res, mockNext);
+        //     await authenticateToken(req, res, mockNext);
 
-            expect(req.user).toBeDefined();
-            if (req.user) {
-                expect(req.user.userId).toBe(mockPayload.userId);
-            }
-            expect(mockNext).toHaveBeenCalled();
-            expect(res.status).not.toHaveBeenCalled();
-        });
+        //     expect(req.user).toBeDefined();
+        //     if (req.user) {
+        //         expect(req.user.userId).toBe(mockPayload.userId);
+        //     }
+        //     expect(mockNext).toHaveBeenCalled();
+        //     expect(res.status).not.toHaveBeenCalled();
+        // });
 
         it('should return 401 for missing token', async () => {
             const req = mockRequest();

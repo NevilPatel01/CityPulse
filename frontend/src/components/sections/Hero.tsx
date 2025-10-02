@@ -1,7 +1,20 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui';
+import { useSafeToast } from '../../hooks/useSafeToast';
 
 export const Hero: React.FC = () => {
+  const navigate = useNavigate();
+  const { showInfo } = useSafeToast();
+
+  const handleJoinCityPulse = () => {
+    navigate('/signup');
+  };
+
+  const handleWatchDemo = () => {
+    showInfo('Coming Soon', 'Video will be added soon!', 3000);
+  };
+
   return (
     <section 
       className='py-20 px-4 lg:py-32'
@@ -26,6 +39,7 @@ export const Hero: React.FC = () => {
                 size='lg'
                 className='bg-pulse text-white hover:opacity-90 px-8 py-4 text-lg'
                 ariaLabel="Join CityPulse to start discovering cities like a local"
+                onClick={handleJoinCityPulse}
               >
                 Join CityPulse
               </Button>
@@ -34,6 +48,7 @@ export const Hero: React.FC = () => {
                 variant='outline'
                 className='border-subtle text-primary hover:bg-white hover:bg-opacity-10 px-8 py-4 text-lg'
                 ariaLabel="Watch demo video showing how CityPulse works"
+                onClick={handleWatchDemo}
               >
                 Watch Demo
               </Button>

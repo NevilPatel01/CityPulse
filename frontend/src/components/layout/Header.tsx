@@ -43,15 +43,23 @@ export const Header: React.FC = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Navigation buttons only for unauthenticated pages
-  const unauthPages = ['/', '/login', '/signup', '/reset-password'];
-  const showNavButtons = unauthPages.includes(location.pathname);
-  const navigationItems = showNavButtons
-    ? [
-        { path: '/features', label: 'Features', icon: '✨' },
-        { path: '/about', label: 'About', icon: '📖' },
-      ]
-    : [];
+  // Navigation logic
+  // Desktop navigation only shows on specific pages
+  const showDesktopNavButtons = ['/', '/features', '/about'].includes(location.pathname);
+  
+  // Mobile navigation items (includes login and signup when on unauthenticated pages)
+  const mobileNavigationItems = !isAuthenticated ? [
+    { path: '/features', label: 'Features', icon: '✨' },
+    { path: '/about', label: 'About', icon: '📖' },
+    { path: '/login', label: 'Login', icon: '🔒' },
+    { path: '/signup', label: 'Sign Up', icon: '✨' },
+  ] : [];
+  
+  // Desktop navigation items
+  const desktopNavigationItems = showDesktopNavButtons ? [
+    { path: '/features', label: 'Features', icon: '✨' },
+    { path: '/about', label: 'About', icon: '📖' },
+  ] : [];
 
   const isActivePath = (path: string) => location.pathname === path;
 
@@ -80,9 +88,9 @@ export const Header: React.FC = () => {
           </Link>
 
           {/* Desktop Navigation (only on unauthenticated pages) */}
-          {showNavButtons && (
+          {showDesktopNavButtons && !isAuthenticated && (
             <nav className='hidden lg:flex items-center gap-8' role="navigation" aria-label="Main navigation">
-              {navigationItems.map(({ path, label, icon }) => (
+              {desktopNavigationItems.map(({ path, label, icon }) => (
                 <Link
                   key={path}
                   to={path}
@@ -103,22 +111,9 @@ export const Header: React.FC = () => {
             {isAuthenticated && !isAuthPage ? (
               /* User Dropdown when authenticated and not on auth pages */
               <UserDropdown />
-            ) : (
-              /* Login/Signup buttons when not authenticated or on auth pages */
+            ) : !isAuthenticated ? (
               <>
-                <Link to="/login">
-                  <Button
-                    variant='ghost'
-                    size="sm"
-                    className='text-primary hover:bg-surface-glass hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-3'
-                    aria-label="Login to your account"
-                  >
-                    <span className="mr-1 text-sm" aria-hidden="true">🔒</span>
-                    <span className="text-sm">Login</span>
-                  </Button>
-                </Link>
-
-                {/* Sign Up Button - Hidden on mobile to save space */}
+                {/* Sign Up button only when not authenticated - Login moved to hamburger menu */}
                 <Link to="/signup" className="hidden md:block">
                   <Button 
                     size="sm"
@@ -128,108 +123,92 @@ export const Header: React.FC = () => {
                     <span className="text-sm">Sign Up</span>
                   </Button>
                 </Link>
-              </>
-            )}
 
-            {/* Mobile Menu Button */}
-            <button
-              className='mobile-menu-button lg:hidden p-3 rounded-md hover:bg-surface-glass transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center'
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-expanded={isMobileMenuOpen}
-              aria-controls="mobile-menu"
-              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-            >
-              <div className="w-6 h-6 flex flex-col justify-center items-center">
-                <span className={`block h-0.5 w-5 bg-primary transition-all duration-300 ${
-                  isMobileMenuOpen ? 'rotate-45 translate-y-1' : ''
-                }`} />
-                <span className={`block h-0.5 w-5 bg-primary transition-all duration-300 mt-1 ${
-                  isMobileMenuOpen ? 'opacity-0' : ''
-                }`} />
-                <span className={`block h-0.5 w-5 bg-primary transition-all duration-300 mt-1 ${
-                  isMobileMenuOpen ? '-rotate-45 -translate-y-1' : ''
-                }`} />
-              </div>
-            </button>
+                {/* Mobile Menu Button - Only visible when NOT authenticated */}
+                <button
+                  className='mobile-menu-button lg:hidden p-3 rounded-md hover:bg-surface-glass transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center'
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="mobile-menu"
+                  aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                >
+                  <div className="w-6 h-6 flex flex-col justify-center items-center">
+                    <span className={`block h-0.5 w-5 bg-white transition-all duration-300 ${
+                      isMobileMenuOpen ? 'rotate-45 translate-y-1' : ''
+                    }`} />
+                    <span className={`block h-0.5 w-5 bg-white transition-all duration-300 mt-1 ${
+                      isMobileMenuOpen ? 'opacity-0' : ''
+                    }`} />
+                    <span className={`block h-0.5 w-5 bg-white transition-all duration-300 mt-1 ${
+                      isMobileMenuOpen ? '-rotate-45 -translate-y-1' : ''
+                    }`} />
+                  </div>
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
+      {/* Mobile Menu Overlay - Only show when not authenticated */}
+      {isMobileMenuOpen && !isAuthenticated && (
         <div 
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           aria-hidden="true"
         />
       )}
 
-      {/* Mobile Menu Drawer */}
-      <nav
-        id="mobile-menu"
-        className={`mobile-menu fixed top-0 right-0 h-full w-80 max-w-[85vw] z-40 bg-surface border-l border-subtle transform transition-transform duration-300 ease-in-out lg:hidden ${
-          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-        role="navigation"
-        aria-label="Mobile navigation"
-      >
-        <div className="flex flex-col h-full">
-          {/* Mobile Menu Header */}
-          <div className="flex items-center justify-between p-4 border-b border-subtle">
-            <h2 className="text-lg font-semibold text-primary">Menu</h2>
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="p-2 rounded-md hover:bg-surface-glass transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2"
-              aria-label="Close menu"
-            >
-              <span className="block w-6 h-6 relative">
-                <span className="block absolute top-1/2 left-1/2 w-4 h-0.5 bg-primary rotate-45 transform -translate-x-1/2 -translate-y-1/2" />
-                <span className="block absolute top-1/2 left-1/2 w-4 h-0.5 bg-primary -rotate-45 transform -translate-x-1/2 -translate-y-1/2" />
-              </span>
-            </button>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="flex-1 px-4 py-6 space-y-2">
-            {navigationItems.map(({ path, label, icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`flex items-center w-full px-4 py-3 text-left rounded-md transition-all duration-200 hover:bg-surface-glass hover:scale-105 active:scale-95 ${
-                  isActivePath(path) 
-                    ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
-                    : 'text-primary hover:text-pulse'
-                }`}
-                aria-current={isActivePath(path) ? 'page' : undefined}
+      {/* Mobile Menu Drawer - Only show when not authenticated */}
+      {!isAuthenticated && (
+        <nav
+          id="mobile-menu"
+          className={`mobile-menu fixed top-0 right-0 h-full w-80 max-w-[85vw] z-40 bg-base border-l border-subtle transform transition-transform duration-300 ease-in-out lg:hidden ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          role="navigation"
+          aria-label="Mobile navigation"
+        >
+          <div className="flex flex-col h-full">
+            {/* Mobile Menu Header */}
+            <div className="flex items-center justify-between p-4 border-b border-subtle">
+              <h2 className="text-lg font-semibold text-primary">Menu</h2>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-md hover:bg-surface-glass transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2"
+                aria-label="Close menu"
               >
-                <span className="mr-3 text-lg" aria-hidden="true">{icon}</span>
-                <span className="font-medium">{label}</span>
-                {isActivePath(path) && (
-                  <span className="ml-auto text-pulse" aria-hidden="true">●</span>
-                )}
-              </Link>
-            ))}
+                <span className="block w-6 h-6 relative">
+                  <span className="block absolute top-1/2 left-1/2 w-4 h-0.5 bg-white rotate-45 transform -translate-x-1/2 -translate-y-1/2" />
+                  <span className="block absolute top-1/2 left-1/2 w-4 h-0.5 bg-white -rotate-45 transform -translate-x-1/2 -translate-y-1/2" />
+                </span>
+              </button>
+            </div>
 
-            {/* Mobile-only Sign Up Button */}
-            <div className="pt-4 mt-4 border-t border-subtle md:hidden">
-              <Link
-                to="/signup"
-                className="flex items-center w-full px-4 py-3 text-left rounded-md bg-pulse text-pulse-fg hover:opacity-90 transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                <span className="mr-3 text-lg" aria-hidden="true">✨</span>
-                <span className="font-medium">Sign Up</span>
-              </Link>
+            {/* Navigation Links */}
+            <div className="flex-1 px-4 py-6 space-y-2">
+              {/* Unauthenticated user navigation */}
+              {mobileNavigationItems.map(({ path, label, icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`flex items-center w-full px-4 py-3 text-left rounded-md transition-all duration-200 hover:bg-surface-glass hover:scale-105 active:scale-95 ${
+                    isActivePath(path) 
+                      ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
+                      : 'text-primary hover:text-pulse'
+                  }`}
+                  aria-current={isActivePath(path) ? 'page' : undefined}
+                >
+                  <span className="mr-3 text-lg" aria-hidden="true">{icon}</span>
+                  <span className="font-medium">{label}</span>
+                  {isActivePath(path) && (
+                    <span className="ml-auto text-pulse" aria-hidden="true">●</span>
+                  )}
+                </Link>
+              ))}
             </div>
           </div>
-
-          {/* Mobile Menu Footer */}
-          <div className="p-4 border-t border-subtle">
-            <div className="flex items-center justify-center text-sm text-muted">
-              <span className="mr-1" aria-hidden="true">📱</span>
-              Mobile Menu
-            </div>
-          </div>
-        </div>
-      </nav>
+        </nav>
+      )}
     </>
   );
 };

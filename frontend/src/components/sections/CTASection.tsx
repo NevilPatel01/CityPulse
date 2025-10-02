@@ -1,7 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui';
 
 export const CTASection: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleJoinCityPulse = () => {
+    navigate('/signup');
+  };
+
   return (
     <section className='py-20 px-4'>
       <div className='container mx-auto text-center'>
@@ -17,6 +24,7 @@ export const CTASection: React.FC = () => {
             <Button
               size='lg'
               className='bg-pulse text-white hover:opacity-90 px-8 py-4 text-lg'
+              onClick={handleJoinCityPulse}
             >
               Join CityPulse Today
             </Button>

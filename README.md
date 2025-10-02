@@ -22,8 +22,8 @@
 
 ### Week 2 (Sept 15)
 - [x] User Profile Management (Basic profile setup, photo upload)
-- [x] Image upload functionality with Multer
-- [x] Image optimization and compression implementation
+- [ ] Image upload functionality with Multer
+- [ ] Image optimization and compression implementation
 - [x] Add password reset & validation (regex, strong password)
 - [x] Secure routes with JWT middleware
 - [x] Parameterized SQL queries to prevent SQLi
@@ -35,7 +35,7 @@
 - [x] Frontend React components for user registration and login
 
 ### Week 3 (Sept 22)
-- [ ] Create and submit progress report and demo video
+- [x] Create and submit progress report and demo video
 - [x] City and Category Management (Cities, Recommendation_Categories tables)
 - [ ] Basic recommendation creation functionality
 - [x] Recommendation CRUD API endpoints

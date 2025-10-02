@@ -119,3 +119,12 @@
     box-shadow: 0 0 0 0 rgba(255, 181, 71, 0);
   }
 }
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

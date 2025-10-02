@@ -52,8 +52,11 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className = '' }) =>
 
   if (!user) return null;
 
+  const isActivePath = (path: string) => location.pathname === path;
+  const isProfilePath = () => location.pathname.startsWith('/profile');
+
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative ml-auto ${className}`} ref={dropdownRef}>
       {/* User Avatar Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -95,7 +98,7 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className = '' }) =>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-base border border-subtle rounded-lg shadow-lg backdrop-blur-glass z-50">
+        <div className="absolute right-0 mt-2 w-56 bg-base border border-subtle rounded-lg shadow-lg z-50">
           {/* User Info Section */}
           <div className="px-4 py-3 border-b border-subtle">
             <div className="flex items-center space-x-3">
@@ -129,30 +132,51 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className = '' }) =>
           {/* Menu Items */}
           <div className="py-1">
             <Link
-              to={`/profile/${user.username}`}
-              className="flex items-center px-4 py-2 text-sm text-primary hover:bg-surface-glass transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="mr-3 text-base">👤</span>
-              My Profile
-            </Link>
-            
-            <Link
-              to="/settings"
-              className="flex items-center px-4 py-2 text-sm text-primary hover:bg-surface-glass transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="mr-3 text-base">⚙️</span>
-              Settings
-            </Link>
-            
-            <Link
               to="/dashboard"
-              className="flex items-center px-4 py-2 text-sm text-primary hover:bg-surface-glass transition-colors"
+              className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                isActivePath('/dashboard') 
+                  ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
+                  : 'text-primary hover:bg-surface-glass'
+              }`}
               onClick={() => setIsOpen(false)}
             >
               <span className="mr-3 text-base">📊</span>
               Dashboard
+              {isActivePath('/dashboard') && (
+                <span className="ml-auto text-pulse" aria-hidden="true">●</span>
+              )}
+            </Link>
+            
+            <Link
+              to={`/profile/${user.username}`}
+              className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                isProfilePath() 
+                  ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
+                  : 'text-primary hover:bg-surface-glass'
+              }`}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="mr-3 text-base">👤</span>
+              My Profile
+              {isProfilePath() && (
+                <span className="ml-auto text-pulse" aria-hidden="true">●</span>
+              )}
+            </Link>
+            
+            <Link
+              to="/settings"
+              className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                isActivePath('/settings') 
+                  ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
+                  : 'text-primary hover:bg-surface-glass'
+              }`}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="mr-3 text-base">⚙️</span>
+              Settings
+              {isActivePath('/settings') && (
+                <span className="ml-auto text-pulse" aria-hidden="true">●</span>
+              )}
             </Link>
 
             <div className="border-t border-subtle my-1"></div>
