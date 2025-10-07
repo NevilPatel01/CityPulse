@@ -22,7 +22,7 @@ export default function ProfilePage() {
     profile?: string;
     cover?: string;
   }>({});
-  const [recommendationCount, setRecommendationCount] = useState(0);
+  const [recommendationCount, setRecommendationCount] = useState<number>(0);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
 

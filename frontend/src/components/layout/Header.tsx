@@ -52,7 +52,7 @@ export const Header: React.FC = () => {
     { path: '/features', label: 'Features', icon: '✨' },
     { path: '/about', label: 'About', icon: '📖' },
     { path: '/login', label: 'Login', icon: '🔒' },
-    { path: '/signup', label: 'Sign Up', icon: '✨' },
+    { path: '/signup', label: 'Sign Up', icon: '👤' },
   ] : [];
   
   // Desktop navigation items
@@ -113,16 +113,28 @@ export const Header: React.FC = () => {
               <UserDropdown />
             ) : !isAuthenticated ? (
               <>
-                {/* Sign Up button only when not authenticated - Login moved to hamburger menu */}
-                <Link to="/signup" className="hidden md:block">
-                  <Button 
-                    size="sm"
-                    className='bg-pulse text-pulse-fg hover:opacity-90 hover:shadow-lg hover:shadow-pulse/25 transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-4'
-                    aria-label="Create new account"
-                  >
-                    <span className="text-sm">Sign Up</span>
-                  </Button>
-                </Link>
+                {/* Login and Sign Up buttons when not authenticated - visible on desktop */}
+                <div className="hidden md:flex items-center gap-2">
+                  <Link to="/login">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className='border-pulse text-pulse hover:bg-pulse hover:text-white transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-4'
+                      aria-label="Sign in to your account"
+                    >
+                      <span className="text-sm">Login</span>
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button 
+                      size="sm"
+                      className='bg-pulse text-pulse-fg hover:opacity-90 hover:shadow-lg hover:shadow-pulse/25 transition-all duration-200 hover:scale-105 active:scale-95 min-h-[44px] px-4'
+                      aria-label="Create new account"
+                    >
+                      <span className="text-sm">Sign Up</span>
+                    </Button>
+                  </Link>
+                </div>
 
                 {/* Mobile Menu Button - Only visible when NOT authenticated */}
                 <button
