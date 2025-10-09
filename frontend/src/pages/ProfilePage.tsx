@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useProfile } from '../hooks/useProfile';
@@ -187,7 +188,7 @@ export default function ProfilePage() {
       <Header />
       
       {/* Main Content Layout - Exact Alex Kim Design */}
-      <main className="pt-16">
+      <main className="pt-16 pb-20 lg:pb-8"> {/* Add bottom padding for mobile navigation */}
         <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
             {/* Left Sidebar - Statistics and Actions - Hidden on mobile */}
@@ -626,6 +627,7 @@ export default function ProfilePage() {
           onSave={handleSaveProfile}
         />
       )}
+      <BottomNavigation />
     </div>
   );
 }

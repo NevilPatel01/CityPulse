@@ -3,14 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../ui';
 import { useAuth } from '../../hooks/useAuth';
 import { UserDropdown } from './UserDropdown';
+import { SearchBar } from './SearchBar';
 
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-
-  // Check if we're on an auth page (login, signup, reset-password)
-  const isAuthPage = ['/login', '/signup', '/reset-password'].includes(location.pathname);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -74,45 +72,71 @@ export const Header: React.FC = () => {
       </a>
 
       <header className='sticky top-0 z-40 border-b border-subtle backdrop-blur-glass bg-surface-glass/95 supports-[backdrop-filter]:bg-surface-glass/80'>
-        <div className='container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between'>
-          {/* Logo */}
-          <Link 
-            to="/" 
-            className='flex items-center gap-2 hover:opacity-80 transition-all duration-200 active:scale-95'
-            aria-label="CityPulse Home"
-          >
-            <div className='w-8 h-8 rounded-full bg-pulse flex items-center justify-center hover:shadow-lg hover:shadow-pulse/30 transition-shadow duration-200'>
-              <span className='text-white font-bold text-sm'>CP</span>
+        <div className='container mx-auto px-4 py-3 sm:py-4'>
+          {/* Authenticated User Layout - Logo, Search (Desktop only), User Dropdown */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              {/* Logo */}
+              <Link 
+                to="/dashboard"
+                className='flex items-center gap-2 hover:opacity-80 transition-all duration-200 active:scale-95 flex-shrink-0'
+                aria-label="CityPulse Dashboard"
+              >
+                <div className='w-8 h-8 rounded-full bg-pulse flex items-center justify-center hover:shadow-lg hover:shadow-pulse/30 transition-shadow duration-200'>
+                  <span className='text-white font-bold text-sm'>CP</span>
+                </div>
+                <span className='font-bold text-xl text-primary'>CityPulse</span>
+              </Link>
+
+              {/* Desktop Search Bar - Centered and Full Width */}
+              <div className="hidden md:flex flex-1 justify-center px-8">
+                <SearchBar />
+              </div>
+
+              {/* Mobile: Just spacer to push user dropdown to the right */}
+              <div className="md:hidden flex-1"></div>
+
+              {/* User Dropdown */}
+              <div className="flex-shrink-0">
+                <UserDropdown />
+              </div>
             </div>
-            <span className='font-bold text-xl text-primary'>CityPulse</span>
-          </Link>
+          ) : (
+            /* Unauthenticated User Layout */
+            <div className="flex items-center justify-between">
+              {/* Logo */}
+              <Link 
+                to="/" 
+                className='flex items-center gap-2 hover:opacity-80 transition-all duration-200 active:scale-95'
+                aria-label="CityPulse Home"
+              >
+                <div className='w-8 h-8 rounded-full bg-pulse flex items-center justify-center hover:shadow-lg hover:shadow-pulse/30 transition-shadow duration-200'>
+                  <span className='text-white font-bold text-sm'>CP</span>
+                </div>
+                <span className='font-bold text-xl text-primary'>CityPulse</span>
+              </Link>
 
-          {/* Desktop Navigation (only on unauthenticated pages) */}
-          {showDesktopNavButtons && !isAuthenticated && (
-            <nav className='hidden lg:flex items-center gap-8' role="navigation" aria-label="Main navigation">
-              {desktopNavigationItems.map(({ path, label, icon }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`text-primary hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 relative after:content-[""] after:absolute after:w-0 after:h-0.5 after:bg-pulse after:left-0 after:-bottom-1 after:transition-all after:duration-200 hover:after:w-full ${
-                    isActivePath(path) ? 'text-pulse after:w-full' : ''
-                  }`}
-                  aria-current={isActivePath(path) ? 'page' : undefined}
-                >
-                  <span className="mr-1" aria-hidden="true">{icon}</span>
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          )}
+              {/* Desktop Navigation (only on unauthenticated pages) */}
+              {showDesktopNavButtons && (
+                <nav className='hidden lg:flex items-center gap-8' role="navigation" aria-label="Main navigation">
+                  {desktopNavigationItems.map(({ path, label, icon }) => (
+                    <Link
+                      key={path}
+                      to={path}
+                      className={`text-primary hover:text-pulse transition-all duration-200 hover:scale-105 active:scale-95 relative after:content-[""] after:absolute after:w-0 after:h-0.5 after:bg-pulse after:left-0 after:-bottom-1 after:transition-all after:duration-200 hover:after:w-full ${
+                        isActivePath(path) ? 'text-pulse after:w-full' : ''
+                      }`}
+                      aria-current={isActivePath(path) ? 'page' : undefined}
+                    >
+                      <span className="mr-1" aria-hidden="true">{icon}</span>
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+              )}
 
-          {/* Action Buttons */}
-          <div className='flex items-center gap-3'>
-            {isAuthenticated && !isAuthPage ? (
-              /* User Dropdown when authenticated and not on auth pages */
-              <UserDropdown />
-            ) : !isAuthenticated ? (
-              <>
+              {/* Action Buttons for unauthenticated users */}
+              <div className='flex items-center gap-3'>
                 {/* Login and Sign Up buttons when not authenticated - visible on desktop */}
                 <div className="hidden md:flex items-center gap-2">
                   <Link to="/login">
@@ -156,9 +180,9 @@ export const Header: React.FC = () => {
                     }`} />
                   </div>
                 </button>
-              </>
-            ) : null}
-          </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 

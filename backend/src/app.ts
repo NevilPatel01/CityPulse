@@ -6,6 +6,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import recommendationRoutes from './routes/recommendations';
+import searchRoutes from './routes/search';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -78,6 +79,10 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up recommendation routes...');
     // Recommendation routes - handles recommendation CRUD operations
     app.use('/api/recommendations', recommendationRoutes);
+
+    console.log('[APP] Setting up search routes...');
+    // Search routes - handles search across recommendations, users, and cities
+    app.use('/api/search', searchRoutes);
 
     console.log('[APP] Setting up static file serving for uploads...');
     // Serve uploaded images statically with CORS headers

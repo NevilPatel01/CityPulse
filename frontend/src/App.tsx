@@ -15,6 +15,7 @@ import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard.tsx';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import SearchPage from './pages/SearchPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
 import { RecommendationDetailPage } from './pages/RecommendationDetailPage';
@@ -86,6 +87,11 @@ function App() {
           <Route path="/settings" element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/search" element={
+            <ProtectedRoute>
+              <SearchPage />
             </ProtectedRoute>
           } />
           

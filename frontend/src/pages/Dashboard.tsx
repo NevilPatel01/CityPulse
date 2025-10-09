@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
 
 // Types
 interface RecommendationCardProps {
@@ -186,34 +187,6 @@ const QuickLinksCard = () => {
     );
 };
 
-// Mobile Bottom Navigation
-const BottomNav = () => {
-    const navItems = [
-        { icon: "🏠", label: "Home", active: true },
-        { icon: "🔍", label: "Search", active: false },
-        { icon: "➕", label: "Add", active: false },
-        { icon: "💬", label: "Chat", active: false },
-        { icon: "👤", label: "Profile", active: false },
-    ];
-
-    return (
-        <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-base border-t border-subtle px-4 py-2">
-            <div className="flex justify-around">
-                {navItems.map((item, index) => (
-                    <button
-                        key={index}
-                        className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg ${item.active ? 'text-pulse' : 'text-muted'
-                            }`}
-                    >
-                        <span className="text-lg">{item.icon}</span>
-                        <span className="text-xs">{item.label}</span>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-};
-
 export default function Dashboard() {
     const navigate = useNavigate();
     const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -298,7 +271,7 @@ export default function Dashboard() {
                         </section>
                     </div>
                 </main>
-                <BottomNav />
+                <BottomNavigation />
             </div>
 
             {/* Desktop Layout */}
