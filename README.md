@@ -41,7 +41,7 @@
 - [x] Recommendation CRUD API endpoints
 - [ ] photo upload for recommendations
 - [ ] Frontend forms for recommendation creation
-- [ ] Basic search functionality implementation
+- [x] Basic search functionality implementation
 - [ ] Integration tests for recommendation endpoints and E2E Test
 
 
@@ -78,7 +78,7 @@ NOTE: I will add as I go.
 ## Localhost URL
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5001
-- PostgreSQL: localhost:5433
+- PostgreSQL: localhost:8080
 
 *CityPulse - Connecting Travelers, Sharing Experiences, Building Communities* 🌍✈️
 

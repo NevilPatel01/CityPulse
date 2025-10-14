@@ -1,14 +1,11 @@
 import { z } from 'zod';
 
-// Create recommendation schema
+// Create recommendation schema for travel places
 export const createRecommendationSchema = z.object({
-    title: z.string()
-        .min(3, 'Title must be at least 3 characters long')
-        .max(200, 'Title must not exceed 200 characters')
-        .trim(),
-    description: z.string()
-        .min(10, 'Description must be at least 10 characters long')
-        .max(2000, 'Description must not exceed 2000 characters')
+    // Basic Information
+    place_name: z.string()
+        .min(3, 'Place name must be at least 3 characters long')
+        .max(200, 'Place name must not exceed 200 characters')
         .trim(),
     category_id: z.number()
         .int('Category ID must be an integer')
@@ -28,19 +25,48 @@ export const createRecommendationSchema = z.object({
         .max(100, 'Custom city must not exceed 100 characters')
         .trim()
         .optional(),
-    price_range_min: z.number()
-        .min(0, 'Minimum price cannot be negative')
+    location: z.string()
+        .max(200, 'Location must not exceed 200 characters')
+        .trim()
         .optional(),
-    price_range_max: z.number()
-        .min(0, 'Maximum price cannot be negative')
-        .optional(),
-    difficulty_level: z.enum(['easy', 'medium', 'hard'], {
-        errorMap: () => ({ message: 'Difficulty level must be easy, medium, or hard' })
-    }).optional(),
     address: z.string()
         .max(500, 'Address must not exceed 500 characters')
         .trim()
         .optional(),
+    
+    // Details
+    description: z.string()
+        .min(10, 'Description must be at least 10 characters long')
+        .max(2000, 'Description must not exceed 2000 characters')
+        .trim(),
+    pros_points: z.string()
+        .max(1000, 'Pros/Points must not exceed 1000 characters')
+        .trim()
+        .optional(),
+    progress_percentage: z.number()
+        .min(0, 'Progress percentage must be between 0 and 100')
+        .max(100, 'Progress percentage must be between 0 and 100')
+        .optional(),
+    
+    // Additional Details
+    best_time_to_visit: z.string()
+        .max(100, 'Best time to visit must not exceed 100 characters')
+        .trim()
+        .optional(),
+    duration_suggestion: z.string()
+        .max(100, 'Duration suggestion must not exceed 100 characters')
+        .trim()
+        .optional(),
+    user_rating: z.number()
+        .int('Rating must be an integer')
+        .min(1, 'Rating must be at least 1')
+        .max(5, 'Rating must be at most 5'),
+    additional_notes: z.string()
+        .max(1000, 'Additional notes must not exceed 1000 characters')
+        .trim()
+        .optional(),
+    
+    // Geographic coordinates
     latitude: z.number()
         .min(-90, 'Latitude must be between -90 and 90')
         .max(90, 'Latitude must be between -90 and 90')
@@ -49,34 +75,12 @@ export const createRecommendationSchema = z.object({
         .min(-180, 'Longitude must be between -180 and 180')
         .max(180, 'Longitude must be between -180 and 180')
         .optional(),
-    best_time_to_visit: z.string()
-        .max(100, 'Best time to visit must not exceed 100 characters')
-        .trim()
-        .optional(),
-    duration_suggestion: z.string()
-        .max(50, 'Duration suggestion must not exceed 50 characters')
-        .trim()
-        .optional(),
-    user_rating: z.number()
-        .int('Rating must be an integer')
-        .min(1, 'Rating must be at least 1')
-        .max(5, 'Rating must be at most 5')
-        .optional(),
+    
+    // Tags
     tags: z.array(z.string().trim().min(1, 'Tag cannot be empty'))
         .max(10, 'Maximum 10 tags allowed')
         .optional()
 }).refine(
-    (data) => {
-        if (data.price_range_min !== undefined && data.price_range_max !== undefined) {
-            return data.price_range_min <= data.price_range_max;
-        }
-        return true;
-    },
-    {
-        message: 'Minimum price cannot be greater than maximum price',
-        path: ['price_range_min']
-    }
-).refine(
     (data) => {
         return data.category_id !== undefined || data.custom_category !== undefined;
     },
@@ -120,7 +124,7 @@ export const validate = (schema: z.ZodSchema) => {
             next();
         } catch (error: any) {
             if (error instanceof z.ZodError) {
-                const errorMessages = error.errors.map(err => ({
+                const errorMessages = error.issues.map(err => ({
                     field: err.path.join('.'),
                     message: err.message
                 }));
@@ -148,7 +152,7 @@ export const validateQuery = (schema: z.ZodSchema) => {
             next();
         } catch (error: any) {
             if (error instanceof z.ZodError) {
-                const errorMessages = error.errors.map(err => ({
+                const errorMessages = error.issues.map(err => ({
                     field: err.path.join('.'),
                     message: err.message
                 }));

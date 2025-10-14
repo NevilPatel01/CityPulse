@@ -184,21 +184,22 @@ export const getRecommendationById = async (req: Request, res: Response) => {
 export const createRecommendation = async (req: Request, res: Response) => {
     try {
         const {
-            title,
+            place_name,
             description,
             category_id,
             custom_category,
             city_id,
             custom_city,
-            price_range_min,
-            price_range_max,
-            difficulty_level,
+            location,
             address,
+            pros_points,
+            progress_percentage,
             latitude,
             longitude,
             best_time_to_visit,
             duration_suggestion,
             user_rating,
+            additional_notes,
             tags
         } = req.body;
 
@@ -263,17 +264,17 @@ export const createRecommendation = async (req: Request, res: Response) => {
             // Insert recommendation
             const recommendationQuery = `
                 INSERT INTO recommendations (
-                    user_id, title, description, category_id, price_range_min,
-                    price_range_max, difficulty_level, address, latitude, longitude,
-                    best_time_to_visit, duration_suggestion, user_rating
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    user_id, title, description, category_id, location,
+                    address, pros_points, progress_percentage, latitude, longitude,
+                    best_time_to_visit, duration_suggestion, user_rating, additional_notes
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 RETURNING id
             `;
 
             const recommendationResult = await query(recommendationQuery, [
-                userId, title, description, finalCategoryId, price_range_min,
-                price_range_max, difficulty_level, address, latitude, longitude,
-                best_time_to_visit, duration_suggestion, user_rating
+                userId, place_name, description, finalCategoryId, location,
+                address, pros_points, progress_percentage, latitude, longitude,
+                best_time_to_visit, duration_suggestion, user_rating, additional_notes
             ]);
 
             const recommendationId = recommendationResult.rows[0].id;
@@ -340,19 +341,20 @@ export const updateRecommendation = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const {
-            title,
+            place_name,
             description,
             category_id,
             city_id,
-            price_range_min,
-            price_range_max,
-            difficulty_level,
+            location,
             address,
+            pros_points,
+            progress_percentage,
             latitude,
             longitude,
             best_time_to_visit,
             duration_suggestion,
             user_rating,
+            additional_notes,
             tags
         } = req.body;
 
@@ -386,17 +388,17 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             const updateQuery = `
                 UPDATE recommendations SET
                     title = $1, description = $2, category_id = $3,
-                    price_range_min = $4, price_range_max = $5, difficulty_level = $6,
-                    address = $7, latitude = $8, longitude = $9,
-                    best_time_to_visit = $10, duration_suggestion = $11, user_rating = $12,
+                    location = $4, address = $5, pros_points = $6, progress_percentage = $7,
+                    latitude = $8, longitude = $9, best_time_to_visit = $10, 
+                    duration_suggestion = $11, user_rating = $12, additional_notes = $13,
                     updated_at = NOW()
-                WHERE id = $13
+                WHERE id = $14
             `;
 
             await query(updateQuery, [
-                title, description, category_id, price_range_min,
-                price_range_max, difficulty_level, address, latitude, longitude,
-                best_time_to_visit, duration_suggestion, user_rating, id
+                place_name, description, category_id, location,
+                address, pros_points, progress_percentage, latitude, longitude,
+                best_time_to_visit, duration_suggestion, user_rating, additional_notes, id
             ]);
 
             // Update city link

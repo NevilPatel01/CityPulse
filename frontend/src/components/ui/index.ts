@@ -13,3 +13,6 @@ export { Select } from './select';
 export { Modal, QuickActionModal } from './Modal';
 export { VerificationCodeInput } from './VerificationCodeInput';
 export { SkipLinks } from './SkipLinks';
+export { StarRating } from './StarRating';
+export { FileUpload } from './FileUpload';
+export { ProgressBar } from './ProgressBar';

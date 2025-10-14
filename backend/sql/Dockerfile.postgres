@@ -1,0 +1,10 @@
+FROM postgres:15-alpine
+
+# Copy initialization scripts
+COPY schema.sql /docker-entrypoint-initdb.d/01-schema.sql
+COPY insert-categories.sql /docker-entrypoint-initdb.d/02-insert-categories.sql
+
+# Set environment variables
+ENV POSTGRES_USER=user
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=citypulse_dev

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Textarea, Select } from '../ui';
+import { Input, Button, Textarea, Select, StarRating, FileUpload, ProgressBar } from '../ui';
 import { useSafeToast } from '../../hooks/useSafeToast';
 
 interface CreateRecommendationFormProps {
@@ -11,36 +9,45 @@ interface CreateRecommendationFormProps {
 }
 
 interface FormData {
-  title: string;
-  description: string;
+  // Basic Information
+  place_name: string;
   category_id: string;
   city_id: string;
-  price_range_min: string;
-  price_range_max: string;
-  difficulty_level: string;
+  location: string;
   address: string;
-  latitude: string;
-  longitude: string;
+  
+  // Details
+  description: string;
+  pros_points: string;
+  progress_percentage: number;
+  
+  // Additional Details
   best_time_to_visit: string;
   duration_suggestion: string;
-  user_rating: string;
+  user_rating: number;
+  additional_notes: string;
+  
+  // Geographic
+  latitude: string;
+  longitude: string;
   tags: string;
 }
 
 interface FormErrors {
-  title?: string;
+  place_name?: string;
   description?: string;
   category_id?: string;
   city_id?: string;
-  price_range_min?: string;
-  price_range_max?: string;
-  difficulty_level?: string;
+  location?: string;
   address?: string;
+  pros_points?: string;
+  progress_percentage?: string;
   latitude?: string;
   longitude?: string;
   best_time_to_visit?: string;
   duration_suggestion?: string;
   user_rating?: string;
+  additional_notes?: string;
   tags?: string;
   general?: string;
 }
@@ -58,6 +65,48 @@ interface City {
   state_province?: string;
 }
 
+interface CollapsibleSectionProps {
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+  title,
+  isOpen,
+  onToggle,
+  children
+}) => {
+  return (
+    <div className="border border-subtle rounded-lg bg-surface-glass backdrop-blur-glass">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface-glass/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 focus:ring-offset-base rounded-lg"
+      >
+        <h3 className="text-lg font-semibold text-primary">{title}</h3>
+        <svg
+          className={`w-5 h-5 text-muted transform transition-transform duration-200 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {isOpen && (
+        <div className="px-6 pb-6 space-y-4 border-t border-subtle">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function CreateRecommendationForm({
   onSuccess,
   onCancel,
@@ -66,19 +115,20 @@ export function CreateRecommendationForm({
   const { showSuccess } = useSafeToast();
 
   const [formData, setFormData] = useState<FormData>({
-    title: '',
-    description: '',
+    place_name: '',
     category_id: '',
     city_id: '',
-    price_range_min: '',
-    price_range_max: '',
-    difficulty_level: '',
+    location: '',
     address: '',
-    latitude: '',
-    longitude: '',
+    description: '',
+    pros_points: '',
+    progress_percentage: 0,
     best_time_to_visit: '',
     duration_suggestion: '',
-    user_rating: '',
+    user_rating: 5,
+    additional_notes: '',
+    latitude: '',
+    longitude: '',
     tags: '',
   });
 
@@ -93,6 +143,16 @@ export function CreateRecommendationForm({
   const [cities, setCities] = useState<City[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingCities, setLoadingCities] = useState(true);
+
+  // Section states
+  const [openSections, setOpenSections] = useState({
+    basicInfo: true,
+    details: false,
+    photos: false,
+    additionalDetails: false,
+  });
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Load categories and cities on component mount
   useEffect(() => {
@@ -125,16 +185,23 @@ export function CreateRecommendationForm({
     loadData();
   }, []);
 
+  const toggleSection = (section: keyof typeof openSections) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
 
     // Required fields
-    if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
-    } else if (formData.title.length < 3) {
-      newErrors.title = 'Title must be at least 3 characters long';
-    } else if (formData.title.length > 200) {
-      newErrors.title = 'Title must not exceed 200 characters';
+    if (!formData.place_name.trim()) {
+      newErrors.place_name = 'Place name is required';
+    } else if (formData.place_name.length < 3) {
+      newErrors.place_name = 'Place name must be at least 3 characters long';
+    } else if (formData.place_name.length > 200) {
+      newErrors.place_name = 'Place name must not exceed 200 characters';
     }
 
     if (!formData.description.trim()) {
@@ -165,26 +232,14 @@ export function CreateRecommendationForm({
       newErrors.user_rating = 'Rating is required';
     }
 
-    // Price range validation
-    if (formData.price_range_min && formData.price_range_max) {
-      const minPrice = parseFloat(formData.price_range_min);
-      const maxPrice = parseFloat(formData.price_range_max);
-
-      if (minPrice < 0) {
-        newErrors.price_range_min = 'Minimum price cannot be negative';
-      }
-      if (maxPrice < 0) {
-        newErrors.price_range_max = 'Maximum price cannot be negative';
-      }
-      if (minPrice > maxPrice) {
-        newErrors.price_range_min =
-          'Minimum price cannot be greater than maximum price';
-      }
+    // Progress percentage validation
+    if (formData.progress_percentage < 0 || formData.progress_percentage > 100) {
+      newErrors.progress_percentage = 'Progress must be between 0 and 100';
     }
 
     // Rating validation
     if (formData.user_rating) {
-      const rating = parseInt(formData.user_rating);
+      const rating = formData.user_rating;
       if (rating < 1 || rating > 5) {
         newErrors.user_rating = 'Rating must be between 1 and 5';
       }
@@ -229,6 +284,38 @@ export function CreateRecommendationForm({
       }
     };
 
+  const handleRatingChange = (rating: number) => {
+    setFormData(prev => ({
+      ...prev,
+      user_rating: rating
+    }));
+
+    if (errors.user_rating) {
+      setErrors(prev => ({
+        ...prev,
+        user_rating: undefined
+      }));
+    }
+  };
+
+  const handleProgressChange = (value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      progress_percentage: value
+    }));
+
+    if (errors.progress_percentage) {
+      setErrors(prev => ({
+        ...prev,
+        progress_percentage: undefined
+      }));
+    }
+  };
+
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(files);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -243,29 +330,22 @@ export function CreateRecommendationForm({
 
     try {
       const requestData = {
-        title: formData.title.trim(),
+        place_name: formData.place_name.trim(),
         description: formData.description.trim(),
         category_id: formData.category_id ? parseInt(formData.category_id) : undefined,
         custom_category: customCategory.trim() || undefined,
         city_id: formData.city_id ? parseInt(formData.city_id) : undefined,
         custom_city: customCity.trim() || undefined,
-        price_range_min: formData.price_range_min
-          ? parseFloat(formData.price_range_min)
-          : undefined,
-        price_range_max: formData.price_range_max
-          ? parseFloat(formData.price_range_max)
-          : undefined,
-        difficulty_level: formData.difficulty_level || undefined,
+        location: formData.location.trim() || undefined,
         address: formData.address.trim() || undefined,
+        pros_points: formData.pros_points.trim() || undefined,
+        progress_percentage: formData.progress_percentage || undefined,
         latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-        longitude: formData.longitude
-          ? parseFloat(formData.longitude)
-          : undefined,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
         best_time_to_visit: formData.best_time_to_visit.trim() || undefined,
         duration_suggestion: formData.duration_suggestion.trim() || undefined,
-        user_rating: formData.user_rating
-          ? parseInt(formData.user_rating)
-          : undefined,
+        user_rating: formData.user_rating,
+        additional_notes: formData.additional_notes.trim() || undefined,
         tags: formData.tags.trim()
           ? formData.tags
               .split(',')
@@ -353,25 +433,13 @@ export function CreateRecommendationForm({
             </div>
           )}
 
-          {/* Basic Information */}
-          <div className='space-y-4'>
-            <h2 className='text-lg font-semibold text-primary'>
-              Basic Information
-            </h2>
-
+          {/* Basic Information Section */}
+          <CollapsibleSection
+            title="Basic Information"
+            isOpen={openSections.basicInfo}
+            onToggle={() => toggleSection('basicInfo')}
+          >
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <Input
-                type='text'
-                label='Title'
-                placeholder='e.g., Cafe de Flore'
-                value={formData.title}
-                onChange={handleInputChange('title')}
-                error={errors.title}
-                disabled={isLoading}
-                required
-                className='bg-surface-glass border-subtle text-primary'
-              />
-
               <Select
                 label='Category'
                 value={formData.category_id}
@@ -398,58 +466,71 @@ export function CreateRecommendationForm({
                 ))}
                 <option value='custom'>Custom Category</option>
               </Select>
-              
-              {showCustomCategory && (
-                <Input
-                  type='text'
-                  label='Custom Category'
-                  placeholder='Enter your custom category'
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  disabled={isLoading}
-                  className='bg-surface-glass border-subtle text-primary'
-                />
-              )}
+
+              <Input
+                type='text'
+                label='Place Name'
+                placeholder='e.g., Cafe de Flore'
+                value={formData.place_name}
+                onChange={handleInputChange('place_name')}
+                error={errors.place_name}
+                disabled={isLoading}
+                required
+                className='bg-surface-glass border-subtle text-primary'
+              />
             </div>
+            
+            {showCustomCategory && (
+              <Input
+                type='text'
+                label='Custom Category'
+                placeholder='Enter your custom category'
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                disabled={isLoading}
+                className='bg-surface-glass border-subtle text-primary'
+              />
+            )}
 
-            <Textarea
-              label='Description'
-              placeholder='Describe what makes this place special...'
-              value={formData.description}
-              onChange={handleInputChange('description')}
-              error={errors.description}
-              disabled={isLoading}
-              required
-              rows={4}
-              className='bg-surface-glass border-subtle text-primary'
-            />
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <Select
+                label='City'
+                value={formData.city_id}
+                onChange={(e) => {
+                  if (e.target.value === 'custom') {
+                    setShowCustomCity(true);
+                    setFormData(prev => ({ ...prev, city_id: '' }));
+                  } else {
+                    setShowCustomCity(false);
+                    setCustomCity('');
+                    handleInputChange('city_id')(e);
+                  }
+                }}
+                error={errors.city_id}
+                disabled={isLoading || loadingCities}
+                required
+                className='bg-surface-glass border-subtle text-primary'
+              >
+                <option value=''>Select city</option>
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}, {city.country}
+                  </option>
+                ))}
+                <option value='custom'>Add Other City</option>
+              </Select>
 
-            <Select
-              label='City'
-              value={formData.city_id}
-              onChange={(e) => {
-                if (e.target.value === 'custom') {
-                  setShowCustomCity(true);
-                  setFormData(prev => ({ ...prev, city_id: '' }));
-                } else {
-                  setShowCustomCity(false);
-                  setCustomCity('');
-                  handleInputChange('city_id')(e);
-                }
-              }}
-              error={errors.city_id}
-              disabled={isLoading || loadingCities}
-              required
-              className='bg-surface-glass border-subtle text-primary'
-            >
-              <option value=''>Select city</option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name}, {city.country}
-                </option>
-              ))}
-              <option value='custom'>Add Other City</option>
-            </Select>
+              <Input
+                type='text'
+                label='Location'
+                placeholder='e.g., Downtown, Near Central Park'
+                value={formData.location}
+                onChange={handleInputChange('location')}
+                error={errors.location}
+                disabled={isLoading}
+                className='bg-surface-glass border-subtle text-primary'
+              />
+            </div>
             
             {showCustomCity && (
               <Textarea
@@ -462,69 +543,6 @@ export function CreateRecommendationForm({
                 className='bg-surface-glass border-subtle text-primary'
               />
             )}
-          </div>
-
-          {/* Details */}
-          <div className='space-y-4'>
-            <h2 className='text-lg font-semibold text-primary'>Details</h2>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <Input
-                type='number'
-                label='Minimum Price ($)'
-                placeholder='0'
-                value={formData.price_range_min}
-                onChange={handleInputChange('price_range_min')}
-                error={errors.price_range_min}
-                disabled={isLoading}
-                min='0'
-                step='0.01'
-                className='bg-surface-glass border-subtle text-primary'
-              />
-
-              <Input
-                type='number'
-                label='Maximum Price ($)'
-                placeholder='100'
-                value={formData.price_range_max}
-                onChange={handleInputChange('price_range_max')}
-                error={errors.price_range_max}
-                disabled={isLoading}
-                min='0'
-                step='0.01'
-                className='bg-surface-glass border-subtle text-primary'
-              />
-            </div>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <Select
-                label='Difficulty Level'
-                value={formData.difficulty_level}
-                onChange={handleInputChange('difficulty_level')}
-                error={errors.difficulty_level}
-                disabled={isLoading}
-                className='bg-surface-glass border-subtle text-primary'
-              >
-                <option value=''>Select difficulty</option>
-                <option value='easy'>Easy</option>
-                <option value='medium'>Medium</option>
-                <option value='hard'>Hard</option>
-              </Select>
-
-              <Input
-                type='number'
-                label='Your Rating (1-5)'
-                placeholder='5'
-                value={formData.user_rating}
-                onChange={handleInputChange('user_rating')}
-                error={errors.user_rating}
-                disabled={isLoading}
-                min='1'
-                max='5'
-                required
-                className='bg-surface-glass border-subtle text-primary'
-              />
-            </div>
 
             <Input
               type='text'
@@ -535,6 +553,126 @@ export function CreateRecommendationForm({
               error={errors.address}
               disabled={isLoading}
               required
+              className='bg-surface-glass border-subtle text-primary'
+            />
+          </CollapsibleSection>
+
+          {/* Details Section */}
+          <CollapsibleSection
+            title="Details"
+            isOpen={openSections.details}
+            onToggle={() => toggleSection('details')}
+          >
+            <Textarea
+              label='Description'
+              placeholder='Describe what makes this place special...'
+              value={formData.description}
+              onChange={handleInputChange('description')}
+              error={errors.description}
+              disabled={isLoading}
+              required
+              rows={4}
+              className='bg-surface-glass border-subtle text-primary'
+            />
+
+            <Textarea
+              label='Pros/Points'
+              placeholder='What are the highlights of this place?'
+              value={formData.pros_points}
+              onChange={handleInputChange('pros_points')}
+              error={errors.pros_points}
+              disabled={isLoading}
+              rows={3}
+              className='bg-surface-glass border-subtle text-primary'
+            />
+
+            <ProgressBar
+              label='Progress/Experience Level (%)'
+              value={formData.progress_percentage}
+              onChange={handleProgressChange}
+              error={errors.progress_percentage}
+              disabled={isLoading}
+              showPercentage={true}
+            />
+          </CollapsibleSection>
+
+          {/* Photos Section */}
+          <CollapsibleSection
+            title="Photos"
+            isOpen={openSections.photos}
+            onToggle={() => toggleSection('photos')}
+          >
+            <FileUpload
+              label="Upload Photos"
+              onFilesSelected={handleFilesSelected}
+              maxFiles={5}
+              maxFileSize={5}
+              acceptedFormats={['image/jpeg', 'image/png', 'image/webp']}
+              disabled={isLoading}
+            />
+            
+            {selectedFiles.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-muted mb-2">Selected files:</p>
+                <ul className="space-y-1">
+                  {selectedFiles.map((file, index) => (
+                    <li key={index} className="text-sm text-primary">
+                      {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Additional Details Section */}
+          <CollapsibleSection
+            title="Additional Details"
+            isOpen={openSections.additionalDetails}
+            onToggle={() => toggleSection('additionalDetails')}
+          >
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <Input
+                type='text'
+                label='Best Time to Visit'
+                placeholder='e.g., Spring, Morning, Weekdays'
+                value={formData.best_time_to_visit}
+                onChange={handleInputChange('best_time_to_visit')}
+                error={errors.best_time_to_visit}
+                disabled={isLoading}
+                className='bg-surface-glass border-subtle text-primary'
+              />
+
+              <Input
+                type='text'
+                label='Recommended Duration'
+                placeholder='e.g., 2 hours, half-day, 30 mins'
+                value={formData.duration_suggestion}
+                onChange={handleInputChange('duration_suggestion')}
+                error={errors.duration_suggestion}
+                disabled={isLoading}
+                className='bg-surface-glass border-subtle text-primary'
+              />
+            </div>
+
+            <StarRating
+              label="Your Rating"
+              rating={formData.user_rating}
+              onRatingChange={handleRatingChange}
+              error={errors.user_rating}
+              disabled={isLoading}
+              isRequired
+              size="lg"
+            />
+
+            <Textarea
+              label='Additional Notes'
+              placeholder='Any additional information or tips...'
+              value={formData.additional_notes}
+              onChange={handleInputChange('additional_notes')}
+              error={errors.additional_notes}
+              disabled={isLoading}
+              rows={3}
               className='bg-surface-glass border-subtle text-primary'
             />
 
@@ -564,30 +702,6 @@ export function CreateRecommendationForm({
               />
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <Input
-                type='text'
-                label='Best Time to Visit'
-                placeholder='Anytime'
-                value={formData.best_time_to_visit}
-                onChange={handleInputChange('best_time_to_visit')}
-                error={errors.best_time_to_visit}
-                disabled={isLoading}
-                className='bg-surface-glass border-subtle text-primary'
-              />
-
-              <Input
-                type='text'
-                label='Recommended Duration'
-                placeholder='e.g., 2 hours, half-day, 30 mins'
-                value={formData.duration_suggestion}
-                onChange={handleInputChange('duration_suggestion')}
-                error={errors.duration_suggestion}
-                disabled={isLoading}
-                className='bg-surface-glass border-subtle text-primary'
-              />
-            </div>
-
             <Input
               type='text'
               label='Tags'
@@ -596,9 +710,9 @@ export function CreateRecommendationForm({
               onChange={handleInputChange('tags')}
               error={errors.tags}
               disabled={isLoading}
-              className='bg-gray-800 border-gray-600 text-white'
+              className='bg-surface-glass border-subtle text-primary'
             />
-          </div>
+          </CollapsibleSection>
 
           {/* Submit Button */}
           <div className='flex justify-end space-x-4 pt-6 border-t border-subtle'>

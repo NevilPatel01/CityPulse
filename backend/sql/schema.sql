@@ -612,9 +612,10 @@ ON CONFLICT (name) DO NOTHING;
 -- =====================================================
 
 -- Grant all privileges to the user
-GRANT ALL PRIVILEGES ON DATABASE citypulse_dev TO user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO user;
+-- Final database grants
+GRANT ALL PRIVILEGES ON DATABASE citypulse_dev TO "user";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "user";
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "user";
 
 -- =====================================================
 -- 19. VERIFICATION

@@ -59,10 +59,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           ref={ref}
           className={cn(
-            'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-            hasError && 'border-red-500 focus-visible:ring-red-500',
+            'w-full px-4 py-3 bg-surface-glass backdrop-blur-glass border border-subtle rounded-lg text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-pulse focus:shadow-lg focus:shadow-pulse/20 focus:ring-offset-2 focus:ring-offset-base hover:border-pulse/50 hover:shadow-md hover:shadow-pulse/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200',
+            hasError && 'border-red-500 focus:ring-red-500 focus:border-red-500 hover:border-red-500',
             className
           )}
+          style={{ color: 'var(--text-primary)' }}
           aria-describedby={describedByIds}
           aria-invalid={hasError}
           {...props}
@@ -73,21 +74,45 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {helperText && !error && (
           <p 
             id={helperTextId}
-            className='text-sm text-muted-foreground'
+            className='text-sm text-muted flex items-start gap-1'
           >
-            {helperText}
+            <svg 
+              className="w-4 h-4 mt-0.5 flex-shrink-0" 
+              fill="currentColor" 
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path 
+                fillRule="evenodd" 
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" 
+                clipRule="evenodd" 
+              />
+            </svg>
+            <span>{helperText}</span>
           </p>
         )}
 
         {error && (
-          <p 
+          <div 
             id={errorId}
-            className='text-sm text-red-500'
             role="alert"
             aria-live="polite"
+            className='text-sm text-red-500 flex items-start gap-1'
           >
-            {error}
-          </p>
+            <svg 
+              className="w-4 h-4 mt-0.5 flex-shrink-0" 
+              fill="currentColor" 
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path 
+                fillRule="evenodd" 
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" 
+                clipRule="evenodd" 
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
         )}
       </div>
     );
