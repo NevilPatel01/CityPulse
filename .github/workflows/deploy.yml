@@ -75,6 +75,13 @@ jobs:
       - name: 📦 Checkout Code
         uses: actions/checkout@v4
 
+      - name: 🔡 Prepare image names
+        run: |
+          REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LOWER=$REPO_LOWER" >> $GITHUB_ENV
+          echo "BACKEND_IMAGE=ghcr.io/${REPO_LOWER}-backend:${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE=ghcr.io/${REPO_LOWER}-frontend:${GITHUB_SHA}" >> $GITHUB_ENV
+
       - name: 🐳 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -90,7 +97,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}
+            ghcr.io/${{ env.REPO_LOWER }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -100,24 +107,24 @@ jobs:
       - name: 🏗️ Build and push Backend image
         uses: docker/build-push-action@v5
         with:
-            context: .
-            file: backend/Dockerfile.prod
-            push: true
-            tags: ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
-            platforms: linux/amd64
+          context: .
+          file: backend/Dockerfile.prod
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: 🏗️ Build and push Frontend image
         uses: docker/build-push-action@v5
         with:
-            context: .
-            file: frontend/Dockerfile.prod
-            push: true
-            tags: ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
-            platforms: linux/amd64
+          context: .
+          file: frontend/Dockerfile.prod
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
   # Job 3: Deploy to Digital Ocean
   deploy:
@@ -126,48 +133,55 @@ jobs:
     needs: [test, build]
     if: github.ref == 'refs/heads/main'
     environment:
-        name: production
+      name: production
 
     steps:
       - name: 📦 Checkout Code
         uses: actions/checkout@v4
 
+      - name: 🔡 Prepare image names
+        run: |
+          REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LOWER=$REPO_LOWER" >> $GITHUB_ENV
+          echo "BACKEND_IMAGE=ghcr.io/${REPO_LOWER}-backend:${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE=ghcr.io/${REPO_LOWER}-frontend:${GITHUB_SHA}" >> $GITHUB_ENV
+
       - name: 📁 Create deployment package
         run: |
-            mkdir -p deploy/backend
-            cp docker-compose.prod.yml deploy/
-            cp -r nginx deploy/
-            cp -r backend/sql deploy/backend/
+          mkdir -p deploy/backend
+          cp docker-compose.prod.yml deploy/
+          cp -r nginx deploy/
+          cp -r backend/sql deploy/backend/
 
-            # Create environment file
-            cat > deploy/.env << EOF
-            # Database Configuration
-            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          # Create environment file
+          cat > deploy/.env << EOF
+          # Database Configuration
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
 
-            # JWT Configuration
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          # JWT Configuration
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
 
-            # Google OAuth
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # Google OAuth
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
 
-            # Email Configuration
-            EMAIL_HOST=${{ secrets.EMAIL_HOST }}
-            EMAIL_PORT=${{ secrets.EMAIL_PORT }}
-            EMAIL_USER=${{ secrets.EMAIL_USER }}
-            EMAIL_PASS=${{ secrets.EMAIL_PASS }}
+          # Email Configuration
+          EMAIL_HOST=${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT=${{ secrets.EMAIL_PORT }}
+          EMAIL_USER=${{ secrets.EMAIL_USER }}
+          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
 
-            # URLs
-            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-            BACKEND_URL=${{ secrets.BACKEND_URL }}
+          # URLs
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          BACKEND_URL=${{ secrets.BACKEND_URL }}
 
-            # Docker Images
-            BACKEND_IMAGE=ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
-            FRONTEND_IMAGE=ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
-            EOF
+          # Docker Images
+          BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}
+          FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}
+          EOF
 
       - name: 📦 Create deployment archive
         run: |
@@ -224,8 +238,8 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Pull latest images
-            docker pull ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
-            docker pull ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
+            docker pull "${{ env.BACKEND_IMAGE }}"
+            docker pull "${{ env.FRONTEND_IMAGE }}"
 
             # Update docker-compose to use specific images
             sed -i 's|build:|#build:|g' docker-compose.prod.yml
@@ -234,8 +248,8 @@ jobs:
             sed -i 's|dockerfile: frontend/Dockerfile.prod|#dockerfile: frontend/Dockerfile.prod|g' docker-compose.prod.yml
 
             # Add image references
-            sed -i '/container_name: citypulse-backend-prod/i\    image: ghcr.io/${{ github.repository }}-backend:${{ github.sha }}' docker-compose.prod.yml
-            sed -i '/container_name: citypulse-frontend-prod/i\    image: ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}' docker-compose.prod.yml
+            sed -i "/container_name: citypulse-backend-prod/i\    image: ${{ env.BACKEND_IMAGE }}" docker-compose.prod.yml
+            sed -i "/container_name: citypulse-frontend-prod/i\    image: ${{ env.FRONTEND_IMAGE }}" docker-compose.prod.yml
 
             # Start services
             docker compose -f docker-compose.prod.yml up -d
