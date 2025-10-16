@@ -7,6 +7,8 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useProfile } from '../hooks/useProfile';
 import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { profileService } from '../services/profileService';
+import { apiRequest } from '../config/api';
+import { RecommendationsList } from '../components/recommendations/RecommendationsList';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -31,22 +33,12 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchRecommendationCount = async () => {
       try {
-        const apiUrl = import.meta.env.PROD 
-          ? '/api/recommendations' 
-          : 'http://localhost:5001/api/recommendations';
+        const data = await apiRequest<{success: boolean; data: {pagination: {total: number}}}>(`/api/recommendations?user_id=${profile?.id || ''}`);
         
-        const response = await fetch(`${apiUrl}?user_id=${profile?.id || ''}`, {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setRecommendationCount(data.pagination?.total || 0);
+        if (data && data.success) {
+          setRecommendationCount(data.data.pagination?.total || 0);
         } else {
-          console.warn('Failed to fetch recommendation count:', response.status);
+          console.warn('Failed to fetch recommendation count');
           setRecommendationCount(0);
         }
       } catch (error) {
@@ -556,26 +548,18 @@ export default function ProfilePage() {
                             </button>
                           </div>
                         ) : (
-                          <div className="text-center py-12">
-                            <div className="text-muted mb-4">
-                              <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
-                              </svg>
-                            </div>
-                            <h4 className="text-lg font-medium text-primary mb-2">Loading recommendations...</h4>
-                            <p className="text-muted">Fetching your recommendations</p>
-                          </div>
+                          <RecommendationsList 
+                            userId={profile?.id} 
+                            showUser={false}
+                            className="mt-4"
+                          />
                         )
                       ) : (
-                        <div className="text-center py-12">
-                          <div className="text-muted mb-4">
-                            <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
-                            </svg>
-                          </div>
-                          <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
-                          <p className="text-muted">This user hasn't shared any recommendations yet</p>
-                        </div>
+                        <RecommendationsList 
+                          userId={profile?.id} 
+                          showUser={false}
+                          className="mt-4"
+                        />
                       )}
                     </div>
                   )}

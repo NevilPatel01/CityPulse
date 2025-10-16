@@ -93,8 +93,15 @@ export const apiRequest = async <T = unknown>(
 ): Promise<T> => {
     const { retries, timeout } = apiConfig;
 
+    // Build full URL if it's a relative path
+    const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
+    
+    console.log('[API] Making request to:', fullUrl);
+    console.log('[API] Request options:', options);
+
     // Get auth token from localStorage
     const authToken = localStorage.getItem('authToken');
+    console.log('[API] Auth token:', authToken ? 'Present' : 'Not found');
     
     const defaultOptions: RequestInit = {
         headers: {
@@ -116,7 +123,9 @@ export const apiRequest = async <T = unknown>(
     // Retry logic
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            const response = await fetch(url, defaultOptions);
+            console.log(`[API] Attempt ${attempt + 1} for ${fullUrl}`);
+            const response = await fetch(fullUrl, defaultOptions);
+            console.log('[API] Response received:', response.status, response.statusText);
             clearTimeout(timeoutId);
 
             // Handle HTTP errors

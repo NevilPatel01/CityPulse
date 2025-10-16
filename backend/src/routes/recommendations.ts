@@ -18,7 +18,7 @@ import {
     validate,
     validateQuery
 } from '../validators/recommendations';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth';
 import { uploadMultiple } from '../utils/imageUpload';
 
 const router = Router();
@@ -67,6 +67,7 @@ router.get(
 router.get(
     '/cities',
     recommendationLimiter,
+    optionalAuthenticateToken,
     validateQuery(getCitiesSchema),
     getCities
 );

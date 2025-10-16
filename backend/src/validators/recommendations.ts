@@ -25,8 +25,8 @@ export const createRecommendationSchema = z.object({
         .max(100, 'Custom city must not exceed 100 characters')
         .trim()
         .optional(),
-    location: z.string()
-        .max(200, 'Location must not exceed 200 characters')
+    city_name: z.string()
+        .max(100, 'City name must not exceed 100 characters')
         .trim()
         .optional(),
     address: z.string()
@@ -39,16 +39,22 @@ export const createRecommendationSchema = z.object({
         .min(10, 'Description must be at least 10 characters long')
         .max(2000, 'Description must not exceed 2000 characters')
         .trim(),
-    pros_points: z.string()
-        .max(1000, 'Pros/Points must not exceed 1000 characters')
-        .trim()
+    
+    // Price range
+    price_range_min: z.number()
+        .min(0, 'Minimum price must be non-negative')
         .optional(),
-    progress_percentage: z.number()
-        .min(0, 'Progress percentage must be between 0 and 100')
-        .max(100, 'Progress percentage must be between 0 and 100')
+    price_range_max: z.number()
+        .min(0, 'Maximum price must be non-negative')
         .optional(),
     
-    // Additional Details
+    // Difficulty level
+    difficulty_level: z.string()
+        .max(20, 'Difficulty level must not exceed 20 characters')
+        .trim()
+        .optional(),
+    
+    // Timing Details
     best_time_to_visit: z.string()
         .max(100, 'Best time to visit must not exceed 100 characters')
         .trim()
@@ -61,10 +67,6 @@ export const createRecommendationSchema = z.object({
         .int('Rating must be an integer')
         .min(1, 'Rating must be at least 1')
         .max(5, 'Rating must be at most 5'),
-    additional_notes: z.string()
-        .max(1000, 'Additional notes must not exceed 1000 characters')
-        .trim()
-        .optional(),
     
     // Geographic coordinates
     latitude: z.number()
@@ -74,11 +76,6 @@ export const createRecommendationSchema = z.object({
     longitude: z.number()
         .min(-180, 'Longitude must be between -180 and 180')
         .max(180, 'Longitude must be between -180 and 180')
-        .optional(),
-    
-    // Tags
-    tags: z.array(z.string().trim().min(1, 'Tag cannot be empty'))
-        .max(10, 'Maximum 10 tags allowed')
         .optional()
 }).refine(
     (data) => {
@@ -90,11 +87,15 @@ export const createRecommendationSchema = z.object({
     }
 ).refine(
     (data) => {
-        return data.city_id !== undefined || data.custom_city !== undefined;
+        // Allow price range validation - if min is provided, max should be >= min
+        if (data.price_range_min !== undefined && data.price_range_max !== undefined) {
+            return data.price_range_max >= data.price_range_min;
+        }
+        return true;
     },
     {
-        message: 'Either city_id or custom_city must be provided',
-        path: ['city_id']
+        message: 'Maximum price must be greater than or equal to minimum price',
+        path: ['price_range_max']
     }
 );
 

@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select } from '../ui';
 import { useSafeToast } from '../../hooks/useSafeToast';
+import { apiRequest } from '../../config/api';
 
 interface Recommendation {
   id: number;
@@ -38,6 +39,22 @@ interface City {
   name: string;
   country: string;
   state_province?: string;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+interface RecommendationsApiResponse {
+  success: boolean;
+  data: {
+    recommendations: Recommendation[];
+    pagination: Pagination;
+  };
+  message?: string;
 }
 
 interface RecommendationsListProps {
@@ -77,20 +94,18 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
 
   const loadData = async () => {
     try {
-      // Load categories and cities in parallel
+      // Load categories and cities in parallel using apiRequest
       const [categoriesResponse, citiesResponse] = await Promise.all([
-        fetch('/api/recommendations/categories'),
-        fetch('/api/recommendations/cities')
+        apiRequest<{success: boolean; data: Category[]}>('/api/recommendations/categories'),
+        apiRequest<{success: boolean; data: City[]}>('/api/recommendations/cities')
       ]);
 
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData.data);
+      if (categoriesResponse && categoriesResponse.data) {
+        setCategories(categoriesResponse.data);
       }
 
-      if (citiesResponse.ok) {
-        const citiesData = await citiesResponse.json();
-        setCities(citiesData.data);
+      if (citiesResponse && citiesResponse.data) {
+        setCities(citiesResponse.data);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -116,10 +131,9 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
       if (filters.city_id) params.append('city_id', filters.city_id);
       if (userId) params.append('user_id', userId.toString());
 
-      const response = await fetch(`/api/recommendations?${params}`);
-      const data = await response.json();
+      const data = await apiRequest<RecommendationsApiResponse>(`/api/recommendations?${params}`);
 
-      if (response.ok) {
+      if (data && data.success) {
         if (reset) {
           setRecommendations(data.data.recommendations);
         } else {
@@ -127,7 +141,7 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
         }
         setPagination(data.data.pagination);
       } else {
-        showError(data.message || 'Failed to load recommendations');
+        showError(data?.message || 'Failed to load recommendations');
       }
     } catch (error) {
       console.error('Error loading recommendations:', error);
@@ -161,13 +175,13 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
       <div className={`space-y-6 ${className}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-gray-900 rounded-lg p-4 animate-pulse">
-              <div className="h-48 bg-gray-800 rounded-lg mb-4"></div>
+            <div key={i} className="bg-surface-glass backdrop-blur-glass rounded-2xl p-4 animate-pulse border border-subtle shadow-glass">
+              <div className="h-48 bg-surface-glass rounded-2xl mb-4"></div>
               <div className="space-y-2">
-                <div className="h-4 bg-gray-800 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-800 rounded w-1/2"></div>
-                <div className="h-3 bg-gray-800 rounded w-full"></div>
-                <div className="h-3 bg-gray-800 rounded w-2/3"></div>
+                <div className="h-4 bg-surface-glass rounded w-3/4"></div>
+                <div className="h-3 bg-surface-glass rounded w-1/2"></div>
+                <div className="h-3 bg-surface-glass rounded w-full"></div>
+                <div className="h-3 bg-surface-glass rounded w-2/3"></div>
               </div>
             </div>
           ))}
@@ -179,7 +193,7 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Filters */}
-      <div className="bg-gray-900 rounded-lg p-4">
+      <div className="bg-surface-glass backdrop-blur-glass rounded-2xl p-4 border border-subtle shadow-glass">
         <form onSubmit={handleSearch} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input
@@ -187,13 +201,13 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
               placeholder="Search recommendations..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="bg-gray-800 border-gray-600 text-white"
+              className="bg-surface-glass border-subtle text-primary"
             />
             
             <Select
               value={filters.category_id}
               onChange={(e) => handleFilterChange('category_id', e.target.value)}
-              className="bg-gray-800 border-gray-600 text-white"
+              className="bg-surface-glass border-subtle text-primary"
             >
               <option value="">All Categories</option>
               {categories.map(category => (
@@ -206,7 +220,7 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
             <Select
               value={filters.city_id}
               onChange={(e) => handleFilterChange('city_id', e.target.value)}
-              className="bg-gray-800 border-gray-600 text-white"
+              className="bg-surface-glass border-subtle text-primary"
             >
               <option value="">All Cities</option>
               {cities.map(city => (
@@ -228,11 +242,11 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
 
       {/* Results Count */}
       <div className="flex items-center justify-between">
-        <p className="text-gray-400">
+        <p className="text-muted">
           {pagination.total} recommendations found
         </p>
         {pagination.pages > 1 && (
-          <p className="text-gray-400">
+          <p className="text-muted">
             Page {pagination.page} of {pagination.pages}
           </p>
         )}
@@ -266,13 +280,13 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
         </>
       ) : (
         <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
+          <div className="text-muted mb-4">
             <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">No recommendations found</h3>
-          <p className="text-gray-400">
+          <h3 className="text-lg font-medium text-primary mb-2">No recommendations found</h3>
+          <p className="text-muted">
             {filters.search || filters.category_id || filters.city_id
               ? 'Try adjusting your filters to see more results.'
               : 'Be the first to share a recommendation!'}

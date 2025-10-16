@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input, Button, Textarea, Select, StarRating, FileUpload, ProgressBar } from '../ui';
+import { Input, Button, Textarea, Select, StarRating, FileUpload } from '../ui';
 import { useSafeToast } from '../../hooks/useSafeToast';
+import { apiRequest } from '../../config/api';
 
 interface CreateRecommendationFormProps {
   onSuccess?: () => void;
@@ -10,27 +11,25 @@ interface CreateRecommendationFormProps {
 
 interface FormData {
   // Basic Information
-  place_name: string;
+  place_name: string; // maps to title
   category_id: string;
   city_id: string;
-  location: string;
   address: string;
   
   // Details
   description: string;
-  pros_points: string;
-  progress_percentage: number;
+  price_range_min: string;
+  price_range_max: string;
+  difficulty_level: string;
   
   // Additional Details
   best_time_to_visit: string;
   duration_suggestion: string;
   user_rating: number;
-  additional_notes: string;
   
   // Geographic
   latitude: string;
   longitude: string;
-  tags: string;
 }
 
 interface FormErrors {
@@ -38,25 +37,29 @@ interface FormErrors {
   description?: string;
   category_id?: string;
   city_id?: string;
-  location?: string;
   address?: string;
-  pros_points?: string;
-  progress_percentage?: string;
+  price_range_min?: string;
+  price_range_max?: string;
+  difficulty_level?: string;
   latitude?: string;
   longitude?: string;
   best_time_to_visit?: string;
   duration_suggestion?: string;
   user_rating?: string;
-  additional_notes?: string;
-  tags?: string;
   general?: string;
 }
 
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-}
+// Travel Categories - matching database recommendation_categories table
+const TRAVEL_CATEGORIES = [
+  { id: 1, name: 'Restaurant' },
+  { id: 2, name: 'Attraction' },
+  { id: 3, name: 'Activity' },
+  { id: 4, name: 'Accommodation' },
+  { id: 5, name: 'Transportation' },
+  { id: 6, name: 'Shopping' },
+  { id: 7, name: 'Entertainment' },
+  { id: 8, name: 'Nature' }
+];
 
 interface City {
   id: number;
@@ -115,33 +118,34 @@ export function CreateRecommendationForm({
   const { showSuccess } = useSafeToast();
 
   const [formData, setFormData] = useState<FormData>({
+    // Basic Information
     place_name: '',
     category_id: '',
     city_id: '',
-    location: '',
     address: '',
+    
+    // Details
     description: '',
-    pros_points: '',
-    progress_percentage: 0,
+    price_range_min: '',
+    price_range_max: '',
+    difficulty_level: '',
+    
+    // Additional Details
     best_time_to_visit: '',
     duration_suggestion: '',
-    user_rating: 5,
-    additional_notes: '',
+    user_rating: 0,
+    
+    // Geographic
     latitude: '',
     longitude: '',
-    tags: '',
-  });
-
-  const [customCategory, setCustomCategory] = useState('');
+  });  const [customCategory, setCustomCategory] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [customCity, setCustomCity] = useState('');
   const [showCustomCity, setShowCustomCity] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<City[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingCities, setLoadingCities] = useState(true);
 
   // Section states
@@ -154,30 +158,21 @@ export function CreateRecommendationForm({
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  // Load categories and cities on component mount
+  // Load cities on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load categories
-        const categoriesResponse = await fetch(
-          '/api/recommendations/categories',
-        );
-        if (categoriesResponse.ok) {
-          const categoriesData = await categoriesResponse.json();
-          setCategories(categoriesData.data);
-        }
-        setLoadingCategories(false);
-
         // Load cities
-        const citiesResponse = await fetch('/api/recommendations/cities');
-        if (citiesResponse.ok) {
-          const citiesData = await citiesResponse.json();
+        console.log('[FRONTEND] Loading cities...');
+        const citiesData = await apiRequest('/api/recommendations/cities') as { success: boolean; data: City[] };
+        console.log('[FRONTEND] Cities response:', citiesData);
+        if (citiesData.success) {
+          console.log('[FRONTEND] Setting cities:', citiesData.data);
           setCities(citiesData.data);
         }
         setLoadingCities(false);
       } catch (error) {
-        console.error('Error loading form data:', error);
-        setLoadingCategories(false);
+        console.error('[FRONTEND] Error loading cities:', error);
         setLoadingCities(false);
       }
     };
@@ -215,6 +210,8 @@ export function CreateRecommendationForm({
     // Category validation - either select from dropdown or custom
     if (!formData.category_id && !customCategory.trim()) {
       newErrors.category_id = 'Category is required';
+    } else if (formData.category_id && isNaN(parseInt(formData.category_id, 10))) {
+      newErrors.category_id = 'Invalid category selection';
     }
 
     // City validation - either select from dropdown or custom
@@ -232,9 +229,13 @@ export function CreateRecommendationForm({
       newErrors.user_rating = 'Rating is required';
     }
 
-    // Progress percentage validation
-    if (formData.progress_percentage < 0 || formData.progress_percentage > 100) {
-      newErrors.progress_percentage = 'Progress must be between 0 and 100';
+    // Price range validation
+    if (formData.price_range_min && formData.price_range_max) {
+      const min = parseFloat(formData.price_range_min);
+      const max = parseFloat(formData.price_range_max);
+      if (min > max) {
+        newErrors.price_range_min = 'Minimum price cannot be greater than maximum price';
+      }
     }
 
     // Rating validation
@@ -298,20 +299,6 @@ export function CreateRecommendationForm({
     }
   };
 
-  const handleProgressChange = (value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      progress_percentage: value
-    }));
-
-    if (errors.progress_percentage) {
-      setErrors(prev => ({
-        ...prev,
-        progress_percentage: undefined
-      }));
-    }
-  };
-
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(files);
   };
@@ -332,45 +319,34 @@ export function CreateRecommendationForm({
       const requestData = {
         place_name: formData.place_name.trim(),
         description: formData.description.trim(),
-        category_id: formData.category_id ? parseInt(formData.category_id) : undefined,
+        category_id: formData.category_id ? parseInt(formData.category_id, 10) : null,
         custom_category: customCategory.trim() || undefined,
-        city_id: formData.city_id ? parseInt(formData.city_id) : undefined,
+        city_name: formData.city_id.trim() || undefined,
         custom_city: customCity.trim() || undefined,
-        location: formData.location.trim() || undefined,
         address: formData.address.trim() || undefined,
-        pros_points: formData.pros_points.trim() || undefined,
-        progress_percentage: formData.progress_percentage || undefined,
+        price_range_min: formData.price_range_min ? parseFloat(formData.price_range_min) : undefined,
+        price_range_max: formData.price_range_max ? parseFloat(formData.price_range_max) : undefined,
+        difficulty_level: formData.difficulty_level.trim() || undefined,
         latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
         longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
         best_time_to_visit: formData.best_time_to_visit.trim() || undefined,
         duration_suggestion: formData.duration_suggestion.trim() || undefined,
         user_rating: formData.user_rating,
-        additional_notes: formData.additional_notes.trim() || undefined,
-        tags: formData.tags.trim()
-          ? formData.tags
-              .split(',')
-              .map((tag) => tag.trim())
-              .filter((tag) => tag)
-          : undefined,
       };
 
-      const response = await fetch('/api/recommendations', {
+      console.log('[FRONTEND] Submitting recommendation:', requestData);
+      const data = await apiRequest('/api/recommendations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify(requestData),
-      });
+      }) as { success: boolean; data?: { id: string }; message?: string; errors?: Array<{ field: string; message: string }> };
 
-      const data = await response.json();
-
-      if (response.ok) {
+      console.log('[FRONTEND] Create recommendation response:', data);
+      if (data.success) {
         showSuccess('Recommendation created successfully!');
         if (onSuccess) {
           onSuccess();
         } else {
-          navigate(`/recommendations/${data.data.id}`);
+          navigate(`/recommendations/${data.data?.id}`);
         }
       } else {
         if (data.errors && Array.isArray(data.errors)) {
@@ -386,7 +362,11 @@ export function CreateRecommendationForm({
         }
       }
     } catch (error) {
-      console.error('Create recommendation error:', error);
+      console.error('[FRONTEND] Create recommendation error:', error);
+      console.error('[FRONTEND] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       setErrors({ general: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -442,7 +422,7 @@ export function CreateRecommendationForm({
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <Select
                 label='Category'
-                value={formData.category_id}
+                value={showCustomCategory ? 'custom' : formData.category_id}
                 onChange={(e) => {
                   if (e.target.value === 'custom') {
                     setShowCustomCategory(true);
@@ -454,12 +434,12 @@ export function CreateRecommendationForm({
                   }
                 }}
                 error={errors.category_id}
-                disabled={isLoading || loadingCategories}
+                disabled={isLoading}
                 required
                 className='bg-surface-glass border-subtle text-primary'
               >
                 <option value=''>Select category</option>
-                {categories.map((category) => (
+                {TRAVEL_CATEGORIES.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
@@ -495,7 +475,7 @@ export function CreateRecommendationForm({
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <Select
                 label='City'
-                value={formData.city_id}
+                value={showCustomCity ? 'custom' : formData.city_id}
                 onChange={(e) => {
                   if (e.target.value === 'custom') {
                     setShowCustomCity(true);
@@ -513,23 +493,13 @@ export function CreateRecommendationForm({
               >
                 <option value=''>Select city</option>
                 {cities.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name}, {city.country}
+                  <option key={city.id} value={city.name}>
+                    {city.name}
                   </option>
                 ))}
                 <option value='custom'>Add Other City</option>
               </Select>
 
-              <Input
-                type='text'
-                label='Location'
-                placeholder='e.g., Downtown, Near Central Park'
-                value={formData.location}
-                onChange={handleInputChange('location')}
-                error={errors.location}
-                disabled={isLoading}
-                className='bg-surface-glass border-subtle text-primary'
-              />
             </div>
             
             {showCustomCity && (
@@ -575,25 +545,44 @@ export function CreateRecommendationForm({
               className='bg-surface-glass border-subtle text-primary'
             />
 
-            <Textarea
-              label='Pros/Points'
-              placeholder='What are the highlights of this place?'
-              value={formData.pros_points}
-              onChange={handleInputChange('pros_points')}
-              error={errors.pros_points}
-              disabled={isLoading}
-              rows={3}
-              className='bg-surface-glass border-subtle text-primary'
-            />
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <Input
+                label='Minimum Price'
+                type='number'
+                placeholder='Minimum price (optional)'
+                value={formData.price_range_min}
+                onChange={handleInputChange('price_range_min')}
+                error={errors.price_range_min}
+                disabled={isLoading}
+                className='bg-surface-glass border-subtle text-primary'
+              />
+              
+              <Input
+                label='Maximum Price'
+                type='number'
+                placeholder='Maximum price (optional)'
+                value={formData.price_range_max}
+                onChange={handleInputChange('price_range_max')}
+                error={errors.price_range_max}
+                disabled={isLoading}
+                className='bg-surface-glass border-subtle text-primary'
+              />
+            </div>
 
-            <ProgressBar
-              label='Progress/Experience Level (%)'
-              value={formData.progress_percentage}
-              onChange={handleProgressChange}
-              error={errors.progress_percentage}
+            <Select
+              label='Difficulty Level'
+              value={formData.difficulty_level}
+              onChange={handleInputChange('difficulty_level')}
+              error={errors.difficulty_level}
               disabled={isLoading}
-              showPercentage={true}
-            />
+              className='bg-surface-glass border-subtle text-primary'
+            >
+              <option value=''>Select difficulty level (optional)</option>
+              <option value='easy'>Easy</option>
+              <option value='moderate'>Moderate</option>
+              <option value='hard'>Hard</option>
+              <option value='expert'>Expert</option>
+            </Select>
           </CollapsibleSection>
 
           {/* Photos Section */}
@@ -665,17 +654,6 @@ export function CreateRecommendationForm({
               size="lg"
             />
 
-            <Textarea
-              label='Additional Notes'
-              placeholder='Any additional information or tips...'
-              value={formData.additional_notes}
-              onChange={handleInputChange('additional_notes')}
-              error={errors.additional_notes}
-              disabled={isLoading}
-              rows={3}
-              className='bg-surface-glass border-subtle text-primary'
-            />
-
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <Input
                 type='number'
@@ -701,17 +679,6 @@ export function CreateRecommendationForm({
                 className='bg-surface-glass border-subtle text-primary'
               />
             </div>
-
-            <Input
-              type='text'
-              label='Tags'
-              placeholder='Add relevant tags (comma-separated)'
-              value={formData.tags}
-              onChange={handleInputChange('tags')}
-              error={errors.tags}
-              disabled={isLoading}
-              className='bg-surface-glass border-subtle text-primary'
-            />
           </CollapsibleSection>
 
           {/* Submit Button */}
