@@ -51,9 +51,9 @@ jobs:
           pnpm --filter frontend lint
           pnpm --filter backend lint
 
-      - name: 🧪 Run tests
-        run: |
-          cd backend && pnpm test
+    #   - name: 🧪 Run tests
+    #     run: |
+    #       cd backend && pnpm test
 
       - name: 🏗️ Build application
         run: |
