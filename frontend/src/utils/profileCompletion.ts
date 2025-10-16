@@ -30,25 +30,27 @@ export function calculateProfileCompletion(profile: UserProfile | null): Profile
     { key: 'socialLinks', value: profile.socialLinks },
   ];
 
-  const completedRequired = requiredFields.filter(field => field.value && field.value.trim());
-  const completedOptional = optionalFields.filter(field => {
-    if (field.key === 'socialLinks') {
-      return field.value && Object.values(field.value).some(link => link && link.trim());
+  const hasValue = (value: unknown): boolean => {
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
     }
-    return field.value && field.value.trim();
-  });
+
+    if (value && typeof value === 'object') {
+      return Object.values(value as Record<string, unknown>).some(link => hasValue(link));
+    }
+
+    return false;
+  };
+
+  const completedRequired = requiredFields.filter(field => hasValue(field.value));
+  const completedOptional = optionalFields.filter(field => hasValue(field.value));
 
   const missingRequired = requiredFields
-    .filter(field => !field.value || !field.value.trim())
+    .filter(field => !hasValue(field.value))
     .map(field => field.key);
 
   const missingOptional = optionalFields
-    .filter(field => {
-      if (field.key === 'socialLinks') {
-        return !field.value || !Object.values(field.value).some(link => link && link.trim());
-      }
-      return !field.value || !field.value.trim();
-    })
+    .filter(field => !hasValue(field.value))
     .map(field => field.key);
 
   const totalFields = requiredFields.length + optionalFields.length;
