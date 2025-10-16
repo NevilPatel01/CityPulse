@@ -33,12 +33,11 @@ export interface UserProfile {
     isComplete: boolean;
     percentage: number;
     canBeDiscovered: boolean;
+    hasMinimumData?: boolean;
+    needsCompletion?: boolean;
+    missingFields?: string[];
   };
-  email?: string;
   phone?: string;
-  instagramUrl?: string;
-  facebookUrl?: string;
-  whatsappContact?: string;
   profileVisibility?: 'public' | 'private';
   locationSharing?: boolean;
   socialLinksVisible?: boolean;

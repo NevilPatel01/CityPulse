@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { profileService, type ProfileUpdateData } from '../../services/profileService';
 
@@ -32,17 +32,6 @@ export function ProfileCompletionForm({ user, onProfileComplete }: ProfileComple
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (isDirty) {
-      const timeoutId = setTimeout(() => {
-        handleSave();
-      }, 1000); // Auto-save after 1 second of no typing
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [formData, isDirty]);
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
@@ -53,7 +42,7 @@ export function ProfileCompletionForm({ user, onProfileComplete }: ProfileComple
     }
   };
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
     
     if (!formData.currentLocation.trim()) {
@@ -75,9 +64,9 @@ export function ProfileCompletionForm({ user, onProfileComplete }: ProfileComple
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -104,9 +93,22 @@ export function ProfileCompletionForm({ user, onProfileComplete }: ProfileComple
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData, onProfileComplete, validateForm]);
 
-  const handleCompleteProfile = async () => {
+  // Auto-save functionality
+  useEffect(() => {
+    if (!isDirty) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void handleSave();
+    }, 1000); // Auto-save after 1 second of no typing
+
+    return () => clearTimeout(timeoutId);
+  }, [handleSave, isDirty]);
+
+  const handleCompleteProfile = useCallback(async () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -118,7 +120,7 @@ export function ProfileCompletionForm({ user, onProfileComplete }: ProfileComple
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [handleSave, onProfileComplete, validateForm]);
 
   const isProfileComplete = formData.currentLocation.trim() && formData.hometown.trim();
 

@@ -2,16 +2,24 @@ import React, { useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import { useSafeToast } from '../../hooks/useSafeToast';
 
-interface PhotoUploadProps {
-  recommendationId: number;
-  onUploadSuccess?: (photos: any[]) => void;
-  maxPhotos?: number;
-}
-
 interface UploadedPhoto {
   id: number;
   photo_url: string;
   is_primary: boolean;
+}
+
+interface UploadPhotosResponse {
+  success: boolean;
+  data: {
+    photos: UploadedPhoto[];
+  };
+  message?: string;
+}
+
+interface PhotoUploadProps {
+  recommendationId: number;
+  onUploadSuccess?: (photos: UploadedPhoto[]) => void;
+  maxPhotos?: number;
 }
 
 export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 }: PhotoUploadProps) {
@@ -95,14 +103,15 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
         body: formData
       });
 
-      const data = await response.json();
+      const data = await response.json() as UploadPhotosResponse;
 
       if (response.ok) {
-        setUploadedPhotos(prev => [...prev, ...data.data.photos]);
+        const newPhotos = data.data?.photos ?? [];
+        setUploadedPhotos(prev => [...prev, ...newPhotos]);
         setSelectedFiles([]);
         showSuccess('Photos uploaded successfully!');
-        if (onUploadSuccess) {
-          onUploadSuccess(data.data.photos);
+        if (onUploadSuccess && newPhotos.length) {
+          onUploadSuccess(newPhotos);
         }
       } else {
         showError(data.message || 'Failed to upload photos');

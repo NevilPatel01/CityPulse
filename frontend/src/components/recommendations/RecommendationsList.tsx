@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RecommendationCard } from './RecommendationCard';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -82,17 +82,7 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
   });
   const { showError } = useSafeToast();
 
-  // Load initial data
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Load recommendations when filters change
-  useEffect(() => {
-    loadRecommendations();
-  }, [filters, userId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // Load categories and cities in parallel using apiRequest
       const [categoriesResponse, citiesResponse] = await Promise.all([
@@ -111,9 +101,9 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
       console.error('Error loading data:', error);
         showError('Failed to load form data');
     }
-  };
+  }, [showError]);
 
-  const loadRecommendations = async (page = 1, reset = true) => {
+  const loadRecommendations = useCallback(async (page = 1, reset = true) => {
     try {
       if (reset) {
         setLoading(true);
@@ -150,7 +140,17 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [filters, pagination.limit, showError, userId]);
+
+  // Load initial data
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  // Load recommendations when filters change
+  useEffect(() => {
+    void loadRecommendations(1, true);
+  }, [loadRecommendations]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({
@@ -161,13 +161,13 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
 
   const handleLoadMore = () => {
     if (pagination.page < pagination.pages && !loadingMore) {
-      loadRecommendations(pagination.page + 1, false);
+      void loadRecommendations(pagination.page + 1, false);
     }
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    loadRecommendations(1, true);
+    void loadRecommendations(1, true);
   };
 
   if (loading) {

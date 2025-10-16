@@ -48,8 +48,8 @@ jobs:
 
       - name: 🔍 Lint code
         run: |
-          cd frontend && pnpm lint
-          cd ../backend && pnpm lint
+          pnpm --filter frontend lint
+          pnpm --filter backend lint
 
       - name: 🧪 Run tests
         run: |
@@ -100,24 +100,24 @@ jobs:
       - name: 🏗️ Build and push Backend image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: backend/Dockerfile.prod
-          push: true
-          tags: ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+            context: .
+            file: backend/Dockerfile.prod
+            push: true
+            tags: ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
+            platforms: linux/amd64
 
       - name: 🏗️ Build and push Frontend image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: frontend/Dockerfile.prod
-          push: true
-          tags: ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+            context: .
+            file: frontend/Dockerfile.prod
+            push: true
+            tags: ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
+            platforms: linux/amd64
 
   # Job 3: Deploy to Digital Ocean
   deploy:
@@ -126,7 +126,7 @@ jobs:
     needs: [test, build]
     if: github.ref == 'refs/heads/main'
     environment:
-      name: production
+        name: production
 
     steps:
       - name: 📦 Checkout Code
@@ -134,40 +134,40 @@ jobs:
 
       - name: 📁 Create deployment package
         run: |
-          mkdir -p deploy/backend
-          cp docker-compose.prod.yml deploy/
-          cp -r nginx deploy/
-          cp -r backend/sql deploy/backend/
+            mkdir -p deploy/backend
+            cp docker-compose.prod.yml deploy/
+            cp -r nginx deploy/
+            cp -r backend/sql deploy/backend/
 
-          # Create environment file
-          cat > deploy/.env << EOF
-          # Database Configuration
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            # Create environment file
+            cat > deploy/.env << EOF
+            # Database Configuration
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
 
-          # JWT Configuration
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            # JWT Configuration
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
 
-          # Google OAuth
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            # Google OAuth
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
 
-          # Email Configuration
-          EMAIL_HOST=${{ secrets.EMAIL_HOST }}
-          EMAIL_PORT=${{ secrets.EMAIL_PORT }}
-          EMAIL_USER=${{ secrets.EMAIL_USER }}
-          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
+            # Email Configuration
+            EMAIL_HOST=${{ secrets.EMAIL_HOST }}
+            EMAIL_PORT=${{ secrets.EMAIL_PORT }}
+            EMAIL_USER=${{ secrets.EMAIL_USER }}
+            EMAIL_PASS=${{ secrets.EMAIL_PASS }}
 
-          # URLs
-          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-          BACKEND_URL=${{ secrets.BACKEND_URL }}
+            # URLs
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            BACKEND_URL=${{ secrets.BACKEND_URL }}
 
-          # Docker Images
-          BACKEND_IMAGE=ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
-          FRONTEND_IMAGE=ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
-          EOF
+            # Docker Images
+            BACKEND_IMAGE=ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
+            FRONTEND_IMAGE=ghcr.io/${{ github.repository }}-frontend:${{ github.sha }}
+            EOF
 
       - name: 📦 Create deployment archive
         run: |
@@ -187,9 +187,9 @@ jobs:
 
             # Backup current deployment
             if [ -f docker-compose.prod.yml ]; then
-              echo "📦 Creating backup..."
-              docker compose -f docker-compose.prod.yml down --remove-orphans || true
-              tar -czf "backup-$(date +%Y%m%d-%H%M%S).tar.gz" . --exclude='backup-*.tar.gz' || true
+                echo "📦 Creating backup..."
+                docker compose -f docker-compose.prod.yml down --remove-orphans || true
+                tar -czf "backup-$(date +%Y%m%d-%H%M%S).tar.gz" . --exclude='backup-*.tar.gz' || true
             fi
 
             # Clean up old files
@@ -199,12 +199,12 @@ jobs:
       - name: 📤 Upload deployment package
         uses: appleboy/scp-action@v0.1.5
         with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.DO_SSH_PORT }}
-          source: deploy.tar.gz
-          target: /opt/citypulse/
+            host: ${{ secrets.DO_HOST }}
+            username: ${{ secrets.DO_USERNAME }}
+            key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+            port: ${{ secrets.DO_SSH_PORT }}
+            source: deploy.tar.gz
+            target: /opt/citypulse/
 
       - name: 🔐 Login to registry and deploy
         uses: appleboy/ssh-action@v1.0.0
@@ -246,12 +246,12 @@ jobs:
 
             # Verify deployment
             if docker compose -f docker-compose.prod.yml ps | grep -q "unhealthy\|Restarting"; then
-              echo "❌ Deployment failed - some services are unhealthy"
-              docker compose -f docker-compose.prod.yml logs
-              exit 1
+                echo "❌ Deployment failed - some services are unhealthy"
+                docker compose -f docker-compose.prod.yml logs
+                exit 1
             else
-              echo "✅ Deployment successful!"
-              docker compose -f docker-compose.prod.yml ps
+                echo "✅ Deployment successful!"
+                docker compose -f docker-compose.prod.yml ps
             fi
 
             # Cleanup old images
@@ -268,12 +268,12 @@ jobs:
       - name: 📢 Deployment Success
         if: needs.deploy.result == 'success'
         run: |
-          echo "🎉 Deployment successful!"
-          echo "✅ Application is live at: https://city-pulse.app"
+            echo "🎉 Deployment successful!"
+            echo "✅ Application is live at: https://city-pulse.app"
 
       - name: 🚨 Deployment Failed
         if: needs.deploy.result == 'failure'
         run: |
-          echo "❌ Deployment failed!"
-          echo "Please check the logs and try again."
-          exit 1
+            echo "❌ Deployment failed!"
+            echo "Please check the logs and try again."
+            exit 1

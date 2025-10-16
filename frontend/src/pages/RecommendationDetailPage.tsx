@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { PhotoUpload } from '../components/recommendations/PhotoUpload';
@@ -42,13 +42,8 @@ export function RecommendationDetailPage() {
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      loadRecommendation();
-    }
-  }, [id]);
-
-  const loadRecommendation = async () => {
+  const loadRecommendation = useCallback(async () => {
+    if (!id) return;
     try {
       setLoading(true);
       const response = await fetch(`/api/recommendations/${id}`);
@@ -68,7 +63,11 @@ export function RecommendationDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate, showError, user?.id]);
+
+  useEffect(() => {
+    void loadRecommendation();
+  }, [loadRecommendation]);
 
   const formatPrice = () => {
     if (recommendation?.price_range_min && recommendation?.price_range_max) {

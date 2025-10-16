@@ -44,17 +44,17 @@ export function useProfile(username: string): UseProfileReturn {
         // For incomplete own profile, don't set error - let the component handle it
         setError(null);
         // Set a special profile object to indicate incomplete profile
-        setProfile({
+        const incompleteProfile: UserProfile = {
           id: 0,
-          username: username,
+          username,
           fullName: '',
           bio: '',
           currentLocation: '',
           hometown: '',
           profilePhotoUrl: '',
           coverPhotoUrl: '',
-          createdAt: '',
-          lastLogin: '',
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
           stats: { cities: 0, recommendations: 0, travelBuddies: 0, points: 0 },
           badges: [],
           profileCompletion: {
@@ -66,7 +66,11 @@ export function useProfile(username: string): UseProfileReturn {
             missingFields: ['currentLocation', 'hometown']
           },
           isOwnProfile: true
-        } as any);
+        };
+
+        setProfile(incompleteProfile);
+        setStats(incompleteProfile.stats);
+        setBadges(incompleteProfile.badges);
         return;
       } else if (error.message?.includes('private')) {
         setError('This profile is private and cannot be viewed');
