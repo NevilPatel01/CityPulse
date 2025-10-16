@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuthGuard } from '../hooks/useAuthGuard';
+import { buildApiUrl } from '../config/api';
 
 interface SearchResult {
   id: number;
@@ -97,11 +98,7 @@ export default function SearchPage() {
     setError(null);
     
     try {
-      const apiUrl = import.meta.env.PROD 
-        ? '/api/search' 
-        : 'http://localhost:5001/api/search';
-
-      const response = await fetch(`${apiUrl}?q=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetch(`${buildApiUrl('api/search')}?q=${encodeURIComponent(searchQuery)}`, {
         method: 'GET',
         credentials: 'include',
         headers: {

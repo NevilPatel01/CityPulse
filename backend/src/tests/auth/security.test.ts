@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { cleanupDatabase } from '../setup';
+import { cleanupTestDatabase } from '../setup';
 
 describe('Authentication Security (Unit Tests)', () => {
     beforeEach(async () => {
-        await cleanupDatabase();
+        await cleanupTestDatabase();
     });
 
     describe('Password Security Standards', () => {
@@ -232,7 +232,7 @@ describe('Authentication Security (Unit Tests)', () => {
 
         it('should define CORS configuration', () => {
             const corsConfig = {
-                origin: ['http://localhost:3000', 'https://citypulse.app'],
+                origin: ['http://localhost:3000', process.env.FRONTEND_URL || 'http://localhost:3001'],
                 credentials: true,
                 optionsSuccessStatus: 200,
                 methods: ['GET', 'POST', 'PUT', 'DELETE'],

@@ -2,6 +2,12 @@
  * Google OAuth Configuration
  */
 
+declare global {
+    interface Window {
+        ENV?: Record<string, string | undefined>;
+    }
+}
+
 export interface GoogleOAuthConfig {
     clientId: string;
     redirectUri: string;
@@ -26,16 +32,27 @@ export interface GoogleOAuthResponse {
     prompt: string;
 }
 
-// Google OAuth configuration - reads directly from .env.local
+const runtimeEnv = typeof window !== 'undefined' ? window.ENV : undefined;
+const buildEnvMap = {
+    VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    VITE_GOOGLE_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+    VITE_GOOGLE_REDIRECT_URI: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
+} as const;
+type GoogleEnvKey = keyof typeof buildEnvMap;
+const getEnvValue = (key: GoogleEnvKey): string | undefined => {
+    return runtimeEnv?.[key] || buildEnvMap[key];
+};
+
+// Google OAuth configuration - reads from runtime (if available) or build env
 export const googleOAuthConfig: GoogleOAuthConfig = {
-    clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-    redirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:3001/auth/google/callback',
+    clientId: getEnvValue('VITE_GOOGLE_CLIENT_ID') || '',
+    redirectUri: getEnvValue('VITE_GOOGLE_REDIRECT_URI') || 'http://localhost:3001/auth/google/callback',
     scope: 'openid email profile'
 };
 
 // Environment variables for Google OAuth
 const getGoogleClientSecret = (): string => {
-    return import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
+    return getEnvValue('VITE_GOOGLE_CLIENT_SECRET') || '';
 };
 
 /**
@@ -45,20 +62,20 @@ const getGoogleClientSecret = (): string => {
 export const validateGoogleOAuthConfig = (): void => {
     const missingVars: string[] = [];
     
-    if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+    if (!getEnvValue('VITE_GOOGLE_CLIENT_ID')) {
         missingVars.push('VITE_GOOGLE_CLIENT_ID');
     }
     
-    if (!import.meta.env.VITE_GOOGLE_CLIENT_SECRET) {
+    if (!getEnvValue('VITE_GOOGLE_CLIENT_SECRET')) {
         missingVars.push('VITE_GOOGLE_CLIENT_SECRET');
     }
     
-    if (!import.meta.env.VITE_GOOGLE_REDIRECT_URI) {
+    if (!getEnvValue('VITE_GOOGLE_REDIRECT_URI')) {
         missingVars.push('VITE_GOOGLE_REDIRECT_URI');
     }
     
     if (missingVars.length > 0) {
-        throw new Error(`Missing required Google OAuth environment variables: ${missingVars.join(', ')}. Please add them to your .env.local file.`);
+        throw new Error(`Missing required Google OAuth environment variables: ${missingVars.join(', ')}. Please add them to your .env file or production secrets.`);
     }
 };
 
@@ -77,11 +94,11 @@ export const getGoogleAuthUrl = (
 ): string => {
     validateGoogleOAuthConfig();
     
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+    const clientId = getEnvValue('VITE_GOOGLE_CLIENT_ID');
+    const redirectUri = getEnvValue('VITE_GOOGLE_REDIRECT_URI');
     
     if (!clientId || !redirectUri) {
-        throw new Error('Google OAuth configuration is missing. Please check your .env.local file.');
+        throw new Error('Google OAuth configuration is missing. Please check your environment configuration.');
     }
     
     const params = new URLSearchParams({
@@ -114,7 +131,7 @@ export const exchangeCodeForToken = async (code: string): Promise<GoogleOAuthRes
     const clientSecret = getGoogleClientSecret();
     
     if (!clientSecret) {
-        throw new Error('Google Client Secret is not configured. Please add VITE_GOOGLE_CLIENT_SECRET to your .env.local file.');
+        throw new Error('Google Client Secret is not configured. Please add VITE_GOOGLE_CLIENT_SECRET to your environment configuration.');
     }
 
     console.log('🔧 Exchanging code for token with Google...');

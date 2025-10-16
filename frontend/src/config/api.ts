@@ -3,6 +3,12 @@
  * It Handles dynamic API URL configuration for different environments
  */
 
+declare global {
+    interface Window {
+        ENV?: Record<string, string | undefined>;
+    }
+}
+
 interface ApiConfig {
     baseUrl: string;
     timeout: number;
@@ -18,14 +24,30 @@ interface ValidationError {
  * It get the API base URL based on environment variables and current context
  */
 const getApiBaseUrl = (): string => {
-    // Priority 1: Development environment
+    const runtimeConfig = typeof window !== 'undefined' ? window.ENV : undefined;
+
+    if (runtimeConfig?.VITE_API_URL) {
+        return runtimeConfig.VITE_API_URL;
+    }
+
+    // Priority 1: Environment variable (for production builds)
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
+    }
+
+    // Priority 2: Development environment
     if (import.meta.env.DEV) {
         // For development with Docker
         return 'http://localhost:5001';
     }
 
-    // Fallback for other environments
-    return window.location.origin;
+    // Priority 3: Browser runtime origin (e.g., production without build-time var)
+    if (typeof window !== 'undefined' && window.location) {
+        return window.location.origin;
+    }
+
+    // Fallback for non-browser contexts
+    return 'http://localhost:5001';
 };
 
 /**

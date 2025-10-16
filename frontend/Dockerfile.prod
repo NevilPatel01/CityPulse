@@ -1,0 +1,62 @@
+# Frontend Production Dockerfile
+# Multi-stage build for optimized production image
+
+# Build stage
+FROM node:20-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm@10.10.0
+
+# Copy root package files for workspace setup
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy shared package.json
+COPY shared/package.json ./shared/package.json
+
+# Copy frontend package.json
+COPY frontend/package.json ./frontend/package.json
+
+# Install dependencies using frozen lockfile for reproducible builds
+RUN pnpm install --frozen-lockfile
+
+# Copy shared source code
+COPY shared ./shared
+
+# Copy frontend source code
+COPY frontend ./frontend
+
+# Build the frontend application
+WORKDIR /app/frontend
+RUN pnpm build
+
+# Production stage
+FROM nginx:1.25-alpine AS production
+
+# Install envsubst for environment variable substitution
+RUN apk add --no-cache gettext
+
+# Copy custom nginx configuration
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
+
+# Copy built application from builder stage
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+
+# Copy environment template and startup script
+COPY frontend/env.template.js /usr/share/nginx/html/env.template.js
+COPY frontend/start.sh /start.sh
+
+# Make startup script executable
+RUN chmod +x /start.sh
+
+# Expose port 80
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+
+# Start nginx with environment variable substitution
+CMD ["/start.sh"]

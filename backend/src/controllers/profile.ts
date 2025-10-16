@@ -220,7 +220,7 @@ export const getProfile = async (req: Request, res: Response) => {
 
         // Prepare response data
         // Convert relative paths to full URLs for images
-        const baseUrl = process.env.API_BASE_URL || 'http://localhost:5001';
+        const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
         const profilePhotoUrl = user.profile_photo_url ? 
             (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
         const coverPhotoUrl = user.cover_photo_url ? 
@@ -645,7 +645,7 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         }
 
         // Convert relative path to full URL
-        const baseUrl = process.env.API_BASE_URL || 'http://localhost:5001';
+        const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
         const fullImageUrl = `${baseUrl}${imagePath}`;
         
         // Set CORS headers for the response

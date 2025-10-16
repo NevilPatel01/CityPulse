@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { profileService } from '../../services/profileService';
+import { buildApiUrl } from '../../config/api';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -19,7 +20,21 @@ interface EditProfileModalProps {
       website?: string;
     };
   };
-  onSave: (updatedProfile: any) => void;
+  onSave: (updatedProfile: {
+    fullName: string;
+    username: string;
+    bio: string;
+    currentLocation: string;
+    hometown: string;
+    citiesVisited: string[];
+    socialLinks: {
+      twitter: string;
+      instagram: string;
+      linkedin: string;
+      email: string;
+      website: string;
+    };
+  }) => void;
 }
 
 export function EditProfileModal({ isOpen, onClose, profile, onSave }: EditProfileModalProps) {
@@ -82,7 +97,7 @@ export function EditProfileModal({ isOpen, onClose, profile, onSave }: EditProfi
         // Check if username is available
         try {
           // Try to get profile with new username to see if it exists
-          const response = await fetch(`http://localhost:5001/api/profile/${formData.username}`);
+          const response = await fetch(buildApiUrl(`api/profile/${formData.username}`));
           if (response.ok) {
             alert('Username already exists. Please choose a different username.');
             return;
@@ -90,6 +105,7 @@ export function EditProfileModal({ isOpen, onClose, profile, onSave }: EditProfi
         } catch (error) {
           // Username is available, continue
           console.log('Username is available:', formData.username);
+          console.error('Error checking username availability:', error);
         }
       }
 

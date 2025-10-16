@@ -19,8 +19,9 @@ testConnection()
         app.listen(PORT, () => {
             console.log(`🚀 CityPulse API server running on port ${PORT}`);
             console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-            console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+            const apiOrigin = (process.env.API_BASE_URL || process.env.BACKEND_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+            console.log(`🌐 Health check: ${apiOrigin}/api/health`);
+            console.log(`🔗 API Base: ${apiOrigin}/api`);
             console.log('✅ [SERVER] Server startup complete!');
         });
     })

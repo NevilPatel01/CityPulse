@@ -21,7 +21,21 @@ export const createApp = (): express.Express => {
                 defaultSrc: ["'self'"],           // Only load resources from same origin
                 styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for UI frameworks
                 scriptSrc: ["'self'"],           // Only scripts from same origin
-                imgSrc: ["'self'", "data:", "https:", "http://localhost:5001", "http://localhost:3000", "http://localhost:3001"], // Images from self, data URLs, HTTPS, and backend
+                imgSrc: (() => {
+                    const sources = ["'self'", "data:", "https:"];
+                    const backendUrl = process.env.API_BASE_URL ?? process.env.BACKEND_URL;
+                    const frontendUrlEnv = process.env.FRONTEND_URL;
+
+                    if (backendUrl) {
+                        sources.push(backendUrl);
+                    }
+
+                    if (frontendUrlEnv) {
+                        sources.push(frontendUrlEnv);
+                    }
+
+                    return sources;
+                })(), // Images from self, data URLs, HTTPS, and configured domains
             },
         },
         crossOriginEmbedderPolicy: false       // for Production need to enable

@@ -75,10 +75,15 @@ NOTE: I will add as I go.
 - `/reset-password` - Reset Password
 - `/dashboard` - Primary landing page after login
 
-## Localhost URL
+## Development URLs
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5001
 - PostgreSQL: localhost:8080
+
+## Production URLs
+- Website: https://city-pulse.app
+- API: https://api.city-pulse.app
+- Health Check: https://api.city-pulse.app/health
 
 *CityPulse - Connecting Travelers, Sharing Experiences, Building Communities* 🌍✈️
 
