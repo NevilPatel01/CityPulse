@@ -195,8 +195,11 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: ${{ secrets.DO_SSH_PORT }}
           script: |
-            # Create deployment directory
+            # Create deployment directory with root ownership
             mkdir -p /opt/citypulse
+            chown -R root:root /opt/citypulse
+            
+            # Switch to deployment directory
             cd /opt/citypulse
 
             # Backup current deployment
@@ -207,7 +210,7 @@ jobs:
             fi
 
             # Clean up old files
-            rm -rf backend
+            rm -rf backend nginx
             rm -f .env docker-compose.prod.yml
 
       - name: 📤 Upload deployment package
@@ -234,22 +237,21 @@ jobs:
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
 
-            # Login to GitHub Container Registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Login to GitHub Container Registry using the registry token
+            echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Pull latest images
-            docker pull "${{ env.BACKEND_IMAGE }}"
-            docker pull "${{ env.FRONTEND_IMAGE }}"
+            # Stop existing containers
+            docker compose -f docker-compose.prod.yml down || true
 
-            # Update docker-compose to use specific images
-            sed -i 's|build:|#build:|g' docker-compose.prod.yml
-            sed -i 's|context: .|#context: .|g' docker-compose.prod.yml
-            sed -i 's|dockerfile: backend/Dockerfile.prod|#dockerfile: backend/Dockerfile.prod|g' docker-compose.prod.yml
-            sed -i 's|dockerfile: frontend/Dockerfile.prod|#dockerfile: frontend/Dockerfile.prod|g' docker-compose.prod.yml
+            # Pull latest images using environment variables from .env
+            source .env
+            docker pull "${BACKEND_IMAGE}"
+            docker pull "${FRONTEND_IMAGE}"
 
-            # Add image references
-            sed -i "/container_name: citypulse-backend-prod/i\    image: ${{ env.BACKEND_IMAGE }}" docker-compose.prod.yml
-            sed -i "/container_name: citypulse-frontend-prod/i\    image: ${{ env.FRONTEND_IMAGE }}" docker-compose.prod.yml
+            # Update docker-compose with new image references
+            source .env
+            sed -i "s|BACKEND_IMAGE_PLACEHOLDER|${BACKEND_IMAGE}|g" docker-compose.prod.yml
+            sed -i "s|FRONTEND_IMAGE_PLACEHOLDER|${FRONTEND_IMAGE}|g" docker-compose.prod.yml
 
             # Start services
             docker compose -f docker-compose.prod.yml up -d

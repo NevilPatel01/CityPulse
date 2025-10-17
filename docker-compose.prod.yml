@@ -28,9 +28,7 @@ services:
 
   # Backend API Service
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.prod
+    image: BACKEND_IMAGE_PLACEHOLDER
     container_name: citypulse-backend-prod
     restart: unless-stopped
     environment:
@@ -73,9 +71,7 @@ services:
 
   # Frontend Service
   frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile.prod
+    image: FRONTEND_IMAGE_PLACEHOLDER
     container_name: citypulse-frontend-prod
     restart: unless-stopped
     environment:
