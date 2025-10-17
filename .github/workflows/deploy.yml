@@ -153,35 +153,35 @@ jobs:
           cp -r nginx deploy/
           cp -r backend/sql deploy/backend/
 
-          # Create environment file
-          cat > deploy/.env << EOF
+          # Create environment file with proper quoting
+          cat > deploy/.env << 'ENV_EOF'
           # Database Configuration
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+          POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+          POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
 
-          # JWT Configuration
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          # JWT Configuration  
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"
 
           # Google OAuth
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+          GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
 
           # Email Configuration
-          EMAIL_HOST=${{ secrets.EMAIL_HOST }}
-          EMAIL_PORT=${{ secrets.EMAIL_PORT }}
-          EMAIL_USER=${{ secrets.EMAIL_USER }}
-          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
+          EMAIL_HOST="${{ secrets.EMAIL_HOST }}"
+          EMAIL_PORT="${{ secrets.EMAIL_PORT }}"
+          EMAIL_USER="${{ secrets.EMAIL_USER }}"
+          EMAIL_PASS="${{ secrets.EMAIL_PASS }}"
 
           # URLs
-          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-          BACKEND_URL=${{ secrets.BACKEND_URL }}
+          FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
 
           # Docker Images
-          BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}
-          FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}
-          EOF
+          BACKEND_IMAGE="${{ env.BACKEND_IMAGE }}"
+          FRONTEND_IMAGE="${{ env.FRONTEND_IMAGE }}"
+          ENV_EOF
 
       - name: 📦 Create deployment archive
         run: |
