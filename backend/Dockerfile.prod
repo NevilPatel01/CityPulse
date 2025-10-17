@@ -28,6 +28,9 @@ COPY shared ./shared
 # Copy backend source code
 COPY backend ./backend
 
+# Build shared workspace package before backend compilation
+RUN pnpm --filter @citypulse/shared build
+
 # Build the backend application
 WORKDIR /app/backend
 RUN pnpm build
