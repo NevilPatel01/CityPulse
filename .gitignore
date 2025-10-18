@@ -88,4 +88,15 @@ backend/src/**/*.js
 tmp/
 temp/
 
+# SSL certificates (they should be generated at deployment time)
+nginx/ssl/
+
+# Backup files
+*.backup
+backup-*.tar.gz
+
+# Temporary deployment files
+db.txt
+fix-*.sh
+
 citypulse-ui/
