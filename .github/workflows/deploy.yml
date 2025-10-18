@@ -131,11 +131,6 @@ jobs:
               image: ghcr.io/${{ env.REPO_LOWER }}-frontend:latest
               container_name: citypulse-frontend-prod
               restart: unless-stopped
-              environment:
-                VITE_API_URL: \${VITE_API_URL}
-                VITE_GOOGLE_CLIENT_ID: \${VITE_GOOGLE_CLIENT_ID}
-                VITE_GOOGLE_CLIENT_SECRET: \${VITE_GOOGLE_CLIENT_SECRET}
-                VITE_GOOGLE_REDIRECT_URI: \${VITE_GOOGLE_REDIRECT_URI}
               networks:
                 - citypulse-network
               depends_on:
@@ -197,10 +192,6 @@ jobs:
           EMAIL_USER=${{ secrets.EMAIL_USER }}
           EMAIL_PASS=${{ secrets.EMAIL_PASS }}
           FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-          VITE_API_URL=${{ secrets.VITE_API_URL }}
-          VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-          VITE_GOOGLE_CLIENT_SECRET=${{ secrets.VITE_GOOGLE_CLIENT_SECRET }}
-          VITE_GOOGLE_REDIRECT_URI=${{ secrets.VITE_GOOGLE_REDIRECT_URI }}
           ENV_EOF
 
       - name: 📤 Upload deployment files
@@ -213,9 +204,9 @@ jobs:
           source: "docker-compose.server.yml,.env,backend/sql/schema.sql"
           target: "/opt/citypulse/"
           strip_components: 0
-          timeout: 30s
-          command_timeout: 10m
-          debug: true
+          timeout: 60s
+          command_timeout: 5m
+          overwrite: true
 
       - name: 🚀 Deploy to Server
         uses: appleboy/ssh-action@v1.0.0
@@ -224,9 +215,8 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: 22
-          timeout: 30s
-          command_timeout: 10m
-          debug: true
+          timeout: 60s
+          command_timeout: 5m
           script: |
             cd /opt/citypulse
             
@@ -236,9 +226,9 @@ jobs:
             docker compose -f docker-compose.server.yml down || true
             
             echo "📦 Pulling latest images..."
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-nginx:latest
+            docker pull ${{ env.BACKEND_IMAGE }}
+            docker pull ${{ env.FRONTEND_IMAGE }}
+            docker pull ${{ env.NGINX_IMAGE }}
             
             echo "🚀 Starting services..."
             docker compose -f docker-compose.server.yml up -d
