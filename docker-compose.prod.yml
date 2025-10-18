@@ -28,7 +28,7 @@ services:
 
   # Backend API Service
   backend:
-    image: BACKEND_IMAGE_PLACEHOLDER
+    image: ${BACKEND_IMAGE}
     container_name: citypulse-backend-prod
     restart: unless-stopped
     environment:
@@ -71,7 +71,7 @@ services:
 
   # Frontend Service
   frontend:
-    image: FRONTEND_IMAGE_PLACEHOLDER
+    image: ${FRONTEND_IMAGE}
     container_name: citypulse-frontend-prod
     restart: unless-stopped
     environment:

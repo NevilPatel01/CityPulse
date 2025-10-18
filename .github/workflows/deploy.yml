@@ -243,18 +243,17 @@ jobs:
             # Stop existing containers
             docker compose -f docker-compose.prod.yml down || true
 
-            # Pull latest images using environment variables from .env
+            # Export environment variables for compose and pulls
+            set -a
             source .env
+            set +a
+
+            # Pull latest images using environment variables from .env
             docker pull "${BACKEND_IMAGE}"
             docker pull "${FRONTEND_IMAGE}"
 
-            # Update docker-compose with new image references
-            source .env
-            sed -i "s|BACKEND_IMAGE_PLACEHOLDER|${BACKEND_IMAGE}|g" docker-compose.prod.yml
-            sed -i "s|FRONTEND_IMAGE_PLACEHOLDER|${FRONTEND_IMAGE}|g" docker-compose.prod.yml
-
             # Start services
-            docker compose -f docker-compose.prod.yml up -d
+            docker compose --env-file .env -f docker-compose.prod.yml up -d
 
             # Wait for services to be healthy
             echo "⏳ Waiting for services to be healthy..."
