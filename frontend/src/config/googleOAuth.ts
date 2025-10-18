@@ -57,25 +57,28 @@ const getGoogleClientSecret = (): string => {
 
 /**
  * Validate that all required Google OAuth environment variables are set 
- * TODO: This need to remove in production and can be improved by using a schema validation with zod
+ * Only validates in development mode to prevent production errors
  */
 export const validateGoogleOAuthConfig = (): void => {
-    const missingVars: string[] = [];
-    
-    if (!getEnvValue('VITE_GOOGLE_CLIENT_ID')) {
-        missingVars.push('VITE_GOOGLE_CLIENT_ID');
-    }
-    
-    if (!getEnvValue('VITE_GOOGLE_CLIENT_SECRET')) {
-        missingVars.push('VITE_GOOGLE_CLIENT_SECRET');
-    }
-    
-    if (!getEnvValue('VITE_GOOGLE_REDIRECT_URI')) {
-        missingVars.push('VITE_GOOGLE_REDIRECT_URI');
-    }
-    
-    if (missingVars.length > 0) {
-        throw new Error(`Missing required Google OAuth environment variables: ${missingVars.join(', ')}. Please add them to your .env file or production secrets.`);
+    // Only validate in development mode
+    if (import.meta.env.MODE === 'development') {
+        const missingVars: string[] = [];
+        
+        if (!getEnvValue('VITE_GOOGLE_CLIENT_ID')) {
+            missingVars.push('VITE_GOOGLE_CLIENT_ID');
+        }
+        
+        if (!getEnvValue('VITE_GOOGLE_CLIENT_SECRET')) {
+            missingVars.push('VITE_GOOGLE_CLIENT_SECRET');
+        }
+        
+        if (!getEnvValue('VITE_GOOGLE_REDIRECT_URI')) {
+            missingVars.push('VITE_GOOGLE_REDIRECT_URI');
+        }
+        
+        if (missingVars.length > 0) {
+            console.warn(`Missing Google OAuth environment variables: ${missingVars.join(', ')}. Please add them to your .env file.`);
+        }
     }
 };
 

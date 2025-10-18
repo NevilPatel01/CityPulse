@@ -13,17 +13,6 @@ RUN mkdir -p /etc/nginx/ssl \
     && mkdir -p /var/www/certbot \
     && mkdir -p /var/log/nginx
 
-# Create self-signed certificates as fallback (will be overridden by volume mount in production)
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/nginx/ssl/key.pem \
-    -out /etc/nginx/ssl/cert.pem \
-    -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=city-pulse.app"
-
-# Set proper permissions
-RUN chown -R nginx:nginx /etc/nginx/ssl \
-    && chmod 600 /etc/nginx/ssl/key.pem \
-    && chmod 644 /etc/nginx/ssl/cert.pem
-
 # Create nginx user if it doesn't exist
 RUN addgroup -g 101 -S nginx || true \
     && adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx || true

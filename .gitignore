@@ -95,8 +95,11 @@ nginx/ssl/
 *.backup
 backup-*.tar.gz
 
-# Temporary deployment files
+# Temporary deployment and SSL files
 db.txt
 fix-*.sh
+setup-ssl.sh
+deploy-letsencrypt.sh
+update-ssl-certificate.sh
 
 citypulse-ui/

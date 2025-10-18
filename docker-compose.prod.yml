@@ -75,7 +75,10 @@ services:
     container_name: citypulse-frontend-prod
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${BACKEND_URL}
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+      VITE_GOOGLE_CLIENT_SECRET: ${VITE_GOOGLE_CLIENT_SECRET}
+      VITE_GOOGLE_REDIRECT_URI: ${VITE_GOOGLE_REDIRECT_URI}
     networks:
       - citypulse-network
     depends_on:
