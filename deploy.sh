@@ -1,113 +1,70 @@
 #!/bin/bash
 
-# Clean deployment script for CityPulse production
-# This script handles the complete deployment process
+# CityPulse Fast CI/CD Deployment Script
+# Focused on code updates and container restarts only
+# SSL certificates are handled by server-setup.sh (run once)
 
 set -e
 
 # Colors for output
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Configuration
 PRODUCTION_SERVER="root@206.189.65.221"
 DEPLOYMENT_PATH="/opt/citypulse"
 
-# Function to print colored messages
-print_message() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
+print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
 
-print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
+echo -e "${GREEN}🚀 CityPulse Fast Deployment${NC}"
+echo "============================="
 
-print_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
-
-echo -e "${GREEN}🚀 CityPulse Production Deployment${NC}"
-echo "=================================="
-
-# Step 1: Ensure we have the latest changes
-print_info "Checking git status..."
+# Step 1: Push latest changes
+print_info "Pushing latest changes..."
 if [[ -n $(git status --porcelain) ]]; then
-    print_warning "You have uncommitted changes. Committing them now..."
     git add .
-    git commit -m "Deploy: $(date '+%Y-%m-%d %H:%M:%S') - Auto-commit before deployment"
+    git commit -m "Deploy: $(date '+%Y-%m-%d %H:%M:%S')" || true
 fi
-
-print_info "Pushing to main branch..."
 git push origin main
 
-# Step 2: Deploy to production server
-print_info "Connecting to production server..."
+# Step 2: Deploy to production
+print_info "Deploying to production server..."
 
 ssh $PRODUCTION_SERVER << 'EOF'
 set -e
-
 cd /opt/citypulse
 
-echo "� Pulling latest images..."
-sudo docker compose -f docker-compose.prod.yml pull postgres backend frontend
+echo "� Pulling latest code..."
+git pull origin main
 
-echo "� Restarting services with latest configuration..."
-sudo docker compose -f docker-compose.prod.yml up -d
+echo "� Stopping services..."
+docker compose -f docker-compose.prod.yml down
 
-echo "⏳ Waiting for services to be ready..."
+echo "� Building images..."
+docker compose -f docker-compose.prod.yml build --no-cache
+
+echo "🚀 Starting services..."
+docker compose -f docker-compose.prod.yml up -d
+
+echo "⏳ Waiting for services..."
 sleep 30
 
-echo "🔍 Checking service status..."
-sudo docker compose -f docker-compose.prod.yml ps
+echo "🔍 Service status:"
+docker compose -f docker-compose.prod.yml ps
 
-echo ""
-echo "🧪 Testing service health..."
-
-# Wait for services to be fully ready
-for i in {1..6}; do
-    if sudo docker compose -f docker-compose.prod.yml ps | grep -q "Up.*healthy"; then
-        echo "✅ Services are healthy"
-        break
-    fi
-    echo "⏳ Waiting for health checks... ($i/6)"
-    sleep 10
-done
-
-echo "✅ Deployment complete on server!"
 EOF
 
-# Step 3: Test the deployment
-print_info "Testing the deployment..."
+# Step 3: Quick health check
+print_info "Verifying deployment..."
 sleep 10
 
-echo ""
-print_info "Testing HTTPS:"
-HTTPS_RESPONSE=$(curl -I https://city-pulse.app/ 2>/dev/null | head -1 || echo "Connection failed")
-echo "$HTTPS_RESPONSE"
-
-echo ""
-print_info "Testing API health:"
-API_RESPONSE=$(curl -s https://city-pulse.app/health 2>/dev/null || echo "API not responding")
-echo "$API_RESPONSE"
-
-echo ""
-if [[ "$HTTPS_RESPONSE" == *"200"* ]] && [[ "$API_RESPONSE" == *"healthy"* ]]; then
-    print_message "🎉 Deployment successful!"
-    print_message "🌐 Your site is ready at: https://city-pulse.app"
-    print_message "🔒 SSL certificates are properly configured"
-    print_message "🔐 Google OAuth is configured and ready"
+if curl -s https://api.city-pulse.app/api/health | grep -q "healthy"; then
+    print_success "🎉 Deployment successful!"
+    print_info "🌐 Site: https://city-pulse.app"
+    print_info "🔗 API: https://api.city-pulse.app/api/health"
 else
-    print_warning "⚠️ Deployment completed but some services may still be starting up"
-    print_info "Check the logs with: ssh $PRODUCTION_SERVER 'cd $DEPLOYMENT_PATH && sudo docker compose -f docker-compose.prod.yml logs'"
+    echo "⚠️ Services may still be starting up"
 fi
-
-echo ""
-print_info "🔍 Final service status:"
-ssh $PRODUCTION_SERVER "cd $DEPLOYMENT_PATH && sudo docker compose -f docker-compose.prod.yml ps"

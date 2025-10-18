@@ -109,7 +109,7 @@ services:
       - "443:443"
     volumes:
       - nginx_logs:/var/log/nginx
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - /etc/letsencrypt/live/city-pulse.app:/etc/nginx/ssl:ro
     networks:
       - citypulse-network
     depends_on:
