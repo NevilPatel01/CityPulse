@@ -87,71 +87,91 @@ jobs:
       - name: 📦 Create deployment archive
         run: tar -czf deploy.tar.gz -C deploy .
 
-      - name: 🔑 Prepare SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/do_key
-          chmod 600 ~/.ssh/do_key
-
-      - name: 📤 Upload deployment bundle
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: root
-          port: ${{ secrets.DO_SSH_PORT || 22 }}
-          key_path: ~/.ssh/do_key
-          source: "deploy.tar.gz"
-          target: "/opt/citypulse/"
-          timeout: 60s
-          command_timeout: 5m
-          overwrite: true
-
-      - name: 🚀 Deploy to server
+      - name: � Deploy to Digital Ocean
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DO_HOST }}
           username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: ${{ secrets.DO_SSH_PORT || 22 }}
-          key_path: ~/.ssh/do_key
-          timeout: 60s
-          command_timeout: 5m
           script: |
-            set -euo pipefail
+            # Create deployment directory with root ownership
+            mkdir -p /opt/citypulse
+            chown -R root:root /opt/citypulse
+            
+            # Switch to deployment directory
             cd /opt/citypulse
 
-            echo "🧹 Removing previous deployment files..."
-            rm -rf backend
-            rm -f docker-compose.prod.yml .env
+            # Backup current deployment
+            if [ -f docker-compose.prod.yml ]; then
+                echo "📦 Creating backup..."
+                docker compose -f docker-compose.prod.yml down --remove-orphans || true
+                tar -czf "backup-$(date +%Y%m%d-%H%M%S).tar.gz" . --exclude='backup-*.tar.gz' || true
+            fi
 
-            echo "📦 Extracting deployment bundle..."
+            # Clean up old files
+            rm -rf backend nginx
+            rm -f .env docker-compose.prod.yml
+
+      - name: 📤 Upload deployment package
+        uses: appleboy/scp-action@v0.1.5
+        with:
+            host: ${{ secrets.DO_HOST }}
+            username: root
+            key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+            port: ${{ secrets.DO_SSH_PORT || 22 }}
+            source: deploy.tar.gz
+            target: /opt/citypulse/
+
+      - name: 🔐 Login to registry and deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.DO_SSH_PORT || 22 }}
+          timeout: 60s
+          command_timeout: 10m
+          script: |
+            cd /opt/citypulse
+
+            # Extract deployment package
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
 
-            echo "🔐 Logging in to GHCR..."
+            # Login to GitHub Container Registry using the GITHUB_TOKEN
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            echo "♻️  Stopping existing services..."
-            docker compose --env-file .env -f docker-compose.prod.yml down || true
+            # Stop existing containers
+            docker compose -f docker-compose.prod.yml down || true
 
-            echo "📦 Loading environment..."
+            # Export environment variables for compose and pulls
             set -a
             source .env
             set +a
 
-            echo "📥 Pulling latest images..."
+            # Pull latest images using environment variables from .env
             docker pull "${BACKEND_IMAGE}"
             docker pull "${FRONTEND_IMAGE}"
 
-            echo "🚀 Starting updated stack..."
-            docker compose --env-file .env -f docker-compose.prod.yml up -d --remove-orphans
+            # Start services
+            docker compose --env-file .env -f docker-compose.prod.yml up -d
 
-            echo "⏳ Waiting for services..."
-            timeout 300 bash -c 'until docker compose --env-file .env -f docker-compose.prod.yml ps | grep -q "healthy"; do sleep 5; done'
+            # Wait for services to be healthy
+            echo "⏳ Waiting for services to be healthy..."
+            timeout 300 bash -c 'until docker compose -f docker-compose.prod.yml ps | grep -q "healthy"; do sleep 5; done'
 
-            echo "🔍 Deployment status:"
-            docker compose --env-file .env -f docker-compose.prod.yml ps
+            # Verify deployment
+            if docker compose -f docker-compose.prod.yml ps | grep -q "unhealthy\|Restarting"; then
+                echo "❌ Deployment failed - some services are unhealthy"
+                docker compose -f docker-compose.prod.yml logs
+                exit 1
+            else
+                echo "✅ Deployment successful!"
+                docker compose -f docker-compose.prod.yml ps
+            fi
 
-            echo "🧹 Cleaning up old images..."
+            # Cleanup old images
             docker image prune -f
 
       - name: 📢 Notify Success
