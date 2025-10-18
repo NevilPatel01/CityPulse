@@ -31,14 +31,11 @@ RUN addgroup -g 101 -S nginx || true \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f https://city-pulse.app/health || exit 1
+    CMD curl -f http://localhost/health || exit 1
 
 # Add curl for health checks
 RUN apk add --no-cache curl
 
 EXPOSE 80 443
-
-# Use nginx user
-USER nginx
 
 CMD ["nginx", "-g", "daemon off;"]
