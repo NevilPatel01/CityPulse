@@ -87,13 +87,19 @@ jobs:
       - name: 📦 Create deployment archive
         run: tar -czf deploy.tar.gz -C deploy .
 
+      - name: 🔑 Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/do_key
+          chmod 600 ~/.ssh/do_key
+
       - name: 📤 Upload deployment bundle
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.DO_HOST }}
           username: root
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: ${{ secrets.DO_SSH_PORT || 22 }}
+          key_path: ~/.ssh/do_key
           source: "deploy.tar.gz"
           target: "/opt/citypulse/"
           timeout: 60s
@@ -105,8 +111,8 @@ jobs:
         with:
           host: ${{ secrets.DO_HOST }}
           username: root
-          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: ${{ secrets.DO_SSH_PORT || 22 }}
+          key_path: ~/.ssh/do_key
           timeout: 60s
           command_timeout: 5m
           script: |
