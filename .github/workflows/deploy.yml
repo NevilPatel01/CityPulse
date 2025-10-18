@@ -211,8 +211,11 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: 22
           source: "docker-compose.server.yml,.env,backend/sql/schema.sql"
-          target: /opt/citypulse/
+          target: "/opt/citypulse/"
           strip_components: 0
+          timeout: 30s
+          command_timeout: 10m
+          debug: true
 
       - name: 🚀 Deploy to Server
         uses: appleboy/ssh-action@v1.0.0
@@ -221,6 +224,9 @@ jobs:
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           port: 22
+          timeout: 30s
+          command_timeout: 10m
+          debug: true
           script: |
             cd /opt/citypulse
             
