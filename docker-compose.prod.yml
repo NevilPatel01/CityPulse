@@ -28,9 +28,7 @@ services:
 
   # Backend API Service
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.prod
+    image: ${BACKEND_IMAGE}
     container_name: citypulse-backend-prod
     restart: unless-stopped
     environment:
@@ -73,16 +71,11 @@ services:
 
   # Frontend Service
   frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile.prod
+    image: ${FRONTEND_IMAGE}
     container_name: citypulse-frontend-prod
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL}
-      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-      VITE_GOOGLE_CLIENT_SECRET: ${VITE_GOOGLE_CLIENT_SECRET}
-      VITE_GOOGLE_REDIRECT_URI: ${VITE_GOOGLE_REDIRECT_URI}
+      VITE_API_URL: ${BACKEND_URL}
     networks:
       - citypulse-network
     depends_on:

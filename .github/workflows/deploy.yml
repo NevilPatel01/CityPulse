@@ -23,9 +23,8 @@ jobs:
       - name: 🔡 Prepare lowercase image names
         run: |
           echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          echo "BACKEND_IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-backend:latest" >> $GITHUB_ENV
-          echo "FRONTEND_IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-frontend:latest" >> $GITHUB_ENV
-          echo "NGINX_IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-nginx:latest" >> $GITHUB_ENV
+          echo "BACKEND_IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-backend:${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-frontend:${GITHUB_SHA}" >> $GITHUB_ENV
 
       - name: 🔐 Login to Container Registry
         uses: docker/login-action@v3
@@ -43,7 +42,7 @@ jobs:
           context: .
           file: backend/Dockerfile.prod
           push: true
-          tags: ${{ env.BACKEND_IMAGE }},ghcr.io/${{ env.REPO_LOWER }}-backend:${{ github.sha }}
+          tags: ${{ env.BACKEND_IMAGE }},ghcr.io/${{ env.REPO_LOWER }}-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -53,199 +52,100 @@ jobs:
           context: .
           file: frontend/Dockerfile.prod
           push: true
-          tags: ${{ env.FRONTEND_IMAGE }},ghcr.io/${{ env.REPO_LOWER }}-frontend:${{ github.sha }}
+          tags: ${{ env.FRONTEND_IMAGE }},ghcr.io/${{ env.REPO_LOWER }}-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: 🏗️ Build and push Nginx image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./nginx
-          file: nginx/Dockerfile
-          push: true
-          tags: ${{ env.NGINX_IMAGE }},ghcr.io/${{ env.REPO_LOWER }}-nginx:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: 📁 Create deployment files
+      - name: 📁 Prepare deployment bundle
         run: |
-          cat > docker-compose.server.yml << 'COMPOSE_EOF'
-          services:
-            postgres:
-              image: postgres:15-alpine
-              container_name: citypulse-postgres-prod
-              restart: unless-stopped
-              environment:
-                POSTGRES_DB: \${POSTGRES_DB}
-                POSTGRES_USER: \${POSTGRES_USER}
-                POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-                - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-              networks:
-                - citypulse-network
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U \${POSTGRES_USER} -d \${POSTGRES_DB}"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
-                start_period: 30s
+          set -euo pipefail
+          rm -rf deploy
+          mkdir -p deploy/backend deploy/nginx
 
-            backend:
-              image: ghcr.io/${{ env.REPO_LOWER }}-backend:latest
-              container_name: citypulse-backend-prod
-              restart: unless-stopped
-              environment:
-                NODE_ENV: production
-                PORT: 5000
-                DB_HOST: postgres
-                DB_PORT: 5432
-                DB_NAME: \${POSTGRES_DB}
-                DB_USER: \${POSTGRES_USER}
-                DB_PASSWORD: \${POSTGRES_PASSWORD}
-                JWT_SECRET: \${JWT_SECRET}
-                JWT_REFRESH_SECRET: \${JWT_REFRESH_SECRET}
-                GOOGLE_CLIENT_ID: \${GOOGLE_CLIENT_ID}
-                GOOGLE_CLIENT_SECRET: \${GOOGLE_CLIENT_SECRET}
-                EMAIL_HOST: \${EMAIL_HOST}
-                EMAIL_PORT: \${EMAIL_PORT}
-                EMAIL_USER: \${EMAIL_USER}
-                EMAIL_PASS: \${EMAIL_PASS}
-                FRONTEND_URL: \${FRONTEND_URL}
-                DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/\${POSTGRES_DB}
-              volumes:
-                - uploads_data:/app/backend/uploads
-              networks:
-                - citypulse-network
-              depends_on:
-                postgres:
-                  condition: service_healthy
-              healthcheck:
-                test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 40s
+          cp docker-compose.prod.yml deploy/docker-compose.prod.yml
+          cp -r nginx/. deploy/nginx/
+          cp -r backend/sql deploy/backend/
 
-            frontend:
-              image: ghcr.io/${{ env.REPO_LOWER }}-frontend:latest
-              container_name: citypulse-frontend-prod
-              restart: unless-stopped
-              networks:
-                - citypulse-network
-              depends_on:
-                backend:
-                  condition: service_healthy
-              healthcheck:
-                test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null 2>&1 || exit 1"]
-                interval: 30s
-                timeout: 5s
-                retries: 3
-                start_period: 20s
-
-            nginx:
-              image: ghcr.io/${{ env.REPO_LOWER }}-nginx:latest
-              container_name: citypulse-nginx-prod
-              restart: unless-stopped
-              ports:
-                - "80:80"
-                - "443:443"
-              volumes:
-                - nginx_logs:/var/log/nginx
-                - /etc/letsencrypt/live/city-pulse.app:/etc/nginx/ssl:ro
-              networks:
-                - citypulse-network
-              depends_on:
-                frontend:
-                  condition: service_healthy
-                backend:
-                  condition: service_healthy
-              healthcheck:
-                test: ["CMD", "nginx", "-t"]
-                interval: 30s
-                timeout: 3s
-                retries: 3
-
-          volumes:
-            postgres_data:
-              driver: local
-            uploads_data:
-              driver: local
-            nginx_logs:
-              driver: local
-
-          networks:
-            citypulse-network:
-              driver: bridge
-          COMPOSE_EOF
-
-          cat > .env << 'ENV_EOF'
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-          EMAIL_HOST=${{ secrets.EMAIL_HOST }}
-          EMAIL_PORT=${{ secrets.EMAIL_PORT }}
-          EMAIL_USER=${{ secrets.EMAIL_USER }}
-          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
-          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          cat > deploy/.env <<'ENV_EOF'
+          POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+          POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+          POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"
+          GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+          GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+          EMAIL_HOST="${{ secrets.EMAIL_HOST }}"
+          EMAIL_PORT="${{ secrets.EMAIL_PORT }}"
+          EMAIL_USER="${{ secrets.EMAIL_USER }}"
+          EMAIL_PASS="${{ secrets.EMAIL_PASS }}"
+          FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          BACKEND_IMAGE="${{ env.BACKEND_IMAGE }}"
+          FRONTEND_IMAGE="${{ env.FRONTEND_IMAGE }}"
           ENV_EOF
 
-      - name: 📤 Upload deployment files
+      - name: 📦 Create deployment archive
+        run: tar -czf deploy.tar.gz -C deploy .
+
+      - name: 📤 Upload deployment bundle
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.DO_HOST }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          port: 22
-          source: "docker-compose.server.yml,.env,backend/sql/schema.sql"
+          port: ${{ secrets.DO_SSH_PORT || 22 }}
+          source: "deploy.tar.gz"
           target: "/opt/citypulse/"
-          strip_components: 0
           timeout: 60s
           command_timeout: 5m
           overwrite: true
 
-      - name: 🚀 Deploy to Server
+      - name: 🚀 Deploy to server
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DO_HOST }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-          port: 22
+          port: ${{ secrets.DO_SSH_PORT || 22 }}
           timeout: 60s
           command_timeout: 5m
           script: |
+            set -euo pipefail
             cd /opt/citypulse
-            
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            echo "🛑 Stopping services..."
-            docker compose -f docker-compose.server.yml down || true
-            
-            echo "📦 Pulling latest images..."
-            docker pull ${{ env.BACKEND_IMAGE }}
-            docker pull ${{ env.FRONTEND_IMAGE }}
-            docker pull ${{ env.NGINX_IMAGE }}
-            
-            echo "🚀 Starting services..."
-            docker compose -f docker-compose.server.yml up -d
-            
+
+            echo "🧹 Removing previous deployment files..."
+            rm -rf backend
+            rm -f docker-compose.prod.yml .env
+
+            echo "📦 Extracting deployment bundle..."
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
+
+            echo "🔐 Logging in to GHCR..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "♻️  Stopping existing services..."
+            docker compose --env-file .env -f docker-compose.prod.yml down || true
+
+            echo "📦 Loading environment..."
+            set -a
+            source .env
+            set +a
+
+            echo "📥 Pulling latest images..."
+            docker pull "${BACKEND_IMAGE}"
+            docker pull "${FRONTEND_IMAGE}"
+
+            echo "🚀 Starting updated stack..."
+            docker compose --env-file .env -f docker-compose.prod.yml up -d --remove-orphans
+
             echo "⏳ Waiting for services..."
-            sleep 45
-            
-            echo "🔍 Checking deployment..."
-            if curl -sf https://api.city-pulse.app/api/health >/dev/null; then
-              echo "✅ Deployment successful!"
-              docker compose -f docker-compose.server.yml ps
-            else
-              echo "❌ Deployment failed!"
-              docker compose -f docker-compose.server.yml logs --tail=50
-              exit 1
-            fi
-            
+            timeout 300 bash -c 'until docker compose --env-file .env -f docker-compose.prod.yml ps | grep -q "healthy"; do sleep 5; done'
+
+            echo "🔍 Deployment status:"
+            docker compose --env-file .env -f docker-compose.prod.yml ps
+
+            echo "🧹 Cleaning up old images..."
             docker image prune -f
 
       - name: 📢 Notify Success
