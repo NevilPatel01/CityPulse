@@ -20,5 +20,22 @@ WORKDIR /workspace/frontend
 
 EXPOSE 3000
 
-# Start Vite dev server
-CMD ["pnpm", "run", "dev", "--host", "0.0.0.0"]
+# Create startup script to generate env.js and start Vite
+RUN echo '#!/bin/sh' > /tmp/start-dev.sh && \
+    echo 'echo "Generating runtime environment configuration..."' >> /tmp/start-dev.sh && \
+    echo 'mkdir -p public' >> /tmp/start-dev.sh && \
+    echo 'cat > public/env.js << EOF' >> /tmp/start-dev.sh && \
+    echo 'window.ENV = {' >> /tmp/start-dev.sh && \
+    echo '  VITE_API_URL: '"'"'${VITE_API_URL}'"'"',' >> /tmp/start-dev.sh && \
+    echo '  VITE_GOOGLE_CLIENT_ID: '"'"'${VITE_GOOGLE_CLIENT_ID}'"'"',' >> /tmp/start-dev.sh && \
+    echo '  VITE_GOOGLE_CLIENT_SECRET: '"'"'${VITE_GOOGLE_CLIENT_SECRET}'"'"',' >> /tmp/start-dev.sh && \
+    echo '  VITE_GOOGLE_REDIRECT_URI: '"'"'${VITE_GOOGLE_REDIRECT_URI}'"'"'' >> /tmp/start-dev.sh && \
+    echo '};' >> /tmp/start-dev.sh && \
+    echo 'EOF' >> /tmp/start-dev.sh && \
+    echo 'echo "Environment configuration written to public/env.js"' >> /tmp/start-dev.sh && \
+    echo 'echo "VITE_API_URL=${VITE_API_URL}"' >> /tmp/start-dev.sh && \
+    echo 'exec pnpm run dev --host 0.0.0.0' >> /tmp/start-dev.sh && \
+    chmod +x /tmp/start-dev.sh
+
+# Start with env generation script
+CMD ["/bin/sh", "/tmp/start-dev.sh"]

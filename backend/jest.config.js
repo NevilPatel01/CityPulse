@@ -20,12 +20,12 @@ module.exports = {
     ],
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'html'],
-    setupFilesAfterEnv: [],
+    setupFilesAfterEnv: ['<rootDir>/src/tests/jest.setup.ts'],
     moduleFileExtensions: ['ts', 'js', 'json'],
     clearMocks: true,
     restoreMocks: true,
     resetMocks: false,
-    testTimeout: 10000,
+    testTimeout: 30000, // Increased to 30 seconds for integration tests
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
     },
@@ -36,5 +36,9 @@ module.exports = {
         'ts-jest': {
             useESM: false
         }
-    }
+    },
+    // Run tests sequentially to avoid database conflicts
+    maxWorkers: 1,
+    // Verbose output for better debugging
+    verbose: true
 };

@@ -6,28 +6,29 @@ services:
       dockerfile: Dockerfile.postgres
     container_name: citypulse-postgres-dev
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: citypulse_dev
+      POSTGRES_USER: ${POSTGRES_USER:-citypulse_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-citypulse_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-citypulse_dev}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     networks:
       - citypulse-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d citypulse_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-citypulse_user} -d ${POSTGRES_DB:-citypulse_dev}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+    restart: unless-stopped
 
-  # pgAdmin for Database GUI
+  # pgAdmin for Database GUI (Optional - comment out if not needed)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: citypulse-pgadmin-dev
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@citypulse.com
+      PGADMIN_DEFAULT_EMAIL: admin@citypulse.local
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
@@ -39,7 +40,9 @@ services:
       - citypulse-network
     volumes:
       - pgadmin_data_dev:/var/lib/pgadmin
+    restart: unless-stopped
 
+  # Backend API Service
   backend:
     build:
       context: .
@@ -48,20 +51,21 @@ services:
     environment:
       NODE_ENV: development
       PORT: 5000
-      DATABASE_URL: postgresql://user:password@postgres:5432/citypulse_dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-citypulse_dev}
+      DB_USER: ${POSTGRES_USER:-citypulse_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-citypulse_dev_password}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-citypulse_user}:${POSTGRES_PASSWORD:-citypulse_dev_password}@postgres:5432/${POSTGRES_DB:-citypulse_dev}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
-      FRONTEND_URL: ${FRONTEND_URL}
-      EMAIL_HOST: ${EMAIL_HOST}
-      EMAIL_PORT: ${EMAIL_PORT}
-      EMAIL_SECURE: ${EMAIL_SECURE}
-      EMAIL_USER: ${EMAIL_USER}
-      EMAIL_PASS: ${EMAIL_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      FRONTEND_URL: http://localhost:3001
     ports:
       - "5001:5000"
     depends_on:
@@ -69,15 +73,17 @@ services:
         condition: service_healthy
     networks:
       - citypulse-network
-    # volumes:
-    #   - ./backend:/app/backend
-    #   - /app/backend/node_modules
-    #   - ./backend/uploads:/app/backend/uploads
+    volumes:
+      - ./backend:/workspace/backend
+      - ./shared:/workspace/shared
+      - /workspace/backend/node_modules
+      - /workspace/shared/node_modules
+      - backend_uploads_dev:/workspace/backend/uploads
     stdin_open: true
     tty: true
     restart: unless-stopped
 
-
+  # Frontend Service
   frontend:
     build:
       context: .
@@ -95,17 +101,22 @@ services:
       - backend
     networks:
       - citypulse-network
-    # volumes:
-    #   - ./frontend:/app/frontend
-    #   - /app/frontend/node_modules
+    volumes:
+      - ./frontend:/workspace/frontend
+      - ./shared:/workspace/shared
+      - /workspace/frontend/node_modules
+      - /workspace/shared/node_modules
     stdin_open: true
     tty: true
     restart: unless-stopped
 
-
 volumes:
   postgres_data_dev:
+    driver: local
   pgadmin_data_dev:
+    driver: local
+  backend_uploads_dev:
+    driver: local
 
 networks:
   citypulse-network:
