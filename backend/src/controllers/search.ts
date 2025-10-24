@@ -30,33 +30,35 @@ export const searchAll = async (req: Request, res: Response) => {
         // Search recommendations/places
         if (!type || type === 'recommendations' || type === 'places') {
             const recommendationsResult = await query(`
-                SELECT 
+                SELECT DISTINCT
                     r.id,
                     r.title,
                     r.description,
-                    r.location,
-                    r.city,
-                    r.image_url,
-                    r.category,
+                    r.address,
+                    c.name as city_name,
+                    rp.photo_url as image_url,
+                    rc.name as category,
                     r.created_at,
                     u.username,
                     u.full_name as author_name,
-                    u.profile_picture,
-                    COUNT(rl.id) as likes_count,
-                    AVG(rr.rating) as avg_rating
+                    up.profile_photo_url as profile_picture,
+                    r.likes_count,
+                    (SELECT AVG(rating) FROM recommendation_ratings WHERE recommendation_id = r.id) as avg_rating
                 FROM recommendations r
                 LEFT JOIN users u ON r.user_id = u.id
-                LEFT JOIN recommendation_likes rl ON r.id = rl.recommendation_id
-                LEFT JOIN recommendation_ratings rr ON r.id = rr.recommendation_id
+                LEFT JOIN user_profiles up ON u.id = up.user_id
+                LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
+                LEFT JOIN recommendation_cities rcities ON r.id = rcities.recommendation_id
+                LEFT JOIN cities c ON rcities.city_id = c.id
+                LEFT JOIN recommendation_photos rp ON r.id = rp.recommendation_id AND rp.is_primary = true
                 WHERE r.status = 'published' 
                     AND (
                         LOWER(r.title) LIKE $1 
                         OR LOWER(r.description) LIKE $1 
-                        OR LOWER(r.location) LIKE $1 
-                        OR LOWER(r.city) LIKE $1
-                        OR LOWER(r.category) LIKE $1
+                        OR LOWER(r.address) LIKE $1 
+                        OR LOWER(c.name) LIKE $1
+                        OR LOWER(rc.name) LIKE $1
                     )
-                GROUP BY r.id, u.id, u.username, u.full_name, u.profile_picture
                 ORDER BY r.created_at DESC
                 LIMIT $2 OFFSET $3
             `, [searchTerm, limitNum, offsetNum]);
@@ -65,8 +67,8 @@ export const searchAll = async (req: Request, res: Response) => {
                 id: row.id,
                 title: row.title,
                 description: row.description,
-                location: row.location,
-                city: row.city,
+                location: row.address,
+                city: row.city_name,
                 imageUrl: row.image_url,
                 category: row.category,
                 createdAt: row.created_at,
@@ -89,23 +91,21 @@ export const searchAll = async (req: Request, res: Response) => {
                     u.username,
                     u.full_name,
                     u.bio,
-                    u.profile_picture,
-                    u.location as user_location,
+                    up.profile_photo_url as profile_picture,
+                    u.current_location as user_location,
                     u.created_at,
-                    COUNT(DISTINCT tb1.id) + COUNT(DISTINCT tb2.id) as connections_count,
                     COUNT(DISTINCT r.id) as recommendations_count
                 FROM users u
-                LEFT JOIN travel_buddies tb1 ON u.id = tb1.user_id AND tb1.status = 'accepted'
-                LEFT JOIN travel_buddies tb2 ON u.id = tb2.buddy_user_id AND tb2.status = 'accepted'
+                LEFT JOIN user_profiles up ON u.id = up.user_id
                 LEFT JOIN recommendations r ON u.id = r.user_id AND r.status = 'published'
-                WHERE u.is_active = true
+                WHERE u.account_status = 'active'
                     AND (
                         LOWER(u.username) LIKE $1 
                         OR LOWER(u.full_name) LIKE $1 
                         OR LOWER(u.bio) LIKE $1
-                        OR LOWER(u.location) LIKE $1
+                        OR LOWER(u.current_location) LIKE $1
                     )
-                GROUP BY u.id, u.username, u.full_name, u.bio, u.profile_picture, u.location, u.created_at
+                GROUP BY u.id, u.username, u.full_name, u.bio, up.profile_photo_url, u.current_location, u.created_at
                 ORDER BY u.created_at DESC
                 LIMIT $2 OFFSET $3
             `, [searchTerm, limitNum, offsetNum]);
@@ -117,7 +117,7 @@ export const searchAll = async (req: Request, res: Response) => {
                 bio: row.bio,
                 profilePicture: row.profile_picture,
                 location: row.user_location,
-                connectionsCount: parseInt(row.connections_count) || 0,
+                connectionsCount: 0, // Removed travel_buddies dependency
                 recommendationsCount: parseInt(row.recommendations_count) || 0,
                 type: 'user'
             }));
@@ -125,35 +125,26 @@ export const searchAll = async (req: Request, res: Response) => {
 
         // Search cities
         if (!type || type === 'cities') {
-            // Since we don't have a dedicated cities table, let's extract unique cities from recommendations and user trips
             const citiesResult = await query(`
                 SELECT DISTINCT
-                    city,
-                    COUNT(*) as mentions_count,
+                    c.id,
+                    c.name as city,
+                    c.country,
+                    COUNT(DISTINCT rc.recommendation_id) as mentions_count,
                     'city' as type
-                FROM (
-                    SELECT DISTINCT TRIM(city) as city
-                    FROM recommendations 
-                    WHERE status = 'published' 
-                        AND city IS NOT NULL 
-                        AND TRIM(city) != ''
-                        AND LOWER(city) LIKE $1
-                    UNION
-                    SELECT DISTINCT TRIM(city) as city
-                    FROM user_trips 
-                    WHERE status = 'completed' 
-                        AND city IS NOT NULL 
-                        AND TRIM(city) != ''
-                        AND LOWER(city) LIKE $1
-                ) unique_cities
-                JOIN recommendations r ON LOWER(TRIM(r.city)) = LOWER(TRIM(unique_cities.city)) AND r.status = 'published'
-                GROUP BY city
-                ORDER BY mentions_count DESC, city ASC
+                FROM cities c
+                LEFT JOIN recommendation_cities rc ON c.id = rc.city_id
+                LEFT JOIN recommendations r ON rc.recommendation_id = r.id AND r.status = 'published'
+                WHERE LOWER(c.name) LIKE $1 OR LOWER(c.country) LIKE $1
+                GROUP BY c.id, c.name, c.country
+                ORDER BY mentions_count DESC, c.name ASC
                 LIMIT $2 OFFSET $3
             `, [searchTerm, limitNum, offsetNum]);
 
             results.cities = citiesResult.rows.map(row => ({
+                id: row.id,
                 name: row.city,
+                country: row.country,
                 mentionsCount: parseInt(row.mentions_count) || 0,
                 type: 'city'
             }));
@@ -204,9 +195,9 @@ export const searchRecommendations = async (req: Request, res: Response) => {
             AND (
                 LOWER(r.title) LIKE $1 
                 OR LOWER(r.description) LIKE $1 
-                OR LOWER(r.location) LIKE $1 
-                OR LOWER(r.city) LIKE $1
-                OR LOWER(r.category) LIKE $1
+                OR LOWER(r.address) LIKE $1 
+                OR LOWER(c.name) LIKE $1
+                OR LOWER(rc.name) LIKE $1
             )
         `;
         
@@ -214,13 +205,13 @@ export const searchRecommendations = async (req: Request, res: Response) => {
         let paramIndex = 2;
 
         if (category && typeof category === 'string') {
-            whereClause += ` AND LOWER(r.category) = $${paramIndex}`;
+            whereClause += ` AND LOWER(rc.name) = $${paramIndex}`;
             queryParams.push(category.toLowerCase());
             paramIndex++;
         }
 
         if (city && typeof city === 'string') {
-            whereClause += ` AND LOWER(r.city) = $${paramIndex}`;
+            whereClause += ` AND LOWER(c.name) = $${paramIndex}`;
             queryParams.push(city.toLowerCase());
             paramIndex++;
         }
@@ -228,26 +219,28 @@ export const searchRecommendations = async (req: Request, res: Response) => {
         queryParams.push(limitNum, offsetNum);
 
         const result = await query(`
-            SELECT 
+            SELECT DISTINCT
                 r.id,
                 r.title,
                 r.description,
-                r.location,
-                r.city,
-                r.image_url,
-                r.category,
+                r.address,
+                c.name as city_name,
+                rp.photo_url as image_url,
+                rc.name as category,
                 r.created_at,
                 u.username,
                 u.full_name as author_name,
-                u.profile_picture,
-                COUNT(rl.id) as likes_count,
-                AVG(rr.rating) as avg_rating
+                up.profile_photo_url as profile_picture,
+                r.likes_count,
+                (SELECT AVG(rating) FROM recommendation_ratings WHERE recommendation_id = r.id) as avg_rating
             FROM recommendations r
             LEFT JOIN users u ON r.user_id = u.id
-            LEFT JOIN recommendation_likes rl ON r.id = rl.recommendation_id
-            LEFT JOIN recommendation_ratings rr ON r.id = rr.recommendation_id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
+            LEFT JOIN recommendation_cities rcities ON r.id = rcities.recommendation_id
+            LEFT JOIN cities c ON rcities.city_id = c.id
+            LEFT JOIN recommendation_photos rp ON r.id = rp.recommendation_id AND rp.is_primary = true
             WHERE ${whereClause}
-            GROUP BY r.id, u.id, u.username, u.full_name, u.profile_picture
             ORDER BY r.created_at DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `, queryParams);
@@ -256,8 +249,8 @@ export const searchRecommendations = async (req: Request, res: Response) => {
             id: row.id,
             title: row.title,
             description: row.description,
-            location: row.location,
-            city: row.city,
+            location: row.address,
+            city: row.city_name,
             imageUrl: row.image_url,
             category: row.category,
             createdAt: row.created_at,
@@ -272,7 +265,9 @@ export const searchRecommendations = async (req: Request, res: Response) => {
 
         res.json({
             success: true,
-            data: recommendations,
+            data: {
+                recommendations
+            },
             query: searchQuery,
             filters: { category, city },
             pagination: {
@@ -307,12 +302,12 @@ export const searchUsers = async (req: Request, res: Response) => {
         const offsetNum = parseInt(offset as string) || 0;
 
         let whereClause = `
-            u.is_active = true
+            u.account_status = 'active'
             AND (
                 LOWER(u.username) LIKE $1 
                 OR LOWER(u.full_name) LIKE $1 
                 OR LOWER(u.bio) LIKE $1
-                OR LOWER(u.location) LIKE $1
+                OR LOWER(u.current_location) LIKE $1
             )
         `;
         
@@ -320,7 +315,7 @@ export const searchUsers = async (req: Request, res: Response) => {
         let paramIndex = 2;
 
         if (location && typeof location === 'string') {
-            whereClause += ` AND LOWER(u.location) = $${paramIndex}`;
+            whereClause += ` AND LOWER(u.current_location) = $${paramIndex}`;
             queryParams.push(location.toLowerCase());
             paramIndex++;
         }
@@ -333,17 +328,15 @@ export const searchUsers = async (req: Request, res: Response) => {
                 u.username,
                 u.full_name,
                 u.bio,
-                u.profile_picture,
-                u.location as user_location,
+                up.profile_photo_url as profile_picture,
+                u.current_location as user_location,
                 u.created_at,
-                COUNT(DISTINCT tb1.id) + COUNT(DISTINCT tb2.id) as connections_count,
                 COUNT(DISTINCT r.id) as recommendations_count
             FROM users u
-            LEFT JOIN travel_buddies tb1 ON u.id = tb1.user_id AND tb1.status = 'accepted'
-            LEFT JOIN travel_buddies tb2 ON u.id = tb2.buddy_user_id AND tb2.status = 'accepted'
+            LEFT JOIN user_profiles up ON u.id = up.user_id
             LEFT JOIN recommendations r ON u.id = r.user_id AND r.status = 'published'
             WHERE ${whereClause}
-            GROUP BY u.id, u.username, u.full_name, u.bio, u.profile_picture, u.location, u.created_at
+            GROUP BY u.id, u.username, u.full_name, u.bio, up.profile_photo_url, u.current_location, u.created_at
             ORDER BY u.created_at DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `, queryParams);
@@ -355,13 +348,14 @@ export const searchUsers = async (req: Request, res: Response) => {
             bio: row.bio,
             profilePicture: row.profile_picture,
             location: row.user_location,
-            connectionsCount: parseInt(row.connections_count) || 0,
             recommendationsCount: parseInt(row.recommendations_count) || 0
         }));
 
         res.json({
             success: true,
-            data: users,
+            data: {
+                users
+            },
             query: searchQuery,
             filters: { location },
             pagination: {
@@ -397,39 +391,33 @@ export const searchCities = async (req: Request, res: Response) => {
 
         const result = await query(`
             SELECT DISTINCT
-                city,
-                COUNT(*) as mentions_count,
+                c.id,
+                c.name as city,
+                c.country,
+                COUNT(DISTINCT rc.recommendation_id) as mentions_count,
                 COUNT(DISTINCT r.user_id) as contributors_count
-            FROM (
-                SELECT DISTINCT TRIM(city) as city
-                FROM recommendations 
-                WHERE status = 'published' 
-                    AND city IS NOT NULL 
-                    AND TRIM(city) != ''
-                    AND LOWER(city) LIKE $1
-                UNION
-                SELECT DISTINCT TRIM(city) as city
-                FROM user_trips 
-                WHERE status = 'completed' 
-                    AND city IS NOT NULL 
-                    AND TRIM(city) != ''
-                    AND LOWER(city) LIKE $1
-            ) unique_cities
-            JOIN recommendations r ON LOWER(TRIM(r.city)) = LOWER(TRIM(unique_cities.city)) AND r.status = 'published'
-            GROUP BY city
-            ORDER BY mentions_count DESC, city ASC
+            FROM cities c
+            LEFT JOIN recommendation_cities rc ON c.id = rc.city_id
+            LEFT JOIN recommendations r ON rc.recommendation_id = r.id AND r.status = 'published'
+            WHERE LOWER(c.name) LIKE $1 OR LOWER(c.country) LIKE $1
+            GROUP BY c.id, c.name, c.country
+            ORDER BY mentions_count DESC, c.name ASC
             LIMIT $2 OFFSET $3
         `, [searchTerm, limitNum, offsetNum]);
 
         const cities = result.rows.map(row => ({
+            id: row.id,
             name: row.city,
+            country: row.country,
             mentionsCount: parseInt(row.mentions_count) || 0,
             contributorsCount: parseInt(row.contributors_count) || 0
         }));
 
         res.json({
             success: true,
-            data: cities,
+            data: {
+                cities
+            },
             query: searchQuery,
             pagination: {
                 limit: limitNum,

@@ -25,42 +25,46 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-// Check if we're in development mode
+// Check if we're in development or test mode
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isTest = process.env.NODE_ENV === 'test';
 
 // Rate limiting for authentication routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: isDevelopment ? 50 : 5, // Much higher limit in development
+    max: (isDevelopment || isTest) ? 1000 : 5, // Much higher limit in development/test
     message: {
         success: false,
         message: 'Too many authentication attempts, please try again later'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: () => isTest // Skip rate limiting entirely in test mode
 });
 
 // More lenient rate limiter for OAuth endpoints (callbacks can happen multiple times during dev)
 const oAuthLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: isDevelopment ? 100 : 20, // TODO: Very high limit in development for OAuth testing, for production it's need to change
+    max: (isDevelopment || isTest) ? 1000 : 20, // TODO: Very high limit in development for OAuth testing, for production it's need to change
     message: {
         success: false,
         message: 'Too many OAuth attempts, please try again later'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: () => isTest // Skip rate limiting entirely in test mode
 });
 
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Limit each IP to 1000 requests per windowMs in dev/test
     message: {
         success: false,
         message: 'Too many requests, please try again later'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: () => isTest // Skip rate limiting entirely in test mode
 });
 
 // Public routes

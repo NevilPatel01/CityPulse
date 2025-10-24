@@ -43,6 +43,12 @@ export const sendPasswordResetEmail = async (
 ): Promise<void> => {
     console.log('📧 [EMAIL] Sending password reset email to:', email);
 
+    // In test mode, skip actual email sending
+    if (process.env.NODE_ENV === 'test') {
+        console.log(`✅ [EMAIL] Test mode - skipping actual email send. Code: ${securityCode}`);
+        return;
+    }
+
     const transporter = createTransporter();
     
     if (!transporter) {
@@ -140,6 +146,12 @@ export const sendPasswordResetSuccessEmail = async (
     email: string,
     username?: string
 ): Promise<void> => {
+    // In test mode, skip actual email sending
+    if (process.env.NODE_ENV === 'test') {
+        console.log(`✅ [EMAIL] Test mode - skipping success email send to: ${email}`);
+        return;
+    }
+
     const transporter = createTransporter();
     
     if (!transporter) {

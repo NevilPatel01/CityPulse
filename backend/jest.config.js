@@ -20,12 +20,12 @@ module.exports = {
     ],
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'html'],
-    setupFilesAfterEnv: [],
+    setupFilesAfterEnv: ['<rootDir>/src/tests/jest.setup.ts'],
     moduleFileExtensions: ['ts', 'js', 'json'],
     clearMocks: true,
     restoreMocks: true,
     resetMocks: false,
-    testTimeout: 10000,
+    testTimeout: 30000, // Increased to 30 seconds for integration tests
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
     },

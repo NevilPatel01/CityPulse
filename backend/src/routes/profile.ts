@@ -20,31 +20,34 @@ import { upload } from '../utils/imageUpload';
 
 const router = Router();
 
-// Check if we're in development mode
+// Check if we're in development or test mode
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isTest = process.env.NODE_ENV === 'test';
 
 // Rate limiting for profile routes
 const profileLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: isDevelopment ? 100 : 30, // Higher limit in development
+    max: (isDevelopment || isTest) ? 1000 : 30, // Higher limit in development/test
     message: {
         success: false,
         message: 'Too many profile requests, please try again later'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: () => isTest // Skip rate limiting entirely in test mode
 });
 
 // Upload rate limiter (more restrictive)
 const uploadLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: isDevelopment ? 20 : 5, // Much lower limit for uploads
+    max: (isDevelopment || isTest) ? 1000 : 5, // Much lower limit for uploads in production
     message: {
         success: false,
         message: 'Too many upload attempts, please try again later'
     },
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: () => isTest // Skip rate limiting entirely in test mode
 });
 
 // Public routes
