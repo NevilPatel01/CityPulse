@@ -36,5 +36,9 @@ module.exports = {
         'ts-jest': {
             useESM: false
         }
-    }
+    },
+    // Run tests sequentially to avoid database conflicts
+    maxWorkers: 1,
+    // Verbose output for better debugging
+    verbose: true
 };

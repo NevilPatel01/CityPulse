@@ -84,8 +84,8 @@ export const createTestUser = async (overrides: any = {}) => {
 
     const userResult = await query(
         `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone, is_google_user, google_id, role, account_status, email_verified)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            RETURNING id, username, email, full_name, bio, current_location, hometown, phone, is_google_user, google_id, role, account_status, email_verified, created_at`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         RETURNING id, username, email, full_name, bio, current_location, hometown, phone, is_google_user, google_id, role, account_status, email_verified, created_at`,
         [
             userData.username,
             userData.email,
@@ -186,8 +186,8 @@ export const createTestCity = async (overrides: any = {}) => {
 
     const result = await query(
         `INSERT INTO cities (name, country, state_province, latitude, longitude, timezone, description)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, name, country, state_province, latitude, longitude, timezone, description, created_at`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, name, country, state_province, latitude, longitude, timezone, description, created_at`,
         [
             cityData.name,
             cityData.country,
@@ -211,9 +211,9 @@ export const createTestCity = async (overrides: any = {}) => {
 export const ensureRecommendationCategory = async (categoryName: string = 'Food') => {
     const result = await query(
         `INSERT INTO recommendation_categories (name, description)
-            VALUES ($1, $2)
-            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-            RETURNING id`,
+         VALUES ($1, $2)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id`,
         [categoryName, `Test ${categoryName} category`]
     );
     
@@ -243,8 +243,8 @@ export const createTestRecommendation = async (userId: number, overrides: any = 
 
     const result = await query(
         `INSERT INTO recommendations (user_id, title, description, category_id, price_range_min, price_range_max, difficulty_level, address, latitude, longitude, user_rating, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            RETURNING id, user_id, title, description, category_id, status, created_at`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING id, user_id, title, description, category_id, status, created_at`,
         [
             userId,
             recData.title,
@@ -277,7 +277,7 @@ export const createPasswordResetToken = async (userId: number, email: string) =>
 
     await query(
         `INSERT INTO password_reset_tokens (user_id, email, security_code, reset_token, expires_at)
-            VALUES ($1, $2, $3, $4, $5)`,
+         VALUES ($1, $2, $3, $4, $5)`,
         [userId, email, securityCode, resetToken, expiresAt]
     );
 
