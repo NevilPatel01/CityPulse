@@ -1,4 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Edit, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { useSafeToast } from '../../hooks/useSafeToast';
+import { Button } from '../ui/button';
+import { apiRequest, apiConfig } from '../../config/api';
 
 interface RecommendationCardProps {
   recommendation: {
@@ -21,12 +27,60 @@ interface RecommendationCardProps {
     city_name: string;
     country: string;
     photos?: string[];
+    user_id?: number;
   };
   showUser?: boolean;
+  showActions?: boolean;
   className?: string;
+  onDelete?: () => void;
 }
 
-export function RecommendationCard({ recommendation, showUser = true, className = '' }: RecommendationCardProps) {
+export function RecommendationCard({ 
+  recommendation, 
+  showUser = true, 
+  showActions = false,
+  className = '',
+  onDelete
+}: RecommendationCardProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showError, showSuccess } = useSafeToast();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const isOwner = Number(user?.id) === recommendation.user_id;
+
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      
+      const data = await apiRequest<{ success: boolean; message?: string }>(
+        `/api/recommendations/${recommendation.id}`,
+        { method: 'DELETE' }
+      );
+
+      if (data.success) {
+        showSuccess('Recommendation deleted successfully');
+        setShowDeleteConfirm(false);
+        if (onDelete) {
+          onDelete();
+        }
+      } else {
+        showError(data.message || 'Failed to delete recommendation');
+      }
+    } catch (error) {
+      console.error('Error deleting recommendation:', error);
+      showError(error instanceof Error ? error.message : 'An error occurred while deleting the recommendation');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/recommendations/${recommendation.id}/edit`);
+  };
+
   const formatPrice = () => {
     if (recommendation.price_range_min && recommendation.price_range_max) {
       return `$${recommendation.price_range_min} - $${recommendation.price_range_max}`;
@@ -81,14 +135,89 @@ export function RecommendationCard({ recommendation, showUser = true, className 
   };
 
   return (
-    <div className={`bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-shadow border border-subtle hover-lift ${className}`}>
-      {/* Image */}
-      <div className="relative h-48 bg-surface-glass rounded-t-2xl">
+    <>
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Delete Recommendation</h3>
+            </div>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete "{recommendation.title}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowDeleteConfirm(false)}
+                variant="outline"
+                className="flex-1"
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div 
+        className={`relative bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-all border border-subtle hover-lift ${className}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Action Buttons (Owner Only) */}
+        {showActions && isOwner && isHovered && (
+          <div className="absolute top-2 right-2 z-10 flex gap-2">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleEdit();
+              }}
+              className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all shadow-lg"
+              title="Edit recommendation"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+              className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all shadow-lg"
+              title="Delete recommendation"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Card Link - Makes entire card clickable */}
+        <Link to={`/recommendations/${recommendation.id}`} className="block">
+          {/* Image */}
+          <div className="relative h-48 bg-surface-glass rounded-t-2xl">
         {recommendation.photos && recommendation.photos.length > 0 ? (
           <img
-            src={recommendation.photos[0]}
+            src={recommendation.photos[0].startsWith('http') 
+              ? recommendation.photos[0] 
+              : `${apiConfig.baseUrl}${recommendation.photos[0]}`
+            }
             alt={recommendation.title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted">
@@ -117,12 +246,9 @@ export function RecommendationCard({ recommendation, showUser = true, className 
       <div className="p-4 space-y-3">
         {/* Title and Location */}
         <div>
-          <Link
-            to={`/recommendations/${recommendation.id}`}
-            className="text-lg font-semibold text-primary hover:text-pulse transition-colors"
-          >
+          <h3 className="text-lg font-semibold text-primary hover:text-pulse transition-colors">
             {recommendation.title}
-          </Link>
+          </h3>
           <p className="text-sm text-muted">
             {recommendation.city_name}, {recommendation.country}
           </p>
@@ -201,6 +327,8 @@ export function RecommendationCard({ recommendation, showUser = true, className 
           </div>
         )}
       </div>
+        </Link>
     </div>
+    </>
   );
 }

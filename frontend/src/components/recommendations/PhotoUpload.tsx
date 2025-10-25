@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import { useSafeToast } from '../../hooks/useSafeToast';
+import { apiConfig } from '../../config/api';
 
 interface UploadedPhoto {
   id: number;
@@ -97,15 +98,52 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
         formData.append('photos', file);
       });
 
-      const response = await fetch(`/api/recommendations/${recommendationId}/photos`, {
+      // Get auth token
+      const authToken = localStorage.getItem('authToken');
+      
+      if (!authToken) {
+        showError('Please login to upload photos');
+        setIsUploading(false);
+        return;
+      }
+      
+      // Build full URL
+      const url = `${apiConfig.baseUrl}/api/recommendations/${recommendationId}/photos`;
+      
+      console.log('[PhotoUpload] Uploading to:', url);
+      console.log('[PhotoUpload] Files count:', selectedFiles.length);
+      
+      const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
         body: formData
       });
 
-      const data = await response.json() as UploadPhotosResponse;
+      console.log('[PhotoUpload] Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[PhotoUpload] Upload failed:', response.status, errorText);
+        
+        let errorMessage = 'Failed to upload photos';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = `${errorMessage}: ${response.statusText}`;
+        }
+        
+        showError(errorMessage);
+        return;
+      }
 
-      if (response.ok) {
+      const data = await response.json() as UploadPhotosResponse;
+      console.log('[PhotoUpload] Response data:', data);
+
+      if (data.success) {
         const newPhotos = data.data?.photos ?? [];
         setUploadedPhotos(prev => [...prev, ...newPhotos]);
         setSelectedFiles([]);
@@ -117,8 +155,8 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
         showError(data.message || 'Failed to upload photos');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      showError('An error occurred while uploading photos');
+      console.error('[PhotoUpload] Upload error:', error);
+      showError(`Upload error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
     }

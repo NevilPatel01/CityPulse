@@ -28,8 +28,14 @@
     "test:profile:complete": "jest profile-complete",
     "test:recommendations": "jest src/tests/recommendations/",
     "test:search": "jest src/tests/search/",
+    "test:security": "jest src/tests/security/owasp-zap.test.ts --verbose",
+    "test:security:coverage": "jest src/tests/security/owasp-zap.test.ts --coverage --verbose",
+    "test:security:sqli": "jest src/tests/security/owasp-zap.test.ts -t 'SQL Injection'",
+    "test:security:xss": "jest src/tests/security/owasp-zap.test.ts -t 'Cross-Site Scripting'",
+    "test:security:headers": "jest src/tests/security/owasp-zap.test.ts -t 'HTTP Security Headers'",
     "test:all": "jest src/tests/",
-    "test:clean": "psql $DATABASE_URL -c \"DELETE FROM users WHERE email LIKE '%test_%';\""
+    "test:clean": "psql $DATABASE_URL -c \"DELETE FROM users WHERE email LIKE '%test_%';\"",
+    "security:audit": "pnpm audit --audit-level=high"
   },
   "keywords": [
     "citypulse",

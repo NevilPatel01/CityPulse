@@ -1,0 +1,71 @@
+{
+    "contextName": "CityPulse Security Context",
+    "description": "OWASP ZAP context configuration for CityPulse application security testing",
+    "includedUrls": [
+        "http://localhost:5001/.*",
+        "https://api.city-pulse.app/.*"
+    ],
+    "excludedUrls": [
+        "http://localhost:5001/uploads/.*",
+        "http://localhost:5001/api/health",
+        "https://api.city-pulse.app/uploads/.*"
+    ],
+    "authentication": {
+        "type": "json",
+        "loginUrl": "http://localhost:5001/api/auth/login",
+        "loginRequestData": "{\"email\":\"test@example.com\",\"password\":\"TestPassword123!@#\"}",
+        "authenticationIndicator": "\"token\":",
+        "loggedInIndicator": "\"success\":true",
+        "loggedOutIndicator": "\"success\":false"
+    },
+    "sessionManagement": {
+        "type": "httpAuth",
+        "authHeaderName": "Authorization",
+        "authHeaderPrefix": "Bearer "
+    },
+    "users": [
+        {
+            "name": "test-user",
+            "credentials": {
+                "email": "test@example.com",
+                "password": "TestPassword123!@#"
+            }
+        }
+    ],
+    "technologyExclusions": [
+        "SCM",
+        "Language"
+    ],
+    "scanPolicies": {
+        "sql-injection": {
+            "enabled": true,
+            "attackStrength": "HIGH",
+            "alertThreshold": "LOW"
+        },
+        "xss": {
+            "enabled": true,
+            "attackStrength": "HIGH",
+            "alertThreshold": "LOW"
+        },
+        "path-traversal": {
+            "enabled": true,
+            "attackStrength": "MEDIUM",
+            "alertThreshold": "MEDIUM"
+        },
+        "remote-file-inclusion": {
+            "enabled": true,
+            "attackStrength": "MEDIUM",
+            "alertThreshold": "MEDIUM"
+        },
+        "server-side-include": {
+            "enabled": true,
+            "attackStrength": "MEDIUM",
+            "alertThreshold": "MEDIUM"
+        },
+        "csrf": {
+            "enabled": true,
+            "attackStrength": "LOW",
+            "alertThreshold": "MEDIUM"
+        }
+    }
+}

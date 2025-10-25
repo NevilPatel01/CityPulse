@@ -2,8 +2,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { SearchOverlayProvider } from './context/SearchOverlayContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
+import GlobalSearchOverlay from './components/search/GlobalSearchOverlay';
 import LandingPage from './components/landing/LandingPage';
 
 import AboutPage from './pages/AboutPage.tsx';
@@ -19,6 +21,7 @@ import SearchPage from './pages/SearchPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
 import { RecommendationDetailPage } from './pages/RecommendationDetailPage';
+import { EditRecommendationPage } from './pages/EditRecommendationPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -43,12 +46,14 @@ function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <Router>
-        <Routes>
-          {/* Public routes - accessible without authentication */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/features" element={<FeaturesPage />} />
+        <SearchOverlayProvider>
+          <Router>
+            <GlobalSearchOverlay />
+            <Routes>
+              {/* Public routes - accessible without authentication */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
           
           {/* Auth routes - only accessible when NOT authenticated */}
           <Route path="/login" element={
@@ -101,12 +106,22 @@ function App() {
               <CreateRecommendationPage />
             </ProtectedRoute>
           } />
-          <Route path="/recommendations/:id" element={<RecommendationDetailPage />} />
+          <Route path="/recommendations/:id" element={
+            <ProtectedRoute>
+              <RecommendationDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/recommendations/:id/edit" element={
+            <ProtectedRoute>
+              <EditRecommendationPage />
+            </ProtectedRoute>
+          } />
           
           {/* 404 route */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
+        </SearchOverlayProvider>
       </AuthProvider>
     </ToastProvider>
   );

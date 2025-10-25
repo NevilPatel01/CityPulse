@@ -7,8 +7,17 @@ import {
     updateRecommendation,
     deleteRecommendation,
     uploadRecommendationPhotos,
+    deleteRecommendationPhoto,
+    setPrimaryRecommendationPhoto,
     getRecommendationCategories,
-    getCities
+    getCities,
+    submitRating,
+    getUserRating,
+    deleteRating,
+    likeRecommendation,
+    unlikeRecommendation,
+    checkLikeStatus,
+    getLikedRecommendations
 } from '../controllers/recommendations';
 import {
     createRecommendationSchema,
@@ -111,6 +120,71 @@ router.post(
     authenticateToken,
     uploadMultiple.array('photos', 10), // Max 10 photos
     uploadRecommendationPhotos
+);
+
+router.delete(
+    '/:id/photos/:photoId',
+    recommendationLimiter,
+    authenticateToken,
+    deleteRecommendationPhoto
+);
+
+router.patch(
+    '/:id/photos/:photoId/primary',
+    recommendationLimiter,
+    authenticateToken,
+    setPrimaryRecommendationPhoto
+);
+
+// Rating routes
+router.post(
+    '/:id/ratings',
+    recommendationLimiter,
+    authenticateToken,
+    submitRating
+);
+
+router.get(
+    '/:id/ratings/me',
+    recommendationLimiter,
+    authenticateToken,
+    getUserRating
+);
+
+router.delete(
+    '/:id/ratings',
+    recommendationLimiter,
+    authenticateToken,
+    deleteRating
+);
+
+// Like/Unlike routes
+router.post(
+    '/:id/like',
+    recommendationLimiter,
+    authenticateToken,
+    likeRecommendation
+);
+
+router.delete(
+    '/:id/like',
+    recommendationLimiter,
+    authenticateToken,
+    unlikeRecommendation
+);
+
+router.get(
+    '/:id/like/status',
+    recommendationLimiter,
+    authenticateToken,
+    checkLikeStatus
+);
+
+router.get(
+    '/user/liked',
+    recommendationLimiter,
+    authenticateToken,
+    getLikedRecommendations
 );
 
 export default router;

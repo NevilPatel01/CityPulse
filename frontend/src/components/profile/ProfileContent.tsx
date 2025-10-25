@@ -1,33 +1,103 @@
-interface ProfileContentProps {
-  activeTab: number;
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { apiRequest, apiConfig } from '../../config/api';
+import { useAuth } from '../../hooks/useAuth';
+
+interface Recommendation {
+  id: number;
+  title: string;
+  description: string;
+  category_name: string;
+  city_name: string;
+  country: string;
+  photos: string[];
+  price_range_min?: number;
+  price_range_max?: number;
+  difficulty_level?: string;
 }
 
-export function ProfileContent({ activeTab }: ProfileContentProps) {
-  // Mock data for demonstration - replace with API calls
-  const mockRecommendations = [
-    {
-      id: 1,
-      title: 'Mount Snowdon Summit Trail',
-      location: 'Tokyo, Japan',
-      category: 'Hiking & Trails',
-      image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-      id: 2,
-      title: 'Shibuya Sky Observatory',
-      location: 'Tokyo, Japan',
-      category: 'Viewpoints',
-      image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-      id: 3,
-      title: 'Tsukiji Outer Market',
-      location: 'Tokyo, Japan',
-      category: 'Food & Markets',
-      image: 'https://images.unsplash.com/photo-1519864600265-abb224a0e3c7?auto=format&fit=crop&w=400&q=80',
-    },
-  ];
+interface ProfileContentProps {
+  activeTab: number;
+  username?: string;
+}
 
+export function ProfileContent({ activeTab, username }: ProfileContentProps) {
+  const { user } = useAuth();
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [likedRecommendations, setLikedRecommendations] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Check if viewing current user's profile
+  const isCurrentUser = !username || username === user?.username;
+
+  const fetchRecommendations = async () => {
+    try {
+      setLoading(true);
+      // If username is provided, fetch that user's recommendations, otherwise fetch current user's
+      const targetUsername = username || user?.username;
+      
+      if (!targetUsername) return;
+
+      // Get user ID first
+      const profileResponse = await apiRequest<{ success: boolean; data: { id: number } }>(
+        `/api/profile/${targetUsername}`
+      );
+
+      if (!profileResponse.success) return;
+
+      const userId = profileResponse.data.id;
+
+      // Fetch recommendations
+      const response = await apiRequest<{ 
+        success: boolean; 
+        data: { recommendations: Recommendation[] } 
+      }>(
+        `/api/recommendations?user_id=${userId}&limit=50`
+      );
+
+      if (response.success) {
+        setRecommendations(response.data.recommendations);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch user's recommendations
+  useEffect(() => {
+    if (activeTab === 0) {
+      fetchRecommendations();
+    } else if (activeTab === 3) {
+      fetchLikedRecommendations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, username]);
+
+  const fetchLikedRecommendations = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch liked recommendations (only for current user)
+      const response = await apiRequest<{ 
+        success: boolean; 
+        data: { recommendations: Recommendation[] } 
+      }>(
+        `/api/recommendations/user/liked?limit=50`
+      );
+
+      if (response.success) {
+        setLikedRecommendations(response.data.recommendations);
+      }
+    } catch (error) {
+      console.error('Error fetching liked recommendations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mock data for other tabs - replace with API calls later
   const mockTravelHistory = [
     {
       id: 1,
@@ -73,38 +143,161 @@ export function ProfileContent({ activeTab }: ProfileContentProps) {
     },
   ];
 
-  const renderRecommendations = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {mockRecommendations.map((item) => (
-        <div key={item.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl overflow-hidden hover:bg-gray-700/50 transition-all duration-200 hover:scale-105 group">
-          <div className="relative">
-            <img
-              src={item.image}
-              alt={item.title}
-              className="w-full h-48 object-cover"
-            />
-            <div className="absolute top-3 left-3">
-              <span className="bg-gray-800/80 text-white px-2 py-1 rounded-lg text-xs font-medium">
-                {item.category}
-              </span>
-            </div>
-            <button className="absolute top-3 right-3 w-8 h-8 bg-gray-800/80 rounded-full flex items-center justify-center text-white hover:bg-gray-700/80 transition-all duration-200">
-              ❤️
-            </button>
-          </div>
-          <div className="p-4">
-            <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-pulse transition-colors">
-              {item.title}
-            </h3>
-            <p className="text-gray-400 text-sm mb-3">{item.location}</p>
-            <button className="text-pulse text-sm font-medium hover:text-pulse/80 transition-colors">
-              View Details
-            </button>
-          </div>
+  const renderRecommendations = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pulse"></div>
         </div>
-      ))}
-    </div>
-  );
+      );
+    }
+
+    if (recommendations.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-muted text-lg">No recommendations yet</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {recommendations.map((item) => {
+          const primaryPhoto = item.photos && item.photos.length > 0 
+            ? (item.photos[0].startsWith('http') ? item.photos[0] : `${apiConfig.baseUrl}${item.photos[0]}`)
+            : 'https://via.placeholder.com/400x300?text=No+Image';
+
+          return (
+            <Link 
+              key={item.id} 
+              to={`/recommendations/${item.id}`}
+              className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-200 hover:scale-105 group"
+            >
+              <div className="relative">
+                <img
+                  src={primaryPhoto}
+                  alt={item.title}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
+                  }}
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="bg-pulse text-white px-3 py-1 rounded-full text-xs font-medium">
+                    {item.category_name}
+                  </span>
+                </div>
+                {item.difficulty_level && (
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                      item.difficulty_level === 'easy' ? 'bg-green-500' :
+                      item.difficulty_level === 'moderate' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`}>
+                      {item.difficulty_level.charAt(0).toUpperCase() + item.difficulty_level.slice(1)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-primary mb-1 group-hover:text-pulse transition-colors line-clamp-1">
+                  {item.title}
+                </h3>
+                <p className="text-muted text-sm mb-2">{item.city_name}, {item.country}</p>
+                {item.description && (
+                  <p className="text-primary text-sm line-clamp-2 mb-3">{item.description}</p>
+                )}
+                {(item.price_range_min || item.price_range_max) && (
+                  <div className="text-pulse text-sm font-medium">
+                    ${item.price_range_min || 0}.00 - ${item.price_range_max || 0}.00
+                  </div>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderLikedRecommendations = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pulse"></div>
+        </div>
+      );
+    }
+
+    if (likedRecommendations.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-muted text-lg">
+            You haven't liked any recommendations yet. Start exploring and save your favorites!
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {likedRecommendations.map((item) => {
+          const primaryPhoto = item.photos && item.photos.length > 0 
+            ? (item.photos[0].startsWith('http') ? item.photos[0] : `${apiConfig.baseUrl}${item.photos[0]}`)
+            : 'https://via.placeholder.com/400x300?text=No+Image';
+
+          return (
+            <Link 
+              key={item.id} 
+              to={`/recommendations/${item.id}`}
+              className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-200 hover:scale-105 group"
+            >
+              <div className="relative">
+                <img
+                  src={primaryPhoto}
+                  alt={item.title}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
+                  }}
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="bg-pulse text-white px-3 py-1 rounded-full text-xs font-medium">
+                    {item.category_name}
+                  </span>
+                </div>
+                {item.difficulty_level && (
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                      item.difficulty_level === 'easy' ? 'bg-green-500' :
+                      item.difficulty_level === 'moderate' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`}>
+                      {item.difficulty_level.charAt(0).toUpperCase() + item.difficulty_level.slice(1)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-primary mb-1 group-hover:text-pulse transition-colors line-clamp-1">
+                  {item.title}
+                </h3>
+                <p className="text-muted text-sm mb-2">{item.city_name}, {item.country}</p>
+                {item.description && (
+                  <p className="text-primary text-sm line-clamp-2 mb-3">{item.description}</p>
+                )}
+                {(item.price_range_min || item.price_range_max) && (
+                  <div className="text-pulse text-sm font-medium">
+                    ${item.price_range_min || 0}.00 - ${item.price_range_max || 0}.00
+                  </div>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderTravelHistory = () => (
     <div className="space-y-6">
@@ -174,7 +367,7 @@ export function ProfileContent({ activeTab }: ProfileContentProps) {
     case 2:
       return renderAchievements();
     case 3:
-      return renderSaved();
+      return isCurrentUser ? renderLikedRecommendations() : renderSaved();
     default:
       return null;
   }

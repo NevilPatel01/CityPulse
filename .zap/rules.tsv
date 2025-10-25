@@ -1,0 +1,81 @@
+# OWASP ZAP Rules Configuration
+# Format: RULE_ID	THRESHOLD	[COMMENT]
+# 
+# Rule IDs:
+# - SQL Injection: 40018
+# - Cross Site Scripting (Reflected): 40012
+# - Cross Site Scripting (Stored): 40014
+# - Cross Site Scripting (Persistent): 40016
+# - Path Traversal: 6
+# - Remote File Inclusion: 7
+# - Server Side Include: 40009
+# - Cross-Domain Script Inclusion: 10017
+# - Remote Code Execution: 20018
+#
+# Thresholds: IGNORE, INFO, LOW, MEDIUM, HIGH, FAIL
+#
+# Common Rules Configuration
+
+# Critical Security Issues - FAIL on detection
+40018	FAIL	SQL Injection
+40012	FAIL	Cross Site Scripting (Reflected)
+40014	FAIL	Cross Site Scripting (Stored)
+40016	FAIL	Cross Site Scripting (Persistent)
+6	FAIL	Path Traversal
+7	FAIL	Remote File Inclusion
+20018	FAIL	Remote Code Execution
+40009	FAIL	Server Side Include
+
+# High Priority Issues - HIGH threshold
+10021	HIGH	X-Content-Type-Options Header Missing
+10020	HIGH	X-Frame-Options Header Not Set
+10016	HIGH	Web Browser XSS Protection Not Enabled
+10017	HIGH	Cross-Domain Script Inclusion
+10038	HIGH	Content Security Policy (CSP) Header Not Set
+10055	HIGH	CSP: Wildcard Directive
+10056	HIGH	CSP: script-src unsafe-inline
+10057	HIGH	CSP: script-src unsafe-eval
+
+# Medium Priority Issues - MEDIUM threshold
+10015	MEDIUM	Incomplete or No Cache-control and Pragma HTTP Header Set
+10019	MEDIUM	Content-Type Header Missing
+10037	MEDIUM	Server Leaks Information via "X-Powered-By" HTTP Response Header Field(s)
+10040	MEDIUM	Secure Pages Include Mixed Content
+10049	MEDIUM	Content Cacheability
+10050	MEDIUM	Retrieved from Cache
+10052	MEDIUM	X-ChromeLogger-Data (XCOLD) Header Information Leak
+10054	MEDIUM	Cookie Without SameSite Attribute
+10063	MEDIUM	Permissions Policy Header Not Set
+10096	MEDIUM	Timestamp Disclosure
+10098	MEDIUM	Cross-Domain Misconfiguration
+
+# Low Priority Issues - LOW threshold
+10027	LOW	Information Disclosure - Suspicious Comments
+10032	LOW	Viewstate Scanner
+10035	LOW	Strict-Transport-Security Header Not Set (on non-HTTPS)
+10036	LOW	Server Leaks Version Information
+10061	LOW	X-AspNet-Version Response Header Scanner
+10062	LOW	PII Disclosure
+10094	LOW	Base64 Disclosure
+10095	LOW	Backup File Disclosure
+10097	LOW	Hash Disclosure
+10109	LOW	Modern Web Application
+10202	LOW	Absence of Anti-CSRF Tokens
+
+# Test/Development specific adjustments
+# You may want to be more lenient in development
+# 10015	INFO	Incomplete or No Cache-control (dev environment)
+# 10037	INFO	X-Powered-By Header (dev environment)
+
+# Rate Limiting & Authentication Issues
+10105	MEDIUM	Weak Authentication Method
+30001	MEDIUM	Buffer Overflow
+30002	MEDIUM	Format String Error
+30003	MEDIUM	Integer Overflow Error
+
+# API-specific rules
+90034	MEDIUM	Cloud Metadata Potentially Exposed
+
+# False Positive Management
+# Add rules here that are causing false positives in your specific application
+# Example: 10202	IGNORE	Anti-CSRF tokens not required for stateless API

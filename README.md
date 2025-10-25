@@ -22,8 +22,8 @@
 
 ### Week 2 (Sept 15)
 - [x] User Profile Management (Basic profile setup, photo upload)
-- [ ] Image upload functionality with Multer
-- [ ] Image optimization and compression implementation
+- [x] Image upload functionality with Multer
+- [x] Image optimization and compression implementation
 - [x] Add password reset & validation (regex, strong password)
 - [x] Secure routes with JWT middleware
 - [x] Parameterized SQL queries to prevent SQLi
@@ -37,13 +37,44 @@
 ### Week 3 (Sept 22)
 - [x] Create and submit progress report and demo video
 - [x] City and Category Management (Cities, Recommendation_Categories tables)
-- [ ] Basic recommendation creation functionality
+- [x] Basic recommendation creation functionality
 - [x] Recommendation CRUD API endpoints
-- [ ] photo upload for recommendations
-- [ ] Frontend forms for recommendation creation
+- [x] photo upload for recommendations
+- [x] Frontend forms for recommendation creation
 - [x] Basic search functionality implementation
 - [ ] Integration tests for recommendation endpoints and E2E Test
 
+### Week 4 (Sept 29)
+- [x] Advanced Search Implementation (multi-filter capability)
+- [x] Search by location, category, price range, difficulty level
+- [x] Tag system implementation (Recommendation_Tags, Tag_Links tables)
+- [x] Search results pagination and infinite scroll
+- [x] Frontend search interface with filter components
+- [x] Database indexing for search optimization
+- [x] Search performance testing and optimization
+
+### Week 5 (Oct 6)
+- [x] Rating and Review System (Recommendation_Ratings table)
+- [x] Like/Unlike functionality (Recommendation_Likes table)
+- [x] User interaction tracking and analytics
+- [x] Recommendation browsing and discovery feeds
+- [x] Content validation and sanitization (XSS protection)
+- [x] SQL injection prevention testing
+- [x] Frontend components for rating and reviewing
+
+### Week 6 (Oct 13)
+- [x] Break Week: Catch-up, bug fixes, and refactoring
+- [x] CI: GitHub Actions auto-run unit + integration + E2E tests (Note: Pipeline configured but test execution needs to be added to workflow)
+- [ ] Add E2E test and Unit Test suite for remaining Test Cases
+
+### Week 7 (Oct 20)
+- [ ] Submit progress report + demo video
+- [x] Deploy initial progress to hosting platform
+- [x] Production environment setup
+- [x] Database deployment and migration
+- [x] Environment variables configuration
+- [x] SSL certificate setup
+- [x] Production testing and bug fixes
 
 NOTE: I will add as I go. 
 

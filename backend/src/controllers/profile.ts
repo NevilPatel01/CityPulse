@@ -42,32 +42,19 @@ export const getProfile = async (req: Request, res: Response) => {
 
         const user = userResult.rows[0];
 
-        // Parse cities_visited JSON if it exists
-        let citiesVisited = [];
-        console.log('Raw cities_visited from DB:', user.cities_visited);
-        console.log('Type of cities_visited:', typeof user.cities_visited);
-        
-        if (user.cities_visited) {
-            try {
-                // Handle both JSON string and already parsed array
-                if (typeof user.cities_visited === 'string') {
-                    console.log('Cities_visited is string, value:', user.cities_visited);
-                    // Check if it's already a JSON string or needs parsing
-                    if (user.cities_visited.startsWith('[') || user.cities_visited.startsWith('{')) {
-                        citiesVisited = JSON.parse(user.cities_visited);
-                    } else {
-                        // If it's a single string, wrap it in an array
-                        citiesVisited = [user.cities_visited];
-                    }
-                } else if (Array.isArray(user.cities_visited)) {
-                    citiesVisited = user.cities_visited;
-                }
-            } catch (error) {
-                console.error('Error parsing cities_visited JSON:', error);
-                console.error('Raw cities_visited value:', user.cities_visited);
-                citiesVisited = [];
-            }
-        }
+        // Get cities visited from user's recommendations
+        const citiesResult = await query(
+            `SELECT DISTINCT c.name, c.country
+             FROM recommendations r
+             JOIN recommendation_cities rc ON r.id = rc.recommendation_id
+             JOIN cities c ON rc.city_id = c.id
+             WHERE r.user_id = $1
+             ORDER BY c.name`,
+            [user.id]
+        );
+
+        const citiesVisited = citiesResult.rows.map(row => `${row.name}, ${row.country}`);
+        console.log('Cities visited from recommendations:', citiesVisited);
 
         // If user_profiles record doesn't exist, create it with default values
         if (!user.profile_photo_url && user.id === currentUserId) {
@@ -115,13 +102,17 @@ export const getProfile = async (req: Request, res: Response) => {
             });
         }
 
-        // Get user stats from actual tables - simplified for now
+        // Get user stats from actual tables
         const statsResult = await query(
             `SELECT 
-                0 as cities_count,
-                0 as recommendations_count,
-                0 as travel_buddies_count,
-                0 as points
+                (SELECT COUNT(DISTINCT rc.city_id)
+                 FROM recommendations r
+                 JOIN recommendation_cities rc ON r.id = rc.recommendation_id
+                 WHERE r.user_id = $1) as cities_count,
+                (SELECT COUNT(*)
+                 FROM recommendations
+                 WHERE user_id = $1 AND status = 'active') as recommendations_count,
+                0 as travel_buddies_count
             FROM (SELECT $1::integer as user_id) u`,
             [user.id]
         );
@@ -129,8 +120,7 @@ export const getProfile = async (req: Request, res: Response) => {
         const stats = statsResult.rows[0] || {
             cities_count: 0,
             recommendations_count: 0,
-            travel_buddies_count: 0,
-            points: 0
+            travel_buddies_count: 0
         };
 
         // Get user badges - simplified for now
@@ -246,8 +236,7 @@ export const getProfile = async (req: Request, res: Response) => {
             stats: {
                 cities: stats.cities_count,
                 recommendations: stats.recommendations_count,
-                travelBuddies: stats.travel_buddies_count,
-                points: stats.points
+                travelBuddies: stats.travel_buddies_count
             },
             badges: userBadges,
             profileCompletion: {
@@ -603,18 +592,14 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         const metadata = await getImageMetadata(req.file.buffer);
         console.log(`[PROFILE] Image metadata:`, metadata);
 
-        // Generate filename and process image
-        const filename = generateFilename(req.file.originalname, userId, type as 'profile' | 'cover');
-        const imagePath = await processImage(req.file.buffer, type as 'profile' | 'cover', filename);
-
-        // Get current profile to delete old image
-        const currentProfileResult = await query(
-            `SELECT ${type === 'profile' ? 'profile_photo_url' : 'cover_photo_url'} 
-             FROM user_profiles WHERE user_id = $1`,
-            [userId]
+        // Generate filename and process image (new structure: uploads/{userId}/{type}/)
+        const filename = generateFilename(req.file.originalname, type as 'profile' | 'cover');
+        const imagePath = await processImage(
+            req.file.buffer, 
+            userId,
+            type as 'profile' | 'cover', 
+            filename
         );
-
-        const oldImageUrl = currentProfileResult.rows[0]?.[type === 'profile' ? 'profile_photo_url' : 'cover_photo_url'];
 
         // Create profile if doesn't exist, or update existing one
         const profileExists = await query(
@@ -630,18 +615,13 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
                 [userId, imagePath]
             );
         } else {
-            // Update existing profile
+            // Update existing profile (old file is automatically deleted by processImage)
             await query(
                 `UPDATE user_profiles 
                  SET ${type === 'profile' ? 'profile_photo_url' : 'cover_photo_url'} = $1, updated_at = NOW()
                  WHERE user_id = $2`,
                 [imagePath, userId]
             );
-        }
-
-        // Delete old image file if it exists
-        if (oldImageUrl) {
-            await deleteOldImage(oldImageUrl);
         }
 
         // Convert relative path to full URL

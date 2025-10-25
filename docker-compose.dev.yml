@@ -23,12 +23,12 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # pgAdmin for Database GUI (Optional - comment out if not needed)
+  # pgAdmin for Database GUI (Optional)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: citypulse-pgadmin-dev
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@citypulse.local
+      PGADMIN_DEFAULT_EMAIL: admin@citypulse.com
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:

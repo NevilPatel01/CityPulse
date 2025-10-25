@@ -7,6 +7,7 @@ import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import recommendationRoutes from './routes/recommendations';
 import searchRoutes from './routes/search';
+import advancedSearchRoutes from './routes/advancedSearch';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -22,7 +23,7 @@ export const createApp = (): express.Express => {
                 styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for UI frameworks
                 scriptSrc: ["'self'"],           // Only scripts from same origin
                 imgSrc: (() => {
-                    const sources = ["'self'", "data:", "https:"];
+                    const sources = ["'self'", "data:", "https:", "http:"];
                     const backendUrl = process.env.API_BASE_URL ?? process.env.BACKEND_URL;
                     const frontendUrlEnv = process.env.FRONTEND_URL;
 
@@ -34,26 +35,61 @@ export const createApp = (): express.Express => {
                         sources.push(frontendUrlEnv);
                     }
 
+                    // Allow localhost in development
+                    if (process.env.NODE_ENV !== 'production') {
+                        sources.push('http://localhost:*');
+                    }
+
                     return sources;
                 })(), // Images from self, data URLs, HTTPS, and configured domains
             },
         },
-        crossOriginEmbedderPolicy: false       // for Production need to enable
+        crossOriginEmbedderPolicy: false,      // Disable to allow cross-origin images
+        crossOriginResourcePolicy: { policy: "cross-origin" } // Allow cross-origin resource access
     }));
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     console.log('[APP] Setting up CORS with frontend URL:', frontendUrl);
     
-    // Added CORS configuration
-    // Credentials true allows cookies/auth headers, origin restricts to frontend URL
-    app.use(cors({
-        origin: [
-            frontendUrl, 
-            // 'http://localhost:3000',  // Vite dev server default port
-        ],
-        credentials: true,                 
-        optionsSuccessStatus: 200       
-    }));
+    // CORS configuration - more permissive for development, strict for production
+    const corsOptions = {
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+            // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+            if (!origin) {
+                return callback(null, true);
+            }
+
+            // In development, allow localhost origins
+            if (process.env.NODE_ENV !== 'production') {
+                const allowedDevelopmentOrigins = [
+                    frontendUrl,
+                    'http://localhost:3000',
+                    'http://localhost:3001',
+                    'http://localhost:5001',
+                ];
+                
+                if (allowedDevelopmentOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+                    return callback(null, true);
+                }
+            }
+
+            // In production, only allow configured frontend URL
+            const allowedOrigins = [frontendUrl];
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            // Log rejected origins for debugging
+            console.warn(`[CORS] Blocked origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        },
+        credentials: true,
+        optionsSuccessStatus: 200,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+    };
+    
+    app.use(cors(corsOptions));
 
     console.log('[APP] Setting up body parsing middleware...');
     // Body parsing middleware - It handles incoming request data parsing
@@ -98,13 +134,26 @@ export const createApp = (): express.Express => {
     // Search routes - handles search across recommendations, users, and cities
     app.use('/api/search', searchRoutes);
 
+    console.log('[APP] Setting up advanced search routes...');
+    // Advanced search routes - handles advanced filtering and search
+    app.use('/api/advanced-search', advancedSearchRoutes);
+
     console.log('[APP] Setting up static file serving for uploads...');
-    // Serve uploaded images statically with CORS headers
+    // Serve uploaded images statically with proper CORS headers
     app.use('/uploads', (req, res, next) => {
-        res.header('Access-Control-Allow-Origin', frontendUrl);
-        res.header('Access-Control-Allow-Credentials', 'true');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        // Set CORS headers to allow cross-origin image requests
+        res.header('Access-Control-Allow-Origin', '*'); // Allow all origins for static assets
+        res.header('Access-Control-Allow-Credentials', 'false'); // No credentials needed for public images
+        res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
         res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+        res.header('Cross-Origin-Resource-Policy', 'cross-origin'); // Explicitly allow cross-origin
+        res.header('Cache-Control', 'public, max-age=31536000'); // Cache images for 1 year
+        
+        // Handle preflight OPTIONS request
+        if (req.method === 'OPTIONS') {
+            return res.sendStatus(200);
+        }
+        
         next();
     }, express.static(path.join(process.cwd(), 'uploads')));
 

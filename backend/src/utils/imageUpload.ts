@@ -50,38 +50,116 @@ export const uploadMultiple = multer({
     }
 });
 
+/**
+ * Get upload directory path based on type
+ * Structure: uploads/{userId}/{type}/{id}/
+ */
+const getUploadPath = (
+    userId: number,
+    type: 'profile' | 'cover' | 'recommendation' | 'city',
+    id?: number
+): string => {
+    const baseDir = path.join(process.cwd(), 'uploads', userId.toString());
+    
+    switch (type) {
+        case 'profile':
+            return path.join(baseDir, 'profile');
+        case 'cover':
+            return path.join(baseDir, 'cover');
+        case 'recommendation':
+            if (!id) throw new Error('Recommendation ID required');
+            return path.join(baseDir, 'recommendations', id.toString());
+        case 'city':
+            if (!id) throw new Error('City ID required');
+            return path.join(baseDir, 'cities', id.toString());
+        default:
+            throw new Error('Invalid upload type');
+    }
+};
+
+/**
+ * Get URL path for uploaded file
+ */
+const getUrlPath = (
+    userId: number,
+    type: 'profile' | 'cover' | 'recommendation' | 'city',
+    filename: string,
+    id?: number
+): string => {
+    switch (type) {
+        case 'profile':
+            return `/uploads/${userId}/profile/${filename}`;
+        case 'cover':
+            return `/uploads/${userId}/cover/${filename}`;
+        case 'recommendation':
+            if (!id) throw new Error('Recommendation ID required');
+            return `/uploads/${userId}/recommendations/${id}/${filename}`;
+        case 'city':
+            if (!id) throw new Error('City ID required');
+            return `/uploads/${userId}/cities/${id}/${filename}`;
+        default:
+            throw new Error('Invalid upload type');
+    }
+};
+
+/**
+ * Delete all old files in a directory
+ */
+const deleteOldFiles = async (dirPath: string): Promise<void> => {
+    try {
+        const files = await fs.readdir(dirPath);
+        await Promise.all(files.map(file => fs.unlink(path.join(dirPath, file))));
+        console.log(`Deleted ${files.length} old file(s) from: ${dirPath}`);
+    } catch (error: any) {
+        if (error.code !== 'ENOENT') {
+            console.error('Error deleting old files:', error);
+        }
+    }
+};
+
 // Image processing and optimization
 export const processImage = async (
     buffer: Buffer,
-    type: 'profile' | 'cover' | 'recommendation',
-    filename: string
+    userId: number,
+    type: 'profile' | 'cover' | 'recommendation' | 'city',
+    filename: string,
+    id?: number
 ): Promise<string> => {
-    let uploadsDir: string;
     let resizeOptions: { width: number; height: number; fit: 'cover' | 'inside'; position: string };
     let jpegOptions: { quality: number; progressive: boolean };
 
+    // Configure resize options based on type
     if (type === 'profile') {
-        uploadsDir = path.join(process.cwd(), 'uploads', 'profiles');
         resizeOptions = { width: 400, height: 400, fit: 'cover', position: 'center' };
         jpegOptions = { quality: 90, progressive: true };
     } else if (type === 'cover') {
-        uploadsDir = path.join(process.cwd(), 'uploads', 'covers');
         resizeOptions = { width: 1200, height: 400, fit: 'cover', position: 'center' };
+        jpegOptions = { quality: 85, progressive: true };
+    } else if (type === 'city') {
+        resizeOptions = { width: 1200, height: 800, fit: 'cover', position: 'center' };
         jpegOptions = { quality: 85, progressive: true };
     } else {
         // Recommendation photos: resize to 800x600, optimize
-        uploadsDir = path.join(process.cwd(), 'uploads', 'recommendations');
         resizeOptions = { width: 800, height: 600, fit: 'cover', position: 'center' };
         jpegOptions = { quality: 85, progressive: true };
     }
     
+    // Get upload directory
+    const uploadsDir = getUploadPath(userId, type, id);
+    
     // Ensure directory exists
     await fs.mkdir(uploadsDir, { recursive: true });
+    
+    // Delete old files for profile/cover (single file only)
+    if (type === 'profile' || type === 'cover') {
+        await deleteOldFiles(uploadsDir);
+    }
     
     const outputPath = path.join(uploadsDir, filename);
     
     try {
         await sharp(buffer)
+            .rotate() // Automatically handle EXIF orientation to fix rotation issues
             .resize(resizeOptions.width, resizeOptions.height, {
                 fit: resizeOptions.fit,
                 position: resizeOptions.position
@@ -89,7 +167,7 @@ export const processImage = async (
             .jpeg(jpegOptions)
             .toFile(outputPath);
         
-        return `/uploads/${type === 'profile' ? 'profiles' : type === 'cover' ? 'covers' : 'recommendations'}/${filename}`;
+        return getUrlPath(userId, type, filename, id);
     } catch (error) {
         console.error('Error processing image:', error);
         throw new Error('Failed to process image');
@@ -97,12 +175,20 @@ export const processImage = async (
 };
 
 // Generate unique filename
-export const generateFilename = (originalName: string, userId: number, type: 'profile' | 'cover' | 'recommendation'): string => {
+export const generateFilename = (originalName: string, type: 'profile' | 'cover' | 'recommendation' | 'city'): string => {
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
     const extension = 'jpg'; // Always save as JPEG after processing
     
-    return `${type}_${userId}_${timestamp}_${randomString}.${extension}`;
+    // For profile and cover, use simple names (since we delete old ones)
+    if (type === 'profile') {
+        return `avatar.${extension}`;
+    } else if (type === 'cover') {
+        return `cover.${extension}`;
+    }
+    
+    // For recommendations and cities, use timestamp to allow multiple files
+    return `${type}_${timestamp}_${randomString}.${extension}`;
 };
 
 // Delete old image file
@@ -117,6 +203,34 @@ export const deleteOldImage = async (imagePath: string): Promise<void> => {
         console.error('Error deleting old image:', error);
         // Don't throw error, just log it
     }
+};
+
+/**
+ * Delete entire folder and its contents
+ */
+export const deleteFolder = async (folderPath: string): Promise<void> => {
+    try {
+        await fs.rm(folderPath, { recursive: true, force: true });
+        console.log(`Deleted folder: ${folderPath}`);
+    } catch (error) {
+        console.error('Error deleting folder:', error);
+    }
+};
+
+/**
+ * Delete user's recommendation folder
+ */
+export const deleteRecommendationFolder = async (userId: number, recommendationId: number): Promise<void> => {
+    const folderPath = getUploadPath(userId, 'recommendation', recommendationId);
+    await deleteFolder(folderPath);
+};
+
+/**
+ * Delete user's city folder
+ */
+export const deleteCityFolder = async (userId: number, cityId: number): Promise<void> => {
+    const folderPath = getUploadPath(userId, 'city', cityId);
+    await deleteFolder(folderPath);
 };
 
 // Validate image dimensions and size

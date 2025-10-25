@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { query } from '../lib/database';
-import { processImage, generateFilename } from '../utils/imageUpload';
+import { processImage, generateFilename, deleteRecommendationFolder } from '../utils/imageUpload';
 
 // Get all recommendations with pagination and filters
 export const getRecommendations = async (req: Request, res: Response) => {
@@ -128,25 +128,29 @@ export const getRecommendations = async (req: Request, res: Response) => {
 export const getRecommendationById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const userId = (req as any).user?.userId;
 
         const recommendationQuery = `
             SELECT 
                 r.*,
                 u.username,
                 u.full_name,
+                up.profile_photo_url as profile_picture_url,
                 rc.name as category_name,
                 c.name as city_name,
                 c.country,
-                (SELECT array_agg(rp.photo_url) 
-                    FROM recommendation_photos rp 
-                    WHERE rp.recommendation_id = r.id 
-                    ORDER BY rp.is_primary DESC, rp.created_at ASC) as photos,
+                (SELECT array_agg(photo_url ORDER BY is_primary DESC, created_at ASC) 
+                    FROM recommendation_photos 
+                    WHERE recommendation_id = r.id) as photos,
                 (SELECT array_agg(rt.name) 
                     FROM recommendation_tag_links rtl
                     JOIN recommendation_tags rt ON rtl.tag_id = rt.id
-                    WHERE rtl.recommendation_id = r.id) as tags
+                    WHERE rtl.recommendation_id = r.id) as tags,
+                (SELECT AVG(rating)::NUMERIC(3,2) FROM recommendation_ratings WHERE recommendation_id = r.id) as average_rating,
+                (SELECT COUNT(*) FROM recommendation_ratings WHERE recommendation_id = r.id) as rating_count
             FROM recommendations r
             LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
             LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
             LEFT JOIN recommendation_cities rec_cities ON r.id = rec_cities.recommendation_id
             LEFT JOIN cities c ON rec_cities.city_id = c.id
@@ -162,6 +166,29 @@ export const getRecommendationById = async (req: Request, res: Response) => {
             });
         }
 
+        const recommendation = result.rows[0];
+
+        // Get user's rating if authenticated
+        if (userId) {
+            const userRatingResult = await query(
+                'SELECT rating, review FROM recommendation_ratings WHERE recommendation_id = $1 AND user_id = $2',
+                [id, userId]
+            );
+            
+            if (userRatingResult.rows.length > 0) {
+                recommendation.user_rating_value = userRatingResult.rows[0].rating;
+                recommendation.user_review = userRatingResult.rows[0].review;
+            }
+
+            // Check if user has liked this recommendation
+            const userLikeResult = await query(
+                'SELECT id FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
+                [id, userId]
+            );
+            
+            recommendation.user_has_liked = userLikeResult.rows.length > 0;
+        }
+
         // Increment view count
         await query(
             'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
@@ -170,7 +197,7 @@ export const getRecommendationById = async (req: Request, res: Response) => {
 
         res.json({
             success: true,
-            data: result.rows[0]
+            data: recommendation
         });
     } catch (error: any) {
         console.error('Get recommendation error:', error);
@@ -516,10 +543,18 @@ export const deleteRecommendation = async (req: Request, res: Response) => {
             });
         }
 
-        // Soft delete by setting status to 'deleted'
+        // Delete physical files from disk
+        try {
+            await deleteRecommendationFolder(userId, parseInt(id, 10));
+        } catch (fileError) {
+            console.error('Error deleting recommendation files:', fileError);
+            // Continue with database deletion even if file deletion fails
+        }
+
+        // Delete from database (cascade will delete photos, ratings, etc.)
         await query(
-            'UPDATE recommendations SET status = $1, updated_at = NOW() WHERE id = $2',
-            ['deleted', id]
+            'DELETE FROM recommendations WHERE id = $1',
+            [id]
         );
 
         res.json({
@@ -571,11 +606,12 @@ export const uploadRecommendationPhotos = async (req: Request, res: Response) =>
 
         const files = req.files as Express.Multer.File[];
         const uploadedPhotos = [];
+        const recommendationId = parseInt(id, 10);
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            const filename = generateFilename(file.originalname, userId, 'recommendation');
-            const photoUrl = await processImage(file.buffer, 'recommendation', filename);
+            const filename = generateFilename(file.originalname, 'recommendation');
+            const photoUrl = await processImage(file.buffer, userId, 'recommendation', filename, recommendationId);
             const isPrimary = i === 0; // First photo is primary
 
             const result = await query(
@@ -600,6 +636,138 @@ export const uploadRecommendationPhotos = async (req: Request, res: Response) =>
         res.status(500).json({
             success: false,
             message: 'Failed to upload photos',
+            error: error.message
+        });
+    }
+};
+
+// Delete recommendation photo
+export const deleteRecommendationPhoto = async (req: Request, res: Response) => {
+    try {
+        const { id, photoId } = req.params;
+        const userId = (req as any).user?.userId;
+
+        // Check if recommendation exists and user owns it
+        const existingRecommendation = await query(
+            'SELECT user_id FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        if (existingRecommendation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
+        if (existingRecommendation.rows[0].user_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to delete photos for this recommendation'
+            });
+        }
+
+        // Get photo info before deleting
+        const photoResult = await query(
+            'SELECT photo_url, is_primary FROM recommendation_photos WHERE id = $1 AND recommendation_id = $2',
+            [photoId, id]
+        );
+
+        if (photoResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Photo not found'
+            });
+        }
+
+        // Delete from database
+        await query(
+            'DELETE FROM recommendation_photos WHERE id = $1',
+            [photoId]
+        );
+
+        // If this was the primary photo, set another photo as primary
+        if (photoResult.rows[0].is_primary) {
+            await query(
+                'UPDATE recommendation_photos SET is_primary = true WHERE recommendation_id = $1 AND id = (SELECT id FROM recommendation_photos WHERE recommendation_id = $1 ORDER BY created_at ASC LIMIT 1)',
+                [id]
+            );
+        }
+
+        res.json({
+            success: true,
+            message: 'Photo deleted successfully'
+        });
+    } catch (error: any) {
+        console.error('Delete photo error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete photo',
+            error: error.message
+        });
+    }
+};
+
+// Set primary photo for recommendation
+export const setPrimaryRecommendationPhoto = async (req: Request, res: Response) => {
+    try {
+        const { id, photoId } = req.params;
+        const userId = (req as any).user?.userId;
+
+        // Check if recommendation exists and user owns it
+        const existingRecommendation = await query(
+            'SELECT user_id FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        if (existingRecommendation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
+        if (existingRecommendation.rows[0].user_id !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to modify photos for this recommendation'
+            });
+        }
+
+        // Verify photo belongs to this recommendation
+        const photoResult = await query(
+            'SELECT id FROM recommendation_photos WHERE id = $1 AND recommendation_id = $2',
+            [photoId, id]
+        );
+
+        if (photoResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Photo not found'
+            });
+        }
+
+        // Unset all primary flags for this recommendation
+        await query(
+            'UPDATE recommendation_photos SET is_primary = false WHERE recommendation_id = $1',
+            [id]
+        );
+
+        // Set this photo as primary
+        await query(
+            'UPDATE recommendation_photos SET is_primary = true WHERE id = $1',
+            [photoId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Primary photo updated successfully'
+        });
+    } catch (error: any) {
+        console.error('Set primary photo error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to set primary photo',
             error: error.message
         });
     }
@@ -690,3 +858,350 @@ export const getCities = async (req: Request, res: Response) => {
         });
     }
 };
+
+// Submit or update rating for a recommendation
+export const submitRating = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { rating, review } = req.body;
+        const userId = (req as any).user?.userId;
+
+        // Validate rating
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rating must be between 1 and 5'
+            });
+        }
+
+        // Check if recommendation exists
+        const recommendationResult = await query(
+            'SELECT user_id, status FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        if (recommendationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
+        // Check if user is trying to rate their own recommendation
+        if (recommendationResult.rows[0].user_id === userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You cannot rate your own recommendation'
+            });
+        }
+
+        // Check if recommendation is active
+        if (recommendationResult.rows[0].status !== 'active') {
+            return res.status(400).json({
+                success: false,
+                message: 'This recommendation is not available for rating'
+            });
+        }
+
+        // Insert or update rating
+        const result = await query(
+            `INSERT INTO recommendation_ratings (recommendation_id, user_id, rating, review, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, NOW(), NOW())
+             ON CONFLICT (recommendation_id, user_id)
+             DO UPDATE SET rating = $3, review = $4, updated_at = NOW()
+             RETURNING id, rating, review, created_at, updated_at`,
+            [id, userId, rating, review || null]
+        );
+
+        // Get updated average rating
+        const avgResult = await query(
+            'SELECT AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as rating_count FROM recommendation_ratings WHERE recommendation_id = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Rating submitted successfully',
+            data: {
+                rating: result.rows[0],
+                averageRating: parseFloat(avgResult.rows[0].avg_rating) || 0,
+                ratingCount: parseInt(avgResult.rows[0].rating_count) || 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Submit rating error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit rating',
+            error: error.message
+        });
+    }
+};
+
+// Get user's rating for a recommendation
+export const getUserRating = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        const result = await query(
+            'SELECT id, rating, review, created_at, updated_at FROM recommendation_ratings WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.json({
+                success: true,
+                data: null
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+    } catch (error: any) {
+        console.error('Get user rating error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch rating',
+            error: error.message
+        });
+    }
+};
+
+// Delete user's rating
+export const deleteRating = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        const result = await query(
+            'DELETE FROM recommendation_ratings WHERE recommendation_id = $1 AND user_id = $2 RETURNING id',
+            [id, userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Rating not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Rating deleted successfully'
+        });
+    } catch (error: any) {
+        console.error('Delete rating error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete rating',
+            error: error.message
+        });
+    }
+};
+
+// Like a recommendation
+export const likeRecommendation = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        // Check if already liked
+        const existingLike = await query(
+            'SELECT id FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (existingLike.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Already liked this recommendation'
+            });
+        }
+
+        // Add like
+        await query(
+            'INSERT INTO recommendation_likes (recommendation_id, user_id) VALUES ($1, $2)',
+            [id, userId]
+        );
+
+        // Update likes count
+        await query(
+            'UPDATE recommendations SET likes_count = likes_count + 1 WHERE id = $1',
+            [id]
+        );
+
+        // Get updated count
+        const countResult = await query(
+            'SELECT likes_count FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Recommendation liked successfully',
+            data: {
+                likes_count: countResult.rows[0]?.likes_count || 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Like recommendation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to like recommendation',
+            error: error.message
+        });
+    }
+};
+
+// Unlike a recommendation
+export const unlikeRecommendation = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        // Check if liked
+        const existingLike = await query(
+            'SELECT id FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (existingLike.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Recommendation not liked yet'
+            });
+        }
+
+        // Remove like
+        await query(
+            'DELETE FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        // Update likes count
+        await query(
+            'UPDATE recommendations SET likes_count = GREATEST(likes_count - 1, 0) WHERE id = $1',
+            [id]
+        );
+
+        // Get updated count
+        const countResult = await query(
+            'SELECT likes_count FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Recommendation unliked successfully',
+            data: {
+                likes_count: countResult.rows[0]?.likes_count || 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Unlike recommendation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to unlike recommendation',
+            error: error.message
+        });
+    }
+};
+
+// Check if user liked a recommendation
+export const checkLikeStatus = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        const result = await query(
+            'SELECT id FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                isLiked: result.rows.length > 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Check like status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check like status',
+            error: error.message
+        });
+    }
+};
+
+// Get user's liked recommendations
+export const getLikedRecommendations = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.userId;
+        const { page = 1, limit = 12 } = req.query;
+        const offset = (Number(page) - 1) * Number(limit);
+
+        const result = await query(`
+            SELECT 
+                r.id,
+                r.title,
+                r.description,
+                r.price_range_min,
+                r.price_range_max,
+                r.difficulty_level,
+                r.views_count,
+                r.likes_count,
+                r.created_at,
+                u.username,
+                u.full_name,
+                rc.name as category_name,
+                c.name as city_name,
+                c.country,
+                (SELECT array_agg(photo_url ORDER BY is_primary DESC, created_at ASC) 
+                 FROM recommendation_photos 
+                 WHERE recommendation_id = r.id) as photos,
+                rl.created_at as liked_at
+            FROM recommendation_likes rl
+            JOIN recommendations r ON rl.recommendation_id = r.id
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
+            LEFT JOIN recommendation_cities rec_cities ON r.id = rec_cities.recommendation_id
+            LEFT JOIN cities c ON rec_cities.city_id = c.id
+            WHERE rl.user_id = $1 AND r.status = 'active'
+            ORDER BY rl.created_at DESC
+            LIMIT $2 OFFSET $3
+        `, [userId, Number(limit), offset]);
+
+        // Get total count
+        const countResult = await query(
+            'SELECT COUNT(*) as total FROM recommendation_likes WHERE user_id = $1',
+            [userId]
+        );
+        const total = parseInt(countResult.rows[0].total);
+
+        res.json({
+            success: true,
+            data: {
+                recommendations: result.rows,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    pages: Math.ceil(total / Number(limit))
+                }
+            }
+        });
+    } catch (error: any) {
+        console.error('Get liked recommendations error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch liked recommendations',
+            error: error.message
+        });
+    }
+};
+
+

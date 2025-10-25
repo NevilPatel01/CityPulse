@@ -201,10 +201,6 @@ export default function ProfilePage() {
                               <div className="text-primary text-2xl font-bold">{stats.travelBuddies || 0}</div>
                               <div className="text-muted text-sm">Travel Buddies</div>
                             </div>
-                            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                              <div className="text-primary text-2xl font-bold">{(stats.points || 0).toLocaleString()}</div>
-                              <div className="text-muted text-sm">Points</div>
-                            </div>
                           </div>
                         </div>
                       )}
@@ -459,10 +455,6 @@ export default function ProfilePage() {
                       <div className="text-primary text-2xl font-bold">{stats.travelBuddies || 0}</div>
                       <div className="text-muted text-sm">Travel Buddies</div>
                     </div>
-                    <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                      <div className="text-primary text-2xl font-bold">{(stats.points || 0).toLocaleString()}</div>
-                      <div className="text-muted text-sm">Points</div>
-                    </div>
                   </div>
                 </div>
               )}
@@ -551,6 +543,7 @@ export default function ProfilePage() {
                           <RecommendationsList 
                             userId={profile?.id} 
                             showUser={false}
+                            showActions={isOwnProfile}
                             className="mt-4"
                           />
                         )
@@ -558,6 +551,7 @@ export default function ProfilePage() {
                         <RecommendationsList 
                           userId={profile?.id} 
                           showUser={false}
+                          showActions={isOwnProfile}
                           className="mt-4"
                         />
                       )}

@@ -26,6 +26,7 @@ interface Recommendation {
   city_name: string;
   country: string;
   photos?: string[];
+  user_id?: number;
 }
 
 interface Category {
@@ -60,10 +61,11 @@ interface RecommendationsApiResponse {
 interface RecommendationsListProps {
   userId?: number;
   showUser?: boolean;
+  showActions?: boolean;
   className?: string;
 }
 
-export function RecommendationsList({ userId, showUser = true, className = '' }: RecommendationsListProps) {
+export function RecommendationsList({ userId, showUser = true, showActions = false, className = '' }: RecommendationsListProps) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<City[]>([]);
@@ -170,6 +172,11 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
     void loadRecommendations(1, true);
   };
 
+  const handleDelete = () => {
+    // Refresh the list after deletion
+    void loadRecommendations(pagination.page, true);
+  };
+
   if (loading) {
     return (
       <div className={`space-y-6 ${className}`}>
@@ -261,6 +268,8 @@ export function RecommendationsList({ userId, showUser = true, className = '' }:
                 key={recommendation.id}
                 recommendation={recommendation}
                 showUser={showUser}
+                showActions={showActions}
+                onDelete={handleDelete}
               />
             ))}
           </div>

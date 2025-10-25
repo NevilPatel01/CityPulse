@@ -7,6 +7,16 @@ import { apiRequest } from '../../config/api';
 interface CreateRecommendationFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
+  isEditing?: boolean;
+  recommendationId?: string;
+  initialData?: Partial<FormData> & {
+    photos?: Array<{
+      id: number;
+      photo_url: string;
+      is_primary: boolean;
+      display_order: number;
+    }>;
+  };
 }
 
 interface FormData {
@@ -113,31 +123,34 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 export function CreateRecommendationForm({
   onSuccess,
   onCancel,
+  isEditing = false,
+  recommendationId,
+  initialData,
 }: CreateRecommendationFormProps) {
   const navigate = useNavigate();
   const { showSuccess } = useSafeToast();
 
   const [formData, setFormData] = useState<FormData>({
     // Basic Information
-    place_name: '',
-    category_id: '',
-    city_id: '',
-    address: '',
+    place_name: initialData?.place_name || '',
+    category_id: initialData?.category_id || '',
+    city_id: initialData?.city_id || '',
+    address: initialData?.address || '',
     
     // Details
-    description: '',
-    price_range_min: '',
-    price_range_max: '',
-    difficulty_level: '',
+    description: initialData?.description || '',
+    price_range_min: initialData?.price_range_min || '',
+    price_range_max: initialData?.price_range_max || '',
+    difficulty_level: initialData?.difficulty_level || '',
     
     // Additional Details
-    best_time_to_visit: '',
-    duration_suggestion: '',
-    user_rating: 0,
+    best_time_to_visit: initialData?.best_time_to_visit || '',
+    duration_suggestion: initialData?.duration_suggestion || '',
+    user_rating: initialData?.user_rating || 0,
     
     // Geographic
-    latitude: '',
-    longitude: '',
+    latitude: initialData?.latitude || '',
+    longitude: initialData?.longitude || '',
   });  const [customCategory, setCustomCategory] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [customCity, setCustomCity] = useState('');
@@ -157,6 +170,13 @@ export function CreateRecommendationForm({
   });
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<Array<{
+    id: number;
+    photo_url: string;
+    is_primary: boolean;
+    display_order: number;
+  }>>(initialData?.photos || []);
+  const [photosToDelete, setPhotosToDelete] = useState<number[]>([]);
 
   // Load cities on component mount
   useEffect(() => {
@@ -334,19 +354,42 @@ export function CreateRecommendationForm({
         user_rating: formData.user_rating,
       };
 
-      console.log('[FRONTEND] Submitting recommendation:', requestData);
-      const data = await apiRequest('/api/recommendations', {
-        method: 'POST',
+      const endpoint = isEditing 
+        ? `/api/recommendations/${recommendationId}` 
+        : '/api/recommendations';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      console.log(`[FRONTEND] ${isEditing ? 'Updating' : 'Creating'} recommendation:`, requestData);
+      const data = await apiRequest(endpoint, {
+        method,
         body: JSON.stringify(requestData),
       }) as { success: boolean; data?: { id: string }; message?: string; errors?: Array<{ field: string; message: string }> };
 
-      console.log('[FRONTEND] Create recommendation response:', data);
+      console.log(`[FRONTEND] ${isEditing ? 'Update' : 'Create'} recommendation response:`, data);
       if (data.success) {
-        showSuccess('Recommendation created successfully!');
+        // Delete photos marked for deletion
+        if (isEditing && photosToDelete.length > 0) {
+          for (const photoId of photosToDelete) {
+            try {
+              await apiRequest(`/api/recommendations/${recommendationId}/photos/${photoId}`, {
+                method: 'DELETE',
+              });
+            } catch (error) {
+              console.error(`Failed to delete photo ${photoId}:`, error);
+            }
+          }
+        }
+
+        const successMessage = isEditing 
+          ? 'Recommendation updated successfully!' 
+          : 'Recommendation created successfully!';
+        showSuccess(successMessage);
+        
         if (onSuccess) {
           onSuccess();
         } else {
-          navigate(`/recommendations/${data.data?.id}`);
+          const targetId = isEditing ? recommendationId : data.data?.id;
+          navigate(`/recommendations/${targetId}`);
         }
       } else {
         if (data.errors && Array.isArray(data.errors)) {
@@ -357,12 +400,12 @@ export function CreateRecommendationForm({
           setErrors(fieldErrors);
         } else {
           setErrors({
-            general: data.message || 'Failed to create recommendation',
+            general: data.message || `Failed to ${isEditing ? 'update' : 'create'} recommendation`,
           });
         }
       }
     } catch (error) {
-      console.error('[FRONTEND] Create recommendation error:', error);
+      console.error(`[FRONTEND] ${isEditing ? 'Update' : 'Create'} recommendation error:`, error);
       console.error('[FRONTEND] Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -388,10 +431,12 @@ export function CreateRecommendationForm({
           <div className='flex items-center justify-between'>
             <div>
               <h1 className='text-2xl font-bold text-primary'>
-                Create Recommendation
+                {isEditing ? 'Edit Recommendation' : 'Create Recommendation'}
               </h1>
               <p className='text-muted mt-1'>
-                Share your favorite places with the community
+                {isEditing 
+                  ? 'Update your recommendation details' 
+                  : 'Share your favorite places with the community'}
               </p>
             </div>
             <Button
@@ -591,8 +636,65 @@ export function CreateRecommendationForm({
             isOpen={openSections.photos}
             onToggle={() => toggleSection('photos')}
           >
+            {/* Existing photos for edit mode */}
+            {isEditing && existingPhotos.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-primary mb-3">Current Photos</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {existingPhotos.map((photo) => (
+                    <div key={photo.id} className="relative group">
+                      <img
+                        src={photo.photo_url}
+                        alt="Recommendation"
+                        className="w-full h-32 object-cover rounded-lg border-2 border-subtle"
+                      />
+                      {photo.is_primary && (
+                        <div className="absolute top-2 left-2 bg-pulse text-white text-xs px-2 py-1 rounded">
+                          Primary
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhotosToDelete([...photosToDelete, photo.id]);
+                          setExistingPhotos(existingPhotos.filter(p => p.id !== photo.id));
+                        }}
+                        className="absolute top-2 right-2 bg-error text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      {!photo.is_primary && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await apiRequest(`/api/recommendations/${recommendationId}/photos/${photo.id}/primary`, {
+                                method: 'PATCH',
+                              });
+                              setExistingPhotos(existingPhotos.map(p => ({
+                                ...p,
+                                is_primary: p.id === photo.id
+                              })));
+                              showSuccess('Primary photo updated');
+                            } catch (error) {
+                              console.error('Failed to set primary photo:', error);
+                            }
+                          }}
+                          className="absolute bottom-2 left-2 bg-surface-glass text-primary text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          Set as Primary
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <FileUpload
-              label="Upload Photos"
+              label={isEditing ? "Add More Photos" : "Upload Photos"}
               onFilesSelected={handleFilesSelected}
               maxFiles={5}
               maxFileSize={5}
@@ -697,7 +799,9 @@ export function CreateRecommendationForm({
               disabled={isLoading}
               className='bg-pulse hover:bg-pulse/80 text-white'
             >
-              {isLoading ? 'Creating...' : 'Create Recommendation'}
+              {isLoading 
+                ? (isEditing ? 'Updating...' : 'Creating...') 
+                : (isEditing ? 'Update Recommendation' : 'Create Recommendation')}
             </Button>
           </div>
         </form>
