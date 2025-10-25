@@ -10,6 +10,15 @@ interface SearchOverlayContextType {
 
 const SearchOverlayContext = createContext<SearchOverlayContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSearchOverlay = () => {
+    const context = useContext(SearchOverlayContext);
+    if (!context) {
+        throw new Error('useSearchOverlay must be used within SearchOverlayProvider');
+    }
+    return context;
+};
+
 export const SearchOverlayProvider = ({ children }: { children: ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -22,12 +31,4 @@ export const SearchOverlayProvider = ({ children }: { children: ReactNode }) => 
             {children}
         </SearchOverlayContext.Provider>
     );
-};
-
-export const useSearchOverlay = () => {
-    const context = useContext(SearchOverlayContext);
-    if (!context) {
-        throw new Error('useSearchOverlay must be used within SearchOverlayProvider');
-    }
-    return context;
 };

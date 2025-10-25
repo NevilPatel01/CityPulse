@@ -128,18 +128,38 @@ export const searchApi = {
             }
         });
 
-        const response = await apiRequest<{ data: any }>(`/api/advanced-search?${params.toString()}`);
+        const response = await apiRequest<{ 
+            data: {
+                recommendations: SearchResult[];
+                users: SearchResult[];
+                cities: SearchResult[];
+                total: number;
+                filters: SearchFiltersType;
+            }
+        }>(`/api/advanced-search?${params.toString()}`);
         return response.data;
     },
 
     /**
      * Basic search (legacy endpoint)
      */
-    async basicSearch(query: string, type?: string): Promise<any> {
+    async basicSearch(query: string, type?: string): Promise<{
+        recommendations: SearchResult[];
+        users: SearchResult[];
+        cities: SearchResult[];
+        total: number;
+    }> {
         const params = new URLSearchParams({ q: query });
         if (type) params.append('type', type);
         
-        const response = await apiRequest<{ data: any }>(`/api/search?${params.toString()}`);
+        const response = await apiRequest<{ 
+            data: {
+                recommendations: SearchResult[];
+                users: SearchResult[];
+                cities: SearchResult[];
+                total: number;
+            }
+        }>(`/api/search?${params.toString()}`);
         return response.data;
     }
 };

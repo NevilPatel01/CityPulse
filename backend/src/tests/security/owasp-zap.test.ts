@@ -4,7 +4,7 @@
  */
 
 import request from 'supertest';
-import { app } from '../../app';
+import { createApp } from '../../app';
 import { query } from '../../lib/database';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
@@ -12,6 +12,7 @@ describe('OWASP Security Tests', () => {
     let authToken: string;
     let testUserId: number;
 
+    const app = createApp();
     beforeAll(async () => {
         // Create test user for authenticated endpoints
         const testUser = {

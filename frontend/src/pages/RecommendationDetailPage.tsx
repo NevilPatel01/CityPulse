@@ -340,7 +340,7 @@ export function RecommendationDetailPage() {
                   <MapPin className="w-4 h-4" />
                   {recommendation.city_name}, {recommendation.country}
                 </span>
-                                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1">
                   <Eye className="w-4 h-4" />
                   {recommendation.views_count} views
                 </span>
@@ -358,30 +358,6 @@ export function RecommendationDetailPage() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="bg-pulse text-white text-sm font-medium px-4 py-2 rounded-full">
                 {recommendation.category_name}
-              </span>
-              {formatDifficulty(recommendation.difficulty_level)}
-              
-              {isOwner && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => navigate(`/recommendations/${id}/edit`)}
-                    className="p-2 text-muted hover:text-pulse transition-colors"
-                    aria-label="Edit recommendation"
-                  >
-                    <Edit className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="p-2 text-muted hover:text-red-400 transition-colors"
-                    aria-label="Delete recommendation"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
               </span>
               {formatDifficulty(recommendation.difficulty_level)}
               

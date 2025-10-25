@@ -3,7 +3,7 @@ import SearchBar from './SearchBar';
 import SearchFilters from './SearchFilters';
 import SearchResults from './SearchResults';
 import FilterDrawer from './FilterDrawer';
-import { searchApi } from '../../services/searchService';
+import { searchApi, type FilterOptions, type SearchResult } from '../../services/searchService';
 
 export interface SearchFilters {
     q: string;
@@ -38,11 +38,39 @@ const AdvancedSearch: React.FC = () => {
         view: 'grid'
     });
 
-    const [filterOptions, setFilterOptions] = useState<any>(null);
-    const [results, setResults] = useState<any>(null);
+    const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+    const [results, setResults] = useState<{
+        recommendations: SearchResult[];
+        users: SearchResult[];
+        cities: SearchResult[];
+        total: number;
+    } | null>(null);
     const [loading, setLoading] = useState(false);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+
+    const performSearch = useCallback(async () => {
+        setLoading(true);
+        try {
+            console.log('[SEARCH] Sending filters:', filters);
+            const searchResults = await searchApi.advancedSearch(filters);
+            console.log('[SEARCH] Received results:', searchResults);
+            setResults(searchResults);
+        } catch (error) {
+            console.error('Search failed:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [filters]);
+
+    const loadFilterOptions = useCallback(async () => {
+        try {
+            const options = await searchApi.getFilters();
+            setFilterOptions(options);
+        } catch (error) {
+            console.error('Failed to load filter options:', error);
+        }
+    }, []);
 
     // Check if mobile view
     useEffect(() => {
@@ -59,7 +87,7 @@ const AdvancedSearch: React.FC = () => {
     // Load filter options on mount
     useEffect(() => {
         loadFilterOptions();
-    }, []);
+    }, [loadFilterOptions]);
 
     // Debounced search when query changes
     useEffect(() => {
@@ -76,7 +104,7 @@ const AdvancedSearch: React.FC = () => {
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timer);
-    }, [filters.q]);
+    }, [filters.q, filters.categories.length, filters.location.length, filters.priceMin, filters.minRating, filters.difficulty, performSearch]);
 
     // Immediate search when other filters change
     useEffect(() => {
@@ -85,6 +113,7 @@ const AdvancedSearch: React.FC = () => {
             filters.priceMin > 0 || filters.minRating > 0 || filters.difficulty !== 'any') {
             performSearch();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         filters.location,
         filters.categories,
@@ -98,29 +127,6 @@ const AdvancedSearch: React.FC = () => {
         filters.sortBy,
         filters.type
     ]);
-
-    const loadFilterOptions = async () => {
-        try {
-            const options = await searchApi.getFilters();
-            setFilterOptions(options);
-        } catch (error) {
-            console.error('Failed to load filter options:', error);
-        }
-    };
-
-    const performSearch = useCallback(async () => {
-        setLoading(true);
-        try {
-            console.log('[SEARCH] Sending filters:', filters);
-            const searchResults = await searchApi.advancedSearch(filters);
-            console.log('[SEARCH] Received results:', searchResults);
-            setResults(searchResults);
-        } catch (error) {
-            console.error('Search failed:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [filters]);
 
     const updateFilters = (updates: Partial<SearchFilters>) => {
         setFilters((prev: SearchFilters) => ({ ...prev, ...updates }));
