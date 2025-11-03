@@ -22,6 +22,7 @@ import { RecommendationsPage } from './pages/RecommendationsPage';
 import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
 import { RecommendationDetailPage } from './pages/RecommendationDetailPage';
 import { EditRecommendationPage } from './pages/EditRecommendationPage';
+import BuddiesPage from './pages/BuddiesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -114,6 +115,13 @@ function App() {
           <Route path="/recommendations/:id/edit" element={
             <ProtectedRoute>
               <EditRecommendationPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Buddies/Social routes */}
+          <Route path="/buddies" element={
+            <ProtectedRoute>
+              <BuddiesPage />
             </ProtectedRoute>
           } />
           

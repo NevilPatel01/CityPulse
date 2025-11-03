@@ -45,11 +45,11 @@ export const getProfile = async (req: Request, res: Response) => {
         // Get cities visited from user's recommendations
         const citiesResult = await query(
             `SELECT DISTINCT c.name, c.country
-             FROM recommendations r
-             JOIN recommendation_cities rc ON r.id = rc.recommendation_id
-             JOIN cities c ON rc.city_id = c.id
-             WHERE r.user_id = $1
-             ORDER BY c.name`,
+                FROM recommendations r
+                JOIN recommendation_cities rc ON r.id = rc.recommendation_id
+                JOIN cities c ON rc.city_id = c.id
+                WHERE r.user_id = $1
+                ORDER BY c.name`,
             [user.id]
         );
 
@@ -106,12 +106,12 @@ export const getProfile = async (req: Request, res: Response) => {
         const statsResult = await query(
             `SELECT 
                 (SELECT COUNT(DISTINCT rc.city_id)
-                 FROM recommendations r
-                 JOIN recommendation_cities rc ON r.id = rc.recommendation_id
-                 WHERE r.user_id = $1) as cities_count,
+                    FROM recommendations r
+                    JOIN recommendation_cities rc ON r.id = rc.recommendation_id
+                    WHERE r.user_id = $1) as cities_count,
                 (SELECT COUNT(*)
-                 FROM recommendations
-                 WHERE user_id = $1 AND status = 'active') as recommendations_count,
+                    FROM recommendations
+                    WHERE user_id = $1 AND status = 'active') as recommendations_count,
                 0 as travel_buddies_count
             FROM (SELECT $1::integer as user_id) u`,
             [user.id]
@@ -886,6 +886,160 @@ export const getUserBadges = async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error'
+        });
+    }
+};
+
+// Get privacy settings
+export const getPrivacySettings = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+
+        const result = await query(
+            `SELECT 
+                profile_visibility,
+                location_sharing,
+                social_links_visible,
+                travel_buddy_requests_enabled
+             FROM user_profiles
+             WHERE user_id = $1`,
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            // Return defaults if no profile exists
+            return res.json({
+                success: true,
+                data: {
+                    profileVisibility: 'public',
+                    locationSharing: true,
+                    socialLinksVisible: true,
+                    travelBuddyRequestsEnabled: true
+                }
+            });
+        }
+
+        const settings = result.rows[0];
+
+        res.json({
+            success: true,
+            data: {
+                profileVisibility: settings.profile_visibility || 'public',
+                locationSharing: settings.location_sharing !== undefined ? settings.location_sharing : true,
+                socialLinksVisible: settings.social_links_visible !== undefined ? settings.social_links_visible : true,
+                travelBuddyRequestsEnabled: settings.travel_buddy_requests_enabled !== undefined ? settings.travel_buddy_requests_enabled : true
+            }
+        });
+
+    } catch (error) {
+        console.error('Get privacy settings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch privacy settings'
+        });
+    }
+};
+
+// Update privacy settings
+export const updatePrivacySettings = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+        const {
+            profileVisibility,
+            locationSharing,
+            socialLinksVisible,
+            travelBuddyRequestsEnabled
+        } = req.body;
+
+        // Validate profile visibility
+        if (profileVisibility && !['public', 'private'].includes(profileVisibility)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid profile visibility value. Must be "public" or "private"'
+            });
+        }
+
+        // Check if profile exists
+        const profileCheck = await query(
+            'SELECT id FROM user_profiles WHERE user_id = $1',
+            [userId]
+        );
+
+        if (profileCheck.rows.length === 0) {
+            // Create profile with privacy settings
+            await query(
+                `INSERT INTO user_profiles (
+                    user_id, profile_visibility, location_sharing, 
+                    social_links_visible, travel_buddy_requests_enabled
+                ) VALUES ($1, $2, $3, $4, $5)`,
+                [
+                    userId,
+                    profileVisibility || 'public',
+                    locationSharing !== undefined ? locationSharing : true,
+                    socialLinksVisible !== undefined ? socialLinksVisible : true,
+                    travelBuddyRequestsEnabled !== undefined ? travelBuddyRequestsEnabled : true
+                ]
+            );
+        } else {
+            // Update privacy settings
+            const updateFields = [];
+            const updateValues = [];
+            let paramCount = 1;
+
+            if (profileVisibility !== undefined) {
+                updateFields.push(`profile_visibility = $${paramCount++}`);
+                updateValues.push(profileVisibility);
+            }
+            if (locationSharing !== undefined) {
+                updateFields.push(`location_sharing = $${paramCount++}`);
+                updateValues.push(locationSharing);
+            }
+            if (socialLinksVisible !== undefined) {
+                updateFields.push(`social_links_visible = $${paramCount++}`);
+                updateValues.push(socialLinksVisible);
+            }
+            if (travelBuddyRequestsEnabled !== undefined) {
+                updateFields.push(`travel_buddy_requests_enabled = $${paramCount++}`);
+                updateValues.push(travelBuddyRequestsEnabled);
+            }
+
+            if (updateFields.length > 0) {
+                updateFields.push(`updated_at = NOW()`);
+                updateValues.push(userId);
+
+                const updateQuery = `
+                    UPDATE user_profiles 
+                    SET ${updateFields.join(', ')}
+                    WHERE user_id = $${paramCount}
+                `;
+                await query(updateQuery, updateValues);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: 'Privacy settings updated successfully'
+        });
+
+    } catch (error) {
+        console.error('Update privacy settings error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update privacy settings'
         });
     }
 };

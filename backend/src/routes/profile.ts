@@ -6,7 +6,9 @@ import {
     uploadProfilePhoto,
     deleteProfilePhoto,
     getUserStats,
-    getUserBadges
+    getUserBadges,
+    getPrivacySettings,
+    updatePrivacySettings
 } from '../controllers/profile';
 import {
     updateProfileSchema,
@@ -98,6 +100,21 @@ router.get(
     profileLimiter,
     authenticateToken,
     getUserBadges
+);
+
+// Privacy settings routes
+router.get(
+    '/privacy/settings',
+    profileLimiter,
+    authenticateToken,
+    getPrivacySettings
+);
+
+router.put(
+    '/privacy/settings',
+    profileLimiter,
+    authenticateToken,
+    updatePrivacySettings
 );
 
 export default router;

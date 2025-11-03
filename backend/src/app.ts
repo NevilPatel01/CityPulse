@@ -8,6 +8,8 @@ import profileRoutes from './routes/profile';
 import recommendationRoutes from './routes/recommendations';
 import searchRoutes from './routes/search';
 import advancedSearchRoutes from './routes/advancedSearch';
+import buddyRoutes from './routes/buddy';
+import notificationRoutes from './routes/notifications';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -137,6 +139,14 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up advanced search routes...');
     // Advanced search routes - handles advanced filtering and search
     app.use('/api/advanced-search', advancedSearchRoutes);
+
+    console.log('[APP] Setting up buddy routes...');
+    // Buddy routes - handles travel buddy connections, blocking, and reporting
+    app.use('/api/buddies', buddyRoutes);
+
+    console.log('[APP] Setting up notification routes...');
+    // Notification routes - handles user notifications
+    app.use('/api/notifications', notificationRoutes);
 
     console.log('[APP] Setting up static file serving for uploads...');
     // Serve uploaded images statically with proper CORS headers

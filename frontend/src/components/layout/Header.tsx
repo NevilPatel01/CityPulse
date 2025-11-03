@@ -4,6 +4,7 @@ import { Button } from '../ui';
 import { useAuth } from '../../hooks/useAuth';
 import { UserDropdown } from './UserDropdown';
 import { SearchBar } from './SearchBar';
+import { NotificationBell } from '../notifications';
 
 export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -95,6 +96,11 @@ export const Header: React.FC = () => {
 
               {/* Mobile: Just spacer to push user dropdown to the right */}
               <div className="md:hidden flex-1"></div>
+
+              {/* Notification Bell */}
+              <div className="flex-shrink-0">
+                <NotificationBell />
+              </div>
 
               {/* User Dropdown */}
               <div className="flex-shrink-0">

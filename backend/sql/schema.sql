@@ -256,7 +256,20 @@ CREATE TABLE IF NOT EXISTS travel_buddy_connections (
     requested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     responded_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(requester_id, requested_id)
+    UNIQUE(requester_id, requested_id),
+    CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled'))
+);
+
+-- User Blocks
+CREATE TABLE IF NOT EXISTS user_blocks (
+    id SERIAL PRIMARY KEY,
+    blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason VARCHAR(100),
+    blocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(blocker_id, blocked_id),
+    CHECK (blocker_id != blocked_id)
 );
 
 -- =====================================================
@@ -386,9 +399,12 @@ CREATE TABLE IF NOT EXISTS notifications (
     message TEXT NOT NULL,
     notification_type VARCHAR(50),
     related_id INTEGER,
+    related_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    action_url VARCHAR(255),
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    read_at TIMESTAMP WITH TIME ZONE
+    read_at TIMESTAMP WITH TIME ZONE,
+    CHECK (notification_type IN ('buddy_request', 'buddy_accepted', 'buddy_declined', 'recommendation_like', 'recommendation_comment', 'recommendation_rating', 'trip_invite', 'achievement_unlocked', 'system'))
 );
 
 -- =====================================================
@@ -476,6 +492,16 @@ CREATE INDEX IF NOT EXISTS idx_recommendations_location ON recommendations(latit
 CREATE INDEX IF NOT EXISTS idx_travel_buddy_connections_requester ON travel_buddy_connections(requester_id);
 CREATE INDEX IF NOT EXISTS idx_travel_buddy_connections_requested ON travel_buddy_connections(requested_id);
 CREATE INDEX IF NOT EXISTS idx_travel_buddy_connections_status ON travel_buddy_connections(status);
+
+-- User blocks indexes
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocker ON user_blocks(blocker_id);
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocked ON user_blocks(blocked_id);
+
+-- Notifications indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(notification_type);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
 -- User achievements indexes (for badges)
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON user_achievements(user_id);

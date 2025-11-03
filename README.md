@@ -20,7 +20,7 @@
 - [x] Basic user registration API endpoint with email validation
 - [x] Begin accessibility tags (ARIA, alt text)
 
-### Week 2 (Sept 15)
+#### Week 2 (Sept 15)
 - [x] User Profile Management (Basic profile setup, photo upload)
 - [x] Image upload functionality with Multer
 - [x] Image optimization and compression implementation
@@ -34,7 +34,7 @@
 - [x] API endpoints for profile CRUD operations
 - [x] Frontend React components for user registration and login
 
-### Week 3 (Sept 22)
+#### Week 3 (Sept 22)
 - [x] Create and submit progress report and demo video
 - [x] City and Category Management (Cities, Recommendation_Categories tables)
 - [x] Basic recommendation creation functionality
@@ -44,7 +44,8 @@
 - [x] Basic search functionality implementation
 - [ ] Integration tests for recommendation endpoints and E2E Test
 
-### Week 4 (Sept 29)
+### Milestone 2
+#### Week 4 (Sept 29)
 - [x] Advanced Search Implementation (multi-filter capability)
 - [x] Search by location, category, price range, difficulty level
 - [x] Tag system implementation (Recommendation_Tags, Tag_Links tables)
@@ -53,21 +54,21 @@
 - [x] Database indexing for search optimization
 - [x] Search performance testing and optimization
 
-### Week 5 (Oct 6)
+#### Week 5 (Oct 6)
 - [x] Rating and Review System (Recommendation_Ratings table)
 - [x] Like/Unlike functionality (Recommendation_Likes table)
 - [x] User interaction tracking and analytics
-- [x] Recommendation browsing and discovery feeds
+- [ ] Recommendation browsing and discovery feeds
 - [x] Content validation and sanitization (XSS protection)
 - [x] SQL injection prevention testing
 - [x] Frontend components for rating and reviewing
 
-### Week 6 (Oct 13)
+#### Week 6 (Oct 13)
 - [x] Break Week: Catch-up, bug fixes, and refactoring
 - [x] CI: GitHub Actions auto-run unit + integration + E2E tests (Note: Pipeline configured but test execution needs to be added to workflow)
 - [ ] Add E2E test and Unit Test suite for remaining Test Cases
 
-### Week 7 (Oct 20)
+#### Week 7 (Oct 20)
 - [ ] Submit progress report + demo video
 - [x] Deploy initial progress to hosting platform
 - [x] Production environment setup
@@ -75,6 +76,36 @@
 - [x] Environment variables configuration
 - [x] SSL certificate setup
 - [x] Production testing and bug fixes
+
+### Milestone 3 
+#### Week 8 (Oct 27)
+- [ ] Begin implementing Travel Buddy System (Travel_Buddy_Connections table)
+- [ ] Connection request functionality
+- [ ] Accept/decline buddy requests
+- [ ] Privacy controls for social media sharing
+- [ ] User blocking and reporting system
+- [ ] Real-time notifications implementation
+- [ ] Frontend components for buddy management
+- [ ] Security testing for user connections with Unit Test and E2E test 
+
+#### Week 9
+- [ ] Trip Planning System (Trips, Trip_Cities, Trip_Companions tables)
+- [ ] Collaborative trip creation and management
+- [ ] Trip itinerary planning (Trip_Itinerary table)
+- [ ] Travel companion finder functionality
+- [ ] Trip sharing and privacy controls
+- [ ] Integration with recommendation system
+- [ ] Frontend trip planning interface
+
+#### Week 10
+- [ ] Submit progress report + demo video
+- [ ] Achievement System (Achievements, User_Achievements tables)
+- [ ] Badge creation and tracking
+- [ ] Travel history tracking (User_City_Visits table)
+- [ ] User engagement metrics
+- [ ] Achievement notification system
+- [ ] Frontend achievement display components
+
 
 NOTE: I will add as I go. 
 

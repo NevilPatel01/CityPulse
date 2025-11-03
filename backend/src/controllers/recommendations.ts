@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { query } from '../lib/database';
 import { processImage, generateFilename, deleteRecommendationFolder } from '../utils/imageUpload';
+import { notifyRecommendationLike, notifyRecommendationRating } from '../utils/notifications';
 
 // Get all recommendations with pagination and filters
 export const getRecommendations = async (req: Request, res: Response) => {
@@ -73,8 +74,8 @@ export const getRecommendations = async (req: Request, res: Response) => {
                 c.country,
                 COALESCE(
                     (SELECT array_agg(rp.photo_url ORDER BY rp.is_primary DESC, rp.created_at ASC) 
-                     FROM recommendation_photos rp 
-                     WHERE rp.recommendation_id = r.id), 
+                        FROM recommendation_photos rp 
+                        WHERE rp.recommendation_id = r.id), 
                     ARRAY[]::varchar[]
                 ) as photos
             FROM recommendations r
@@ -903,6 +904,14 @@ export const submitRating = async (req: Request, res: Response) => {
             });
         }
 
+        // Check if this is a new rating (not an update)
+        const existingRatingResult = await query(
+            'SELECT id FROM recommendation_ratings WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        const isNewRating = existingRatingResult.rows.length === 0;
+
         // Insert or update rating
         const result = await query(
             `INSERT INTO recommendation_ratings (recommendation_id, user_id, rating, review, created_at, updated_at)
@@ -918,6 +927,35 @@ export const submitRating = async (req: Request, res: Response) => {
             'SELECT AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as rating_count FROM recommendation_ratings WHERE recommendation_id = $1',
             [id]
         );
+
+        // Create notification for new ratings (not updates)
+        if (isNewRating) {
+            // Get rater's details
+            const raterResult = await query(
+                'SELECT full_name, username FROM users WHERE id = $1',
+                [userId]
+            );
+
+            const rater = raterResult.rows[0];
+
+            // Get recommendation details
+            const recResult = await query(
+                'SELECT title FROM recommendations WHERE id = $1',
+                [id]
+            );
+
+            const recommendationTitle = recResult.rows[0]?.title;
+
+            await notifyRecommendationRating(
+                userId,
+                recommendationResult.rows[0].user_id,
+                rater.full_name,
+                rater.username,
+                parseInt(id),
+                recommendationTitle,
+                rating
+            );
+        }
 
         res.json({
             success: true,
@@ -1021,6 +1059,29 @@ export const likeRecommendation = async (req: Request, res: Response) => {
             });
         }
 
+        // Get recommendation details and author info
+        const recommendationResult = await query(
+            'SELECT r.id, r.title, r.user_id, u.username FROM recommendations r JOIN users u ON r.user_id = u.id WHERE r.id = $1',
+            [id]
+        );
+
+        if (recommendationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
+        const recommendation = recommendationResult.rows[0];
+
+        // Get liker's details
+        const likerResult = await query(
+            'SELECT full_name, username FROM users WHERE id = $1',
+            [userId]
+        );
+
+        const liker = likerResult.rows[0];
+
         // Add like
         await query(
             'INSERT INTO recommendation_likes (recommendation_id, user_id) VALUES ($1, $2)',
@@ -1032,6 +1093,18 @@ export const likeRecommendation = async (req: Request, res: Response) => {
             'UPDATE recommendations SET likes_count = likes_count + 1 WHERE id = $1',
             [id]
         );
+
+        // Create notification for the recommendation author (if not liking own recommendation)
+        if (recommendation.user_id !== userId) {
+            await notifyRecommendationLike(
+                userId,
+                recommendation.user_id,
+                liker.full_name,
+                liker.username,
+                parseInt(id),
+                recommendation.title
+            );
+        }
 
         // Get updated count
         const countResult = await query(

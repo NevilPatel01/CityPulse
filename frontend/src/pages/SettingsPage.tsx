@@ -1,18 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthGuard } from '../hooks/useAuthGuard';
+import { useSafeToast } from '../hooks/useSafeToast';
 import { Header } from '../components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { apiRequest, buildApiUrl } from '../config/api';
+
+interface PrivacySettings {
+  profileVisibility: 'public' | 'private';
+  locationSharing: boolean;
+  socialLinksVisible: boolean;
+  travelBuddyRequestsEnabled: boolean;
+}
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { showSuccess, showError } = useSafeToast();
   
   // Auth guard for protection
   useAuthGuard({ requireAuth: true });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
+    profileVisibility: 'public',
+    locationSharing: true,
+    socialLinksVisible: true,
+    travelBuddyRequestsEnabled: true,
+  });
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -29,6 +46,52 @@ export default function SettingsPage() {
   const handleDeleteAccount = () => {
     // TODO: Implement account deletion
     console.log('Delete account clicked');
+  };
+
+  // Load privacy settings
+  useEffect(() => {
+    const loadPrivacySettings = async () => {
+      try {
+        const response = await apiRequest<{ success: boolean; data: PrivacySettings }>(
+          buildApiUrl('api/profile/privacy/settings'),
+          { method: 'GET' }
+        );
+        if (response.success) {
+          setPrivacySettings(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load privacy settings:', error);
+      }
+    };
+
+    loadPrivacySettings();
+  }, []);
+
+  // Save privacy settings
+  const handleSavePrivacySettings = async () => {
+    setIsSavingPrivacy(true);
+    try {
+      await apiRequest(
+        buildApiUrl('api/profile/privacy/settings'),
+        {
+          method: 'PUT',
+          body: JSON.stringify(privacySettings),
+        }
+      );
+      showSuccess('Success', 'Privacy settings updated successfully');
+    } catch (error) {
+      console.error('Failed to save privacy settings:', error);
+      showError('Error', 'Failed to save privacy settings');
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
+  const updatePrivacySetting = <K extends keyof PrivacySettings>(
+    key: K,
+    value: PrivacySettings[K]
+  ) => {
+    setPrivacySettings((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -60,14 +123,99 @@ export default function SettingsPage() {
                     Edit
                   </button>
                 </div>
-                
+              </CardContent>
+            </Card>
+
+            {/* Privacy Settings */}
+            <Card className="bg-surface-glass border-subtle">
+              <CardHeader>
+                <CardTitle className="text-primary">Privacy Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Profile Visibility */}
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-primary">Privacy Settings</h3>
-                    <p className="text-sm text-muted">Control who can see your profile</p>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-primary">Profile Visibility</h3>
+                    <p className="text-sm text-muted">Control who can view your profile</p>
                   </div>
-                  <button className="bg-surface-glass border border-subtle text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/10 transition-colors">
-                    Manage
+                  <select
+                    value={privacySettings.profileVisibility}
+                    onChange={(e) => updatePrivacySetting('profileVisibility', e.target.value as 'public' | 'private')}
+                    className="bg-surface-glass border border-subtle text-primary px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pulse"
+                  >
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+
+                {/* Location Sharing */}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-primary">Location Sharing</h3>
+                    <p className="text-sm text-muted">Share your current location with others</p>
+                  </div>
+                  <button
+                    onClick={() => updatePrivacySetting('locationSharing', !privacySettings.locationSharing)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 ${
+                      privacySettings.locationSharing ? 'bg-pulse' : 'bg-surface-glass border border-subtle'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        privacySettings.locationSharing ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Social Links Visible */}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-primary">Social Links Visible</h3>
+                    <p className="text-sm text-muted">Show your social media links on your profile</p>
+                  </div>
+                  <button
+                    onClick={() => updatePrivacySetting('socialLinksVisible', !privacySettings.socialLinksVisible)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 ${
+                      privacySettings.socialLinksVisible ? 'bg-pulse' : 'bg-surface-glass border border-subtle'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        privacySettings.socialLinksVisible ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Travel Buddy Requests */}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-primary">Accept Buddy Requests</h3>
+                    <p className="text-sm text-muted">Allow others to send you travel buddy requests</p>
+                  </div>
+                  <button
+                    onClick={() => updatePrivacySetting('travelBuddyRequestsEnabled', !privacySettings.travelBuddyRequestsEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 ${
+                      privacySettings.travelBuddyRequestsEnabled ? 'bg-pulse' : 'bg-surface-glass border border-subtle'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        privacySettings.travelBuddyRequestsEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-4 border-t border-subtle">
+                  <button
+                    onClick={handleSavePrivacySettings}
+                    disabled={isSavingPrivacy}
+                    className="w-full bg-pulse text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/80 transition-colors disabled:opacity-50"
+                  >
+                    {isSavingPrivacy ? 'Saving...' : 'Save Privacy Settings'}
                   </button>
                 </div>
               </CardContent>
