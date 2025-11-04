@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import pool from '../lib/database';
 import { createNotification } from '../utils/notifications';
 
+// Note: Request type is extended in middleware/auth.ts to include user property
+
 // Send buddy request
 export const sendBuddyRequest = async (req: Request, res: Response) => {
     const client = await pool.connect();
@@ -109,8 +111,8 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         // Create buddy request
         const insertResult = await client.query(
             `INSERT INTO travel_buddy_connections (requester_id, requested_id, request_message, status)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id, requester_id, requested_id, request_message, status, requested_at`,
+                VALUES ($1, $2, $3, $4)
+                RETURNING id, requester_id, requested_id, request_message, status, requested_at`,
             [requesterId, targetUserId, message || null, 'pending']
         );
 
@@ -156,7 +158,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
 };
 
 // Get all buddy requests (received)
-export const getReceivedBuddyRequests = async (req: AuthRequest, res: Response) => {
+export const getReceivedBuddyRequests = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
 
@@ -202,7 +204,7 @@ export const getReceivedBuddyRequests = async (req: AuthRequest, res: Response) 
 };
 
 // Get sent buddy requests
-export const getSentBuddyRequests = async (req: AuthRequest, res: Response) => {
+export const getSentBuddyRequests = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
 
@@ -248,7 +250,7 @@ export const getSentBuddyRequests = async (req: AuthRequest, res: Response) => {
 };
 
 // Accept buddy request
-export const acceptBuddyRequest = async (req: AuthRequest, res: Response) => {
+export const acceptBuddyRequest = async (req: Request, res: Response) => {
     const client = await pool.connect();
 
     try {
@@ -323,7 +325,7 @@ export const acceptBuddyRequest = async (req: AuthRequest, res: Response) => {
 };
 
 // Decline buddy request
-export const declineBuddyRequest = async (req: AuthRequest, res: Response) => {
+export const declineBuddyRequest = async (req: Request, res: Response) => {
     const client = await pool.connect();
 
     try {
@@ -379,7 +381,7 @@ export const declineBuddyRequest = async (req: AuthRequest, res: Response) => {
 };
 
 // Cancel sent buddy request
-export const cancelBuddyRequest = async (req: AuthRequest, res: Response) => {
+export const cancelBuddyRequest = async (req: Request, res: Response) => {
     try {
         const { requestId } = req.params;
         const userId = req.user?.userId;
@@ -419,7 +421,7 @@ export const cancelBuddyRequest = async (req: AuthRequest, res: Response) => {
 };
 
 // Get all buddies (accepted connections)
-export const getBuddies = async (req: AuthRequest, res: Response) => {
+export const getBuddies = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
 
@@ -470,7 +472,7 @@ export const getBuddies = async (req: AuthRequest, res: Response) => {
 };
 
 // Remove buddy (unfriend)
-export const removeBuddy = async (req: AuthRequest, res: Response) => {
+export const removeBuddy = async (req: Request, res: Response) => {
     try {
         const { buddyId } = req.params;
         const userId = req.user?.userId;
@@ -513,7 +515,7 @@ export const removeBuddy = async (req: AuthRequest, res: Response) => {
 };
 
 // Block user
-export const blockUser = async (req: AuthRequest, res: Response) => {
+export const blockUser = async (req: Request, res: Response) => {
     const client = await pool.connect();
 
     try {
@@ -583,7 +585,7 @@ export const blockUser = async (req: AuthRequest, res: Response) => {
 };
 
 // Unblock user
-export const unblockUser = async (req: AuthRequest, res: Response) => {
+export const unblockUser = async (req: Request, res: Response) => {
     try {
         const { targetUserId } = req.params;
         const blockerId = req.user?.userId;
@@ -623,7 +625,7 @@ export const unblockUser = async (req: AuthRequest, res: Response) => {
 };
 
 // Get blocked users
-export const getBlockedUsers = async (req: AuthRequest, res: Response) => {
+export const getBlockedUsers = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
 
@@ -666,7 +668,7 @@ export const getBlockedUsers = async (req: AuthRequest, res: Response) => {
 };
 
 // Check buddy status with another user
-export const checkBuddyStatus = async (req: AuthRequest, res: Response) => {
+export const checkBuddyStatus = async (req: Request, res: Response) => {
     try {
         const { targetUserId } = req.params;
         const userId = req.user?.userId;
@@ -725,7 +727,7 @@ export const checkBuddyStatus = async (req: AuthRequest, res: Response) => {
 };
 
 // Report user (for admin review later)
-export const reportUser = async (req: AuthRequest, res: Response) => {
+export const reportUser = async (req: Request, res: Response) => {
     try {
         const { targetUserId, reportReason, description } = req.body;
         const reporterId = req.user?.userId;
