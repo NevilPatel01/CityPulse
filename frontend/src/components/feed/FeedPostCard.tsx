@@ -53,7 +53,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
         e.stopPropagation();
         
         try {
-            const result: any = await toggleBookmark(post.id);
+            const result = await toggleBookmark(post.id) as { data: { isBookmarked: boolean } };
             onUpdate(post.id, {
                 is_bookmarked: result.data.isBookmarked
             });

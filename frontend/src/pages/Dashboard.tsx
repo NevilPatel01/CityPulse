@@ -118,31 +118,6 @@ const InterestsCard = () => {
     );
 };
 
-const RecommendationCard = ({ title, location, rating, category, image }: RecommendationCardProps) => (
-    <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl overflow-hidden cursor-pointer hover:bg-white/12 transition-all">
-        <div className="relative h-40 overflow-hidden">
-            <img
-                src={image}
-                alt={title}
-                className="w-full h-full object-cover"
-            />
-            <div className="absolute top-2 right-2">
-                <span className="bg-black/50 text-white px-2 py-1 rounded text-xs">
-                    {category}
-                </span>
-            </div>
-        </div>
-        <div className="p-4">
-            <h3 className="font-semibold text-primary mb-1">{title}</h3>
-            <p className="text-sm text-muted mb-2">{location}</p>
-            <div className="flex items-center gap-1">
-                <span className="text-[var(--accent-amber)]">★</span>
-                <span className="text-sm font-medium text-primary">{rating}</span>
-            </div>
-        </div>
-    </div>
-);
-
 const TrendingCard = ({ title, location, rating, category, image, onClick }: RecommendationCardProps & { onClick?: () => void }) => (
     <div 
         className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl overflow-hidden cursor-pointer hover:bg-white/12 transition-all"
@@ -171,7 +146,17 @@ const TrendingCard = ({ title, location, rating, category, image, onClick }: Rec
     </div>
 );
 
-const TrendingNowCard = ({ trending }: { trending: any[] }) => {
+interface TrendingPost {
+    id: number;
+    title: string;
+    city_name: string;
+    country: string;
+    user_rating: number;
+    category_name: string;
+    photos?: string[];
+}
+
+const TrendingNowCard = ({ trending }: { trending: TrendingPost[] }) => {
     const navigate = useNavigate();
     
     if (!trending || trending.length === 0) {
@@ -335,7 +320,7 @@ export default function Dashboard() {
     // User stats
     const [stats, setStats] = useState<UserStats | null>(null);
     const [buddies, setBuddies] = useState<ActiveBuddy[]>([]);
-    const [trending, setTrending] = useState<any[]>([]);
+    const [trending, setTrending] = useState<TrendingPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load sidebar data
@@ -350,7 +335,7 @@ export default function Dashboard() {
 
                 setStats(statsRes.data);
                 setBuddies(buddiesRes.data);
-                setTrending(trendingRes.data || []);
+                setTrending((trendingRes as { data: TrendingPost[] }).data || []);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             }
