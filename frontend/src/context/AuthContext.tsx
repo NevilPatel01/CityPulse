@@ -185,7 +185,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Show success toast
         showSuccess(
             'Logged Out Successfully',
-            `Goodbye ${userName}! You've been logged out successfully.`,
+            `See you later ${userName}! You've been logged out successfully.`,
             3000
         );
         

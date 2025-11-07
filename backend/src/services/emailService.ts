@@ -8,7 +8,7 @@ const EMAIL_CONFIG = {
     port: parseInt(process.env.EMAIL_PORT || '587'),
     secure: process.env.EMAIL_SECURE === 'true',
     user: process.env.EMAIL_USER,
-    password: process.env.EMAIL_PASS,
+    password: process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS,
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
 };
 
@@ -42,6 +42,7 @@ export const sendPasswordResetEmail = async (
     username?: string
 ): Promise<void> => {
     console.log('📧 [EMAIL] Sending password reset email to:', email);
+    console.log('🔑 [EMAIL] Security Code:', securityCode);
 
     // In test mode, skip actual email sending
     if (process.env.NODE_ENV === 'test') {

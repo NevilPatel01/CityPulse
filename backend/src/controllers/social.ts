@@ -1,0 +1,471 @@
+import { Request, Response } from 'express';
+import pool from '../lib/database';
+
+// ============================================================================
+// BOOKMARK ENDPOINTS
+// ============================================================================
+
+/**
+ * Toggle bookmark for a recommendation
+ * POST /api/social/bookmarks/:recommendationId
+ */
+export const toggleBookmark = async (req: Request, res: Response) => {
+    const client = await pool.connect();
+    
+    try {
+        const { recommendationId } = req.params;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        await client.query('BEGIN');
+
+        // Check if bookmark exists
+        const existingBookmark = await client.query(
+            'SELECT id FROM recommendation_bookmarks WHERE user_id = $1 AND recommendation_id = $2',
+            [userId, recommendationId]
+        );
+
+        let isBookmarked = false;
+
+        if (existingBookmark.rows.length > 0) {
+            // Remove bookmark
+            await client.query(
+                'DELETE FROM recommendation_bookmarks WHERE user_id = $1 AND recommendation_id = $2',
+                [userId, recommendationId]
+            );
+            isBookmarked = false;
+        } else {
+            // Add bookmark
+            await client.query(
+                'INSERT INTO recommendation_bookmarks (user_id, recommendation_id) VALUES ($1, $2)',
+                [userId, recommendationId]
+            );
+            isBookmarked = true;
+        }
+
+        await client.query('COMMIT');
+
+        res.status(200).json({
+            success: true,
+            message: isBookmarked ? 'Recommendation bookmarked' : 'Bookmark removed',
+            data: { isBookmarked }
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Toggle bookmark error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle bookmark'
+        });
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * Get user's bookmarked recommendations
+ * GET /api/social/bookmarks
+ */
+export const getBookmarkedRecommendations = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { page = 1, limit = 10 } = req.query;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        const offset = (Number(page) - 1) * Number(limit);
+
+        const result = await pool.query(
+            `SELECT 
+                r.id,
+                r.title,
+                r.description,
+                r.user_rating,
+                r.likes_count,
+                r.shares_count,
+                r.views_count,
+                r.created_at,
+                u.username,
+                u.full_name,
+                rc.name as category_name,
+                c.name as city_name,
+                c.country,
+                b.created_at as bookmarked_at,
+                COALESCE(
+                    (SELECT array_agg(rp.photo_url ORDER BY rp.is_primary DESC, rp.created_at ASC) 
+                     FROM recommendation_photos rp 
+                     WHERE rp.recommendation_id = r.id), 
+                    ARRAY[]::varchar[]
+                ) as photos
+            FROM recommendation_bookmarks b
+            JOIN recommendations r ON b.recommendation_id = r.id
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
+            LEFT JOIN recommendation_cities rec_city ON r.id = rec_city.recommendation_id
+            LEFT JOIN cities c ON rec_city.city_id = c.id
+            WHERE b.user_id = $1 AND r.status = 'active'
+            ORDER BY b.created_at DESC
+            LIMIT $2 OFFSET $3`,
+            [userId, Number(limit), offset]
+        );
+
+        // Get total count
+        const countResult = await pool.query(
+            'SELECT COUNT(*) as total FROM recommendation_bookmarks WHERE user_id = $1',
+            [userId]
+        );
+
+        res.status(200).json({
+            success: true,
+            data: result.rows,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total: parseInt(countResult.rows[0].total),
+                totalPages: Math.ceil(countResult.rows[0].total / Number(limit))
+            }
+        });
+
+    } catch (error) {
+        console.error('Get bookmarks error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get bookmarked recommendations'
+        });
+    }
+};
+
+/**
+ * Check if recommendation is bookmarked
+ * GET /api/social/bookmarks/:recommendationId/status
+ */
+export const checkBookmarkStatus = async (req: Request, res: Response) => {
+    try {
+        const { recommendationId } = req.params;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        const result = await pool.query(
+            'SELECT id FROM recommendation_bookmarks WHERE user_id = $1 AND recommendation_id = $2',
+            [userId, recommendationId]
+        );
+
+        res.status(200).json({
+            success: true,
+            data: {
+                isBookmarked: result.rows.length > 0
+            }
+        });
+
+    } catch (error) {
+        console.error('Check bookmark status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check bookmark status'
+        });
+    }
+};
+
+// ============================================================================
+// SHARE ENDPOINTS
+// ============================================================================
+
+/**
+ * Record a share
+ * POST /api/social/shares/:recommendationId
+ */
+export const recordShare = async (req: Request, res: Response) => {
+    try {
+        const { recommendationId } = req.params;
+        const { platform } = req.body; // 'twitter', 'facebook', 'whatsapp', 'copy_link', etc.
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        await pool.query(
+            'INSERT INTO recommendation_shares (recommendation_id, user_id, share_platform) VALUES ($1, $2, $3)',
+            [recommendationId, userId, platform || 'unknown']
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Share recorded successfully'
+        });
+
+    } catch (error) {
+        console.error('Record share error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to record share'
+        });
+    }
+};
+
+// ============================================================================
+// REPORT ENDPOINTS
+// ============================================================================
+
+/**
+ * Report a recommendation
+ * POST /api/social/reports/:recommendationId
+ */
+export const reportRecommendation = async (req: Request, res: Response) => {
+    try {
+        const { recommendationId } = req.params;
+        const { reason, description } = req.body;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        // Validate reason
+        const validReasons = ['spam', 'inappropriate', 'misleading', 'offensive', 'copyright', 'other'];
+        if (!reason || !validReasons.includes(reason)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid report reason'
+            });
+        }
+
+        // Check if user already reported this recommendation
+        const existingReport = await pool.query(
+            'SELECT id FROM recommendation_reports WHERE reporter_id = $1 AND recommendation_id = $2',
+            [userId, recommendationId]
+        );
+
+        if (existingReport.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already reported this recommendation'
+            });
+        }
+
+        await pool.query(
+            `INSERT INTO recommendation_reports (recommendation_id, reporter_id, report_reason, description)
+             VALUES ($1, $2, $3, $4)`,
+            [recommendationId, userId, reason, description]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Report submitted successfully. Our team will review it.'
+        });
+
+    } catch (error) {
+        console.error('Report recommendation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit report'
+        });
+    }
+};
+
+// ============================================================================
+// USER INTERESTS ENDPOINTS
+// ============================================================================
+
+/**
+ * Set user interests (categories they're interested in)
+ * POST /api/social/interests
+ */
+export const setUserInterests = async (req: Request, res: Response) => {
+    const client = await pool.connect();
+    
+    try {
+        const { categoryIds } = req.body; // Array of category IDs
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide at least one category'
+            });
+        }
+
+        await client.query('BEGIN');
+
+        // Delete existing interests
+        await client.query(
+            'DELETE FROM user_interests WHERE user_id = $1',
+            [userId]
+        );
+
+        // Insert new interests
+        for (const categoryId of categoryIds) {
+            await client.query(
+                'INSERT INTO user_interests (user_id, interest_category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [userId, categoryId]
+            );
+        }
+
+        await client.query('COMMIT');
+
+        res.status(200).json({
+            success: true,
+            message: 'Interests updated successfully'
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Set user interests error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update interests'
+        });
+    } finally {
+        client.release();
+    }
+};
+
+/**
+ * Get user interests
+ * GET /api/social/interests
+ */
+export const getUserInterests = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT 
+                ui.id,
+                ui.interest_category_id as category_id,
+                ic.name as category_name,
+                ic.description as category_description
+            FROM user_interests ui
+            JOIN interest_categories ic ON ui.interest_category_id = ic.id
+            WHERE ui.user_id = $1
+            ORDER BY ic.name`,
+            [userId]
+        );
+
+        res.status(200).json({
+            success: true,
+            data: result.rows
+        });
+
+    } catch (error) {
+        console.error('Get user interests error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get user interests'
+        });
+    }
+};
+
+// ============================================================================
+// USER STATS ENDPOINT
+// ============================================================================
+
+/**
+ * Get user statistics for dashboard
+ * GET /api/social/stats
+ */
+export const getUserStats = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        // Get recommendations count
+        const recsCount = await pool.query(
+            'SELECT COUNT(*) as count FROM recommendations WHERE user_id = $1 AND status = $2',
+            [userId, 'active']
+        );
+
+        // Get cities visited count (unique cities from user's recommendations)
+        const citiesCount = await pool.query(
+            `SELECT COUNT(DISTINCT c.id) as count
+             FROM recommendations r
+             JOIN recommendation_cities rc ON r.id = rc.recommendation_id
+             JOIN cities c ON rc.city_id = c.id
+             WHERE r.user_id = $1 AND r.status = $2`,
+            [userId, 'active']
+        );
+
+        // Get buddies count
+        const buddiesCount = await pool.query(
+            'SELECT COUNT(*) as count FROM buddies WHERE user_id = $1 AND status = $2',
+            [userId, 'accepted']
+        );
+
+        // Get total likes received
+        const likesReceived = await pool.query(
+            `SELECT SUM(r.likes_count) as total_likes
+             FROM recommendations r
+             WHERE r.user_id = $1 AND r.status = $2`,
+            [userId, 'active']
+        );
+
+        // Get total views
+        const viewsCount = await pool.query(
+            `SELECT SUM(r.views_count) as total_views
+             FROM recommendations r
+             WHERE r.user_id = $1 AND r.status = $2`,
+            [userId, 'active']
+        );
+
+        res.status(200).json({
+            success: true,
+            data: {
+                recommendations: parseInt(recsCount.rows[0].count) || 0,
+                citiesVisited: parseInt(citiesCount.rows[0].count) || 0,
+                buddies: parseInt(buddiesCount.rows[0].count) || 0,
+                likesReceived: parseInt(likesReceived.rows[0].total_likes) || 0,
+                totalViews: parseInt(viewsCount.rows[0].total_views) || 0
+            }
+        });
+
+    } catch (error) {
+        console.error('Get user stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get user statistics'
+        });
+    }
+};

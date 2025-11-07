@@ -10,6 +10,8 @@ import searchRoutes from './routes/search';
 import advancedSearchRoutes from './routes/advancedSearch';
 import buddyRoutes from './routes/buddy';
 import notificationRoutes from './routes/notifications';
+import socialRoutes from './routes/social';
+import feedRoutes from './routes/feed';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -147,6 +149,14 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up notification routes...');
     // Notification routes - handles user notifications
     app.use('/api/notifications', notificationRoutes);
+
+    console.log('[APP] Setting up social routes...');
+    // Social routes - handles bookmarks, shares, reports, interests, stats
+    app.use('/api/social', socialRoutes);
+
+    console.log('[APP] Setting up feed routes...');
+    // Feed routes - handles personalized feed algorithm
+    app.use('/api/feed', feedRoutes);
 
     console.log('[APP] Setting up static file serving for uploads...');
     // Serve uploaded images statically with proper CORS headers

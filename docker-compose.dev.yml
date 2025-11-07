@@ -74,14 +74,11 @@ services:
     networks:
       - citypulse-network
     volumes:
-      - ./backend:/workspace/backend
-      - ./shared:/workspace/shared
-      - /workspace/backend/node_modules
-      - /workspace/shared/node_modules
       - backend_uploads_dev:/workspace/backend/uploads
     stdin_open: true
     tty: true
     restart: unless-stopped
+    command: sh -c "cd /workspace/backend && pnpm dev"
 
   # Frontend Service
   frontend:
@@ -101,14 +98,10 @@ services:
       - backend
     networks:
       - citypulse-network
-    volumes:
-      - ./frontend:/workspace/frontend
-      - ./shared:/workspace/shared
-      - /workspace/frontend/node_modules
-      - /workspace/shared/node_modules
     stdin_open: true
     tty: true
     restart: unless-stopped
+    command: sh -c "cd /workspace/frontend && pnpm dev --host 0.0.0.0 --port 3000"
 
 volumes:
   postgres_data_dev:
