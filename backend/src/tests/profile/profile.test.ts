@@ -5,6 +5,7 @@ import { generateTestToken } from '../setup';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
 describe('Profile API Tests', () => {
+  const app = createApp();
   let testUser: any;
   let authToken: string;
   let testProfile: any;
@@ -60,7 +61,7 @@ describe('Profile API Tests', () => {
 
   describe('GET /api/profile/:username', () => {
     it('should get user profile successfully', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .expect(200);
 
@@ -81,7 +82,7 @@ describe('Profile API Tests', () => {
     });
 
     it('should return 404 for non-existent user', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/nonexistent')
         .expect(404);
 
@@ -96,7 +97,7 @@ describe('Profile API Tests', () => {
         ['private', testUser.id]
       );
 
-      const response = await request(createApp)
+      const response = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .expect(403);
 
@@ -111,7 +112,7 @@ describe('Profile API Tests', () => {
     });
 
     it('should show sensitive data for profile owner', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -138,7 +139,7 @@ describe('Profile API Tests', () => {
         travelBuddyRequestsEnabled: false
       };
 
-      const response = await request(createApp)
+      const response = await request(app)
         .put('/api/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateData)
@@ -171,13 +172,13 @@ describe('Profile API Tests', () => {
     });
 
     it('should require authentication', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .put('/api/profile')
         .send({ bio: 'Test' })
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Authentication required');
+      expect(response.body.message).toBe('Access token required');
     });
 
     it('should validate social media URLs', async () => {
@@ -186,7 +187,7 @@ describe('Profile API Tests', () => {
         facebookUrl: 'https://invalid.com/profile'
       };
 
-      const response = await request(createApp)
+      const response = await request(app)
         .put('/api/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send(invalidData)
@@ -200,7 +201,7 @@ describe('Profile API Tests', () => {
 
     it('should validate bio length', async () => {
       const longBio = 'a'.repeat(501);
-      const response = await request(createApp)
+      const response = await request(app)
         .put('/api/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ bio: longBio })
@@ -213,7 +214,7 @@ describe('Profile API Tests', () => {
 
   describe('GET /api/profile/stats', () => {
     it('should get user statistics', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -230,18 +231,18 @@ describe('Profile API Tests', () => {
     });
 
     it('should require authentication', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/stats')
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Authentication required');
+      expect(response.body.message).toBe('Access token required');
     });
   });
 
   describe('GET /api/profile/badges', () => {
     it('should get user badges', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/badges')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -252,27 +253,27 @@ describe('Profile API Tests', () => {
     });
 
     it('should require authentication', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/badges')
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Authentication required');
+      expect(response.body.message).toBe('Access token required');
     });
   });
 
   describe('POST /api/profile/photo', () => {
     it('should require authentication', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .post('/api/profile/photo')
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Authentication required');
+      expect(response.body.message).toBe('Access token required');
     });
 
     it('should validate photo type', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .post('/api/profile/photo')
         .set('Authorization', `Bearer ${authToken}`)
         .field('type', 'invalid')
@@ -283,7 +284,7 @@ describe('Profile API Tests', () => {
     });
 
     it('should require photo file', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .post('/api/profile/photo')
         .set('Authorization', `Bearer ${authToken}`)
         .field('type', 'profile')
@@ -296,7 +297,7 @@ describe('Profile API Tests', () => {
 
   describe('DELETE /api/profile/photo/:type', () => {
     it('should delete profile photo successfully', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .delete('/api/profile/photo/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -306,7 +307,7 @@ describe('Profile API Tests', () => {
     });
 
     it('should delete cover photo successfully', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .delete('/api/profile/photo/cover')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -316,7 +317,7 @@ describe('Profile API Tests', () => {
     });
 
     it('should validate photo type', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .delete('/api/profile/photo/invalid')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
@@ -326,12 +327,12 @@ describe('Profile API Tests', () => {
     });
 
     it('should require authentication', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .delete('/api/profile/photo/profile')
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toBe('Authentication required');
+      expect(response.body.message).toBe('Access token required');
     });
   });
 });

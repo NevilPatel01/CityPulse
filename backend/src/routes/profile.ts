@@ -52,12 +52,19 @@ const uploadLimiter = rateLimit({
     skip: () => isTest // Skip rate limiting entirely in test mode
 });
 
-// Public routes
+// Statistics and badges routes (MUST be before /:username to avoid conflict)
 router.get(
-    '/:username',
+    '/stats',
     profileLimiter,
-    validateParams(usernameParamSchema),
-    getProfile
+    authenticateToken,
+    getUserStats
+);
+
+router.get(
+    '/badges',
+    profileLimiter,
+    authenticateToken,
+    getUserBadges
 );
 
 // Protected routes (require authentication)
@@ -87,19 +94,12 @@ router.delete(
     deleteProfilePhoto
 );
 
-// Statistics and badges routes
+// Public routes (MUST be last as it has a catch-all param)
 router.get(
-    '/stats',
+    '/:username',
     profileLimiter,
-    authenticateToken,
-    getUserStats
-);
-
-router.get(
-    '/badges',
-    profileLimiter,
-    authenticateToken,
-    getUserBadges
+    validateParams(usernameParamSchema),
+    getProfile
 );
 
 // Privacy settings routes

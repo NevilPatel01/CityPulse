@@ -45,60 +45,52 @@ describe('Profile Integration Tests', () => {
       ]
     );
 
+    // Create recommendation category if it doesn't exist
+    const categoryResult = await query(
+      `INSERT INTO recommendation_categories (name, description) 
+       VALUES ('Food', 'Food and dining') 
+       ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name 
+       RETURNING id`
+    );
+    const categoryId = categoryResult.rows[0].id;
+
     // Create some test data for statistics
     await query(
-      `INSERT INTO user_trips (user_id, city, country, start_date, end_date, status)
+      `INSERT INTO recommendations (user_id, title, description, category_id, user_rating, status)
         VALUES ($1, $2, $3, $4, $5, $6)`,
-      [testUser.id, 'Tokyo', 'Japan', '2024-01-01', '2024-01-07', 'completed']
+      [testUser.id, 'Test Recommendation 1', 'Test description', categoryId, 5, 'active']
     );
 
     await query(
-      `INSERT INTO user_trips (user_id, city, country, start_date, end_date, status)
+      `INSERT INTO recommendations (user_id, title, description, category_id, user_rating, status)
         VALUES ($1, $2, $3, $4, $5, $6)`,
-      [testUser.id, 'Seoul', 'South Korea', '2024-02-01', '2024-02-07', 'completed']
+      [testUser.id, 'Test Recommendation 2', 'Test description', categoryId, 4, 'active']
     );
 
-    await query(
-      `INSERT INTO recommendations (user_id, title, description, location, category, status)
-        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [testUser.id, 'Test Recommendation 1', 'Test description', 'Tokyo, Japan', 'Food', 'published']
+    // Create a mock buddy user for buddy connection
+    const buddyUserResult = await query(
+      `INSERT INTO users (username, email, password_hash, full_name)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id`,
+      ['mockbuddy', 'mockbuddy@example.com', '$2b$10$testhash', 'Mock Buddy User']
     );
+    const buddyUserId = buddyUserResult.rows[0].id;
 
     await query(
-      `INSERT INTO recommendations (user_id, title, description, location, category, status)
-        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [testUser.id, 'Test Recommendation 2', 'Test description', 'Seoul, South Korea', 'Culture', 'published']
-    );
-
-    await query(
-      `INSERT INTO travel_buddies (user_id, buddy_user_id, status)
-        VALUES ($1, $2, $3)`,
-      [testUser.id, 999, 'accepted'] // Mock buddy user
-    );
-
-    await query(
-      `INSERT INTO user_activities (user_id, activity_type, points)
-        VALUES ($1, $2, $3)`,
-      [testUser.id, 'recommendation_created', 100]
-    );
-
-    await query(
-      `INSERT INTO user_activities (user_id, activity_type, points)
-        VALUES ($1, $2, $3)`,
-      [testUser.id, 'trip_completed', 50]
+      `INSERT INTO travel_buddy_connections (requester_id, requested_id, status, responded_at)
+        VALUES ($1, $2, $3, NOW())`,
+      [testUser.id, buddyUserId, 'accepted']
     );
 
     authToken = generateTestToken(testUser.id);
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await query('DELETE FROM user_activities WHERE user_id = $1', [testUser.id]);
-    await query('DELETE FROM travel_buddies WHERE user_id = $1', [testUser.id]);
+    // Clean up test data (cascade will handle most relationships)
+    await query('DELETE FROM travel_buddy_connections WHERE requester_id = $1 OR requested_id = $1', [testUser.id]);
     await query('DELETE FROM recommendations WHERE user_id = $1', [testUser.id]);
-    await query('DELETE FROM user_trips WHERE user_id = $1', [testUser.id]);
     await query('DELETE FROM user_profiles WHERE user_id = $1', [testUser.id]);
-    await query('DELETE FROM users WHERE id = $1', [testUser.id]);
+    await query('DELETE FROM users WHERE email LIKE \'%mockbuddy%\' OR id = $1', [testUser.id]);
   });
 
   describe('Complete Profile Flow', () => {

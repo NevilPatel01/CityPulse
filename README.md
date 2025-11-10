@@ -58,7 +58,7 @@
 - [x] Rating and Review System (Recommendation_Ratings table)
 - [x] Like/Unlike functionality (Recommendation_Likes table)
 - [x] User interaction tracking and analytics
-- [ ] Recommendation browsing and discovery feeds
+- [x] Recommendation browsing and discovery feeds (Implemented personalized feed algorithm)
 - [x] Content validation and sanitization (XSS protection)
 - [x] SQL injection prevention testing
 - [x] Frontend components for rating and reviewing
@@ -66,7 +66,7 @@
 #### Week 6 (Oct 13)
 - [x] Break Week: Catch-up, bug fixes, and refactoring
 - [x] CI: GitHub Actions auto-run unit + integration + E2E tests (Note: Pipeline configured but test execution needs to be added to workflow)
-- [ ] Add E2E test and Unit Test suite for remaining Test Cases
+- [ ] Add E2E test and Unit Test suite for remaining Test Cases (Social features, Feed, Comprehensive E2E)
 
 #### Week 7 (Oct 20)
 - [ ] Submit progress report + demo video
@@ -79,14 +79,17 @@
 
 ### Milestone 3 
 #### Week 8 (Oct 27)
-- [ ] Begin implementing Travel Buddy System (Travel_Buddy_Connections table)
-- [ ] Connection request functionality
-- [ ] Accept/decline buddy requests
-- [ ] Privacy controls for social media sharing
-- [ ] User blocking and reporting system
-- [ ] Real-time notifications implementation
-- [ ] Frontend components for buddy management
-- [ ] Security testing for user connections with Unit Test and E2E test 
+- [x] Begin implementing Travel Buddy System (Travel_Buddy_Connections table)
+- [x] Connection request functionality
+- [x] Accept/decline buddy requests
+- [x] Privacy controls for social media sharing
+- [x] User blocking and reporting system
+- [x] Real-time notifications implementation (WebSocket with Socket.IO)
+- [x] Frontend components for buddy management
+- [x] Security testing for user connections with Unit Test and E2E test
+- [x] **BONUS**: Social Media Dashboard with personalized feed algorithm (50% buddies, 30% trending, 20% interests)
+- [x] **BONUS**: Infinite scroll feed with location-based filtering
+- [x] **BONUS**: Bookmarks, shares, and reports functionality 
 
 #### Week 9
 - [ ] Trip Planning System (Trips, Trip_Cities, Trip_Companions tables)
