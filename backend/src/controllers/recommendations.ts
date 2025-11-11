@@ -1277,4 +1277,274 @@ export const getLikedRecommendations = async (req: Request, res: Response) => {
     }
 };
 
+// Save a recommendation
+export const saveRecommendation = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        // Check if already saved
+        const existingSave = await query(
+            'SELECT id FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (existingSave.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Already saved this recommendation'
+            });
+        }
+
+        // Check if recommendation exists
+        const recommendationResult = await query(
+            'SELECT id FROM recommendations WHERE id = $1 AND status = \'active\'',
+            [id]
+        );
+
+        if (recommendationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
+        // Add save
+        await query(
+            'INSERT INTO recommendation_saves (recommendation_id, user_id) VALUES ($1, $2)',
+            [id, userId]
+        );
+
+        // Update saves count
+        await query(
+            'UPDATE recommendations SET saves_count = saves_count + 1 WHERE id = $1',
+            [id]
+        );
+
+        // Get updated count
+        const countResult = await query(
+            'SELECT saves_count FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Recommendation saved successfully',
+            data: {
+                saves_count: countResult.rows[0]?.saves_count || 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Save recommendation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to save recommendation',
+            error: error.message
+        });
+    }
+};
+
+// Unsave a recommendation
+export const unsaveRecommendation = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        // Check if saved
+        const existingSave = await query(
+            'SELECT id FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (existingSave.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Recommendation not saved yet'
+            });
+        }
+
+        // Remove save
+        await query(
+            'DELETE FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        // Update saves count
+        await query(
+            'UPDATE recommendations SET saves_count = GREATEST(saves_count - 1, 0) WHERE id = $1',
+            [id]
+        );
+
+        // Get updated count
+        const countResult = await query(
+            'SELECT saves_count FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Recommendation unsaved successfully',
+            data: {
+                saves_count: countResult.rows[0]?.saves_count || 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Unsave recommendation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to unsave recommendation',
+            error: error.message
+        });
+    }
+};
+
+// Check if user saved a recommendation
+export const checkSaveStatus = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId;
+
+        const result = await query(
+            'SELECT id FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                isSaved: result.rows.length > 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Check save status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check save status',
+            error: error.message
+        });
+    }
+};
+
+// Track view for a recommendation
+export const trackView = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req as any).user?.userId || null;
+
+        // Check if recommendation exists
+        const recommendationResult = await query(
+            'SELECT id FROM recommendations WHERE id = $1 AND status = \'active\'',
+            [id]
+        );
+
+        if (recommendationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
+        // Add view record
+        await query(
+            'INSERT INTO recommendation_views (recommendation_id, user_id) VALUES ($1, $2)',
+            [id, userId]
+        );
+
+        // Update views count
+        await query(
+            'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
+            [id]
+        );
+
+        // Get updated count
+        const countResult = await query(
+            'SELECT views_count FROM recommendations WHERE id = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'View tracked successfully',
+            data: {
+                views_count: countResult.rows[0]?.views_count || 0
+            }
+        });
+    } catch (error: any) {
+        console.error('Track view error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to track view',
+            error: error.message
+        });
+    }
+};
+
+// Get user's saved recommendations
+export const getSavedRecommendations = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.userId;
+        const { page = 1, limit = 12 } = req.query;
+        const offset = (Number(page) - 1) * Number(limit);
+
+        const result = await query(`
+            SELECT 
+                r.id,
+                r.title,
+                r.description,
+                r.price_range_min,
+                r.price_range_max,
+                r.difficulty_level,
+                r.views_count,
+                r.likes_count,
+                r.saves_count,
+                r.created_at,
+                u.username,
+                u.full_name,
+                rc.name as category_name,
+                c.name as city_name,
+                c.country,
+                (SELECT array_agg(photo_url ORDER BY is_primary DESC, created_at ASC) 
+                    FROM recommendation_photos 
+                    WHERE recommendation_id = r.id) as photos,
+                rs.created_at as saved_at
+            FROM recommendation_saves rs
+            JOIN recommendations r ON rs.recommendation_id = r.id
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
+            LEFT JOIN recommendation_cities rec_cities ON r.id = rec_cities.recommendation_id
+            LEFT JOIN cities c ON rec_cities.city_id = c.id
+            WHERE rs.user_id = $1 AND r.status = 'active'
+            ORDER BY rs.created_at DESC
+            LIMIT $2 OFFSET $3
+        `, [userId, Number(limit), offset]);
+
+        // Get total count
+        const countResult = await query(
+            'SELECT COUNT(*) as total FROM recommendation_saves WHERE user_id = $1',
+            [userId]
+        );
+        const total = parseInt(countResult.rows[0].total);
+
+        res.json({
+            success: true,
+            data: {
+                recommendations: result.rows,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    pages: Math.ceil(total / Number(limit))
+                }
+            }
+        });
+    } catch (error: any) {
+        console.error('Get saved recommendations error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch saved recommendations',
+            error: error.message
+        });
+    }
+};
+
 

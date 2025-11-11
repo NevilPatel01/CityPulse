@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, MapPin, Calendar, Clock, Eye, Heart, AlertTriangle, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { Star, MapPin, Calendar, Clock, Eye, Heart, AlertTriangle, Edit, Trash2, ArrowLeft, Bookmark, Share2, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ImageCarousel } from '../components/recommendations/ImageCarousel';
 import { PhotoUpload } from '../components/recommendations/PhotoUpload';
@@ -24,6 +24,7 @@ interface Recommendation {
   user_rating?: number;
   views_count: number;
   likes_count: number;
+  saves_count?: number;
   created_at: string;
   updated_at: string;
   username: string;
@@ -59,6 +60,26 @@ export function RecommendationDetailPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [savesCount, setSavesCount] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const checkSaveStatus = useCallback(async () => {
+    if (!id || !user) return;
+    
+    try {
+      const data = await apiRequest<{ success: boolean; data: { isSaved: boolean } }>(
+        `/api/recommendations/${id}/save/status`
+      );
+      
+      if (data.success) {
+        setIsSaved(data.data.isSaved);
+      }
+    } catch (error) {
+      console.error('Error checking save status:', error);
+    }
+  }, [id, user]);
 
   const loadRecommendation = useCallback(async () => {
     if (!id) return;
@@ -74,9 +95,15 @@ export function RecommendationDetailPage() {
         setIsOwner(Number(user?.id) === data.data.user_id);
         setLikesCount(data.data.likes_count);
         setIsLiked(data.data.user_has_liked || false);
+        setSavesCount(data.data.saves_count || 0);
         // Set user's rating if they've already rated
         if (data.data.user_rating_value) {
           setUserRating(data.data.user_rating_value);
+        }
+        
+        // Check if user has saved this recommendation
+        if (user) {
+          checkSaveStatus();
         }
       } else {
         showError(data.message || 'Recommendation not found');
@@ -89,7 +116,7 @@ export function RecommendationDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, showError, user?.id]);
+  }, [id, navigate, showError, user, checkSaveStatus]);
 
   useEffect(() => {
     void loadRecommendation();
@@ -191,6 +218,52 @@ export function RecommendationDetailPage() {
       showError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!id || isSaving || !user) return;
+    
+    try {
+      setIsSaving(true);
+      
+      const endpoint = isSaved ? `/api/recommendations/${id}/save` : `/api/recommendations/${id}/save`;
+      const method = isSaved ? 'DELETE' : 'POST';
+      
+      const data = await apiRequest<{ success: boolean; data: { saves_count: number }; message?: string }>(
+        endpoint,
+        { method }
+      );
+
+      if (data.success) {
+        setIsSaved(!isSaved);
+        setSavesCount(data.data.saves_count);
+        showSuccess(isSaved ? 'Removed from saved recommendations' : 'Saved recommendation');
+      } else {
+        showError(data.message || 'Failed to update save status');
+      }
+    } catch (error) {
+      console.error('Error updating save:', error);
+      showError(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      showSuccess('Link copied to clipboard!');
+      
+      setTimeout(() => {
+        setLinkCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error copying link:', error);
+      showError('Failed to copy link');
     }
   };
 
@@ -335,11 +408,14 @@ export function RecommendationDetailPage() {
                 <h1 className="text-3xl md:text-4xl font-bold text-primary">{recommendation.title}</h1>
               </div>
               
-              <div className="flex flex-wrap items-center gap-3 text-muted">
-                <span className="inline-flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-3 text-muted mb-4">
+                <Link
+                  to={`/cities/${recommendation.city_name}`}
+                  className="inline-flex items-center gap-1 hover:text-pulse transition-colors"
+                >
                   <MapPin className="w-4 h-4" />
                   {recommendation.city_name}, {recommendation.country}
-                </span>
+                </Link>
                 <span className="inline-flex items-center gap-1">
                   <Eye className="w-4 h-4" />
                   {recommendation.views_count} views
@@ -350,8 +426,60 @@ export function RecommendationDetailPage() {
                   className="inline-flex items-center gap-1 hover:text-pulse transition-colors disabled:opacity-50"
                 >
                   <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                  {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+                  {likesCount}
                 </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving || !user}
+                  className="inline-flex items-center gap-1 hover:text-pulse transition-colors disabled:opacity-50"
+                  title={!user ? 'Login to save' : isSaved ? 'Remove from saved' : 'Save recommendation'}
+                >
+                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-pulse text-pulse' : ''}`} />
+                  {savesCount}
+                </button>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                {user && (
+                  <>
+                    <Button
+                      onClick={handleLike}
+                      disabled={isLiking}
+                      variant="outline"
+                      className={`flex items-center gap-2 ${isLiked ? 'border-red-500 text-red-500' : ''}`}
+                    >
+                      <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500' : ''}`} />
+                      {isLiked ? 'Liked' : 'Like'}
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      variant="outline"
+                      className={`flex items-center gap-2 ${isSaved ? 'border-pulse text-pulse' : ''}`}
+                    >
+                      <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-pulse' : ''}`} />
+                      {isSaved ? 'Saved' : 'Save'}
+                    </Button>
+                  </>
+                )}
+                <Button
+                  onClick={handleShare}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-500" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
             
@@ -482,12 +610,6 @@ export function RecommendationDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Comments placeholder */}
-            <div className="bg-surface-glass backdrop-blur-glass rounded-lg p-6 shadow-glass border border-subtle">
-              <h2 className="text-2xl font-semibold text-primary mb-4">Comments</h2>
-              <p className="text-muted">Comments feature coming soon...</p>
-            </div>
           </div>
 
           {/* Right Column - Sidebar */}
@@ -504,11 +626,11 @@ export function RecommendationDetailPage() {
                 )}
                 
                 <div className="flex items-center justify-between py-3 border-b border-subtle">
-                  <span className="text-muted">Rating</span>
+                  <span className="text-muted">Average Rating</span>
                   <div className="flex items-center gap-2">
-                    {renderStars(recommendation.average_rating || 0)}
+                    {renderStars(recommendation.average_rating || recommendation.user_rating || 0)}
                     {recommendation.rating_count !== undefined && recommendation.rating_count > 0 && (
-                      <span className="text-sm text-muted">({recommendation.rating_count})</span>
+                      <span className="text-sm text-muted">({recommendation.rating_count} {recommendation.rating_count === 1 ? 'rating' : 'ratings'})</span>
                     )}
                   </div>
                 </div>

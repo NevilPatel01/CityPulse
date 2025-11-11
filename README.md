@@ -87,9 +87,6 @@
 - [x] Real-time notifications implementation (WebSocket with Socket.IO)
 - [x] Frontend components for buddy management
 - [x] Security testing for user connections with Unit Test and E2E test
-- [x] **BONUS**: Social Media Dashboard with personalized feed algorithm (50% buddies, 30% trending, 20% interests)
-- [x] **BONUS**: Infinite scroll feed with location-based filtering
-- [x] **BONUS**: Bookmarks, shares, and reports functionality 
 
 #### Week 9
 - [ ] Trip Planning System (Trips, Trip_Cities, Trip_Companions tables)

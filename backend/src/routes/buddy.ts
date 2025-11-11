@@ -13,7 +13,8 @@ import {
     unblockUser,
     getBlockedUsers,
     checkBuddyStatus,
-    reportUser
+    reportUser,
+    findBuddies
 } from '../controllers/buddy';
 import { authenticateToken } from '../middleware/auth';
 
@@ -38,6 +39,9 @@ const buddyLimiter = rateLimit({
 
 // All buddy routes require authentication
 router.use(authenticateToken);
+
+// Find buddies route
+router.get('/find', findBuddies);
 
 // Buddy request routes
 router.post('/request', buddyLimiter, sendBuddyRequest);

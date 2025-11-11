@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
     report_reason TEXT,
     views_count INTEGER DEFAULT 0,
     likes_count INTEGER DEFAULT 0,
+    saves_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -237,6 +238,24 @@ CREATE TABLE IF NOT EXISTS user_favorites (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, recommendation_id)
+);
+
+-- Recommendation Views (track who viewed what)
+CREATE TABLE IF NOT EXISTS recommendation_views (
+    id SERIAL PRIMARY KEY,
+    recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    viewed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Recommendation Saves (track who saved what)
+CREATE TABLE IF NOT EXISTS recommendation_saves (
+    id SERIAL PRIMARY KEY,
+    recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id, recommendation_id)
 );
@@ -496,6 +515,16 @@ CREATE INDEX IF NOT EXISTS idx_travel_buddy_connections_status ON travel_buddy_c
 -- User blocks indexes
 CREATE INDEX IF NOT EXISTS idx_user_blocks_blocker ON user_blocks(blocker_id);
 CREATE INDEX IF NOT EXISTS idx_user_blocks_blocked ON user_blocks(blocked_id);
+
+-- Recommendation views indexes
+CREATE INDEX IF NOT EXISTS idx_recommendation_views_recommendation_id ON recommendation_views(recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_views_user_id ON recommendation_views(user_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_views_viewed_at ON recommendation_views(viewed_at);
+
+-- Recommendation saves indexes
+CREATE INDEX IF NOT EXISTS idx_recommendation_saves_recommendation_id ON recommendation_saves(recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_saves_user_id ON recommendation_saves(user_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_saves_created_at ON recommendation_saves(created_at);
 
 -- Notifications indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);

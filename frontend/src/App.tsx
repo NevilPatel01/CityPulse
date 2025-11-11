@@ -23,6 +23,7 @@ import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
 import { RecommendationDetailPage } from './pages/RecommendationDetailPage';
 import { EditRecommendationPage } from './pages/EditRecommendationPage';
 import BuddiesPage from './pages/BuddiesPage';
+import CityPage from './pages/CityPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
@@ -122,6 +123,13 @@ function App() {
           <Route path="/buddies" element={
             <ProtectedRoute>
               <BuddiesPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* City routes */}
+          <Route path="/cities/:cityName" element={
+            <ProtectedRoute>
+              <CityPage />
             </ProtectedRoute>
           } />
           

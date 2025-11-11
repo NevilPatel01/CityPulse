@@ -12,6 +12,7 @@ import {
     cleanupAllTestData,
     testDataTracker
 } from '../helpers/test-helpers';
+import { describe, beforeAll, afterAll, afterEach, beforeEach, expect, it } from '@jest/globals';
 
 
 const app = createApp();
@@ -167,7 +168,7 @@ describe('Buddy System', () => {
             // Check both directions exist
             const result = await query(
                 `SELECT * FROM buddies 
-                 WHERE (user_id = $1 AND buddy_id = $2 AND status = 'accepted')
+                    WHERE (user_id = $1 AND buddy_id = $2 AND status = 'accepted')
                     OR (user_id = $2 AND buddy_id = $1 AND status = 'accepted')`,
                 [user1.id, user2.id]
             );
@@ -301,7 +302,7 @@ describe('Buddy System', () => {
 
             const result = await query(
                 `SELECT * FROM buddies 
-                 WHERE (user_id = $1 AND buddy_id = $2)
+                    WHERE (user_id = $1 AND buddy_id = $2)
                     OR (user_id = $2 AND buddy_id = $1)`,
                 [user1.id, user2.id]
             );
@@ -426,7 +427,7 @@ describe('Buddy System', () => {
             // Verify buddy relationship is removed
             const buddyResult = await query(
                 `SELECT * FROM buddies 
-                 WHERE (user_id = $1 AND buddy_id = $2)
+                WHERE (user_id = $1 AND buddy_id = $2)
                     OR (user_id = $2 AND buddy_id = $1)`,
                 [user1.id, user2.id]
             );
@@ -557,8 +558,8 @@ describe('Buddy System', () => {
             // Disable buddy requests for User2
             await query(
                 `UPDATE user_profiles 
-                 SET travel_buddy_requests_enabled = false 
-                 WHERE user_id = $1`,
+                    SET travel_buddy_requests_enabled = false 
+                    WHERE user_id = $1`,
                 [user2.id]
             );
 

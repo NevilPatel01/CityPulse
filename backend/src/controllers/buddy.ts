@@ -766,3 +766,212 @@ export const reportUser = async (req: Request, res: Response) => {
         });
     }
 };
+
+// Find users to connect with (for buddies page)
+export const findBuddies = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { 
+            search, 
+            city, 
+            interests, 
+            travelStyle, 
+            activityLevel,
+            page = 1, 
+            limit = 20 
+        } = req.query;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        const offset = (Number(page) - 1) * Number(limit);
+
+        // Build query
+        let queryText = `
+            SELECT DISTINCT
+                u.id,
+                u.username,
+                u.full_name,
+                u.bio,
+                u.current_location,
+                u.hometown,
+                up.profile_photo_url,
+                up.cities_visited,
+                tp.travel_style,
+                tp.activity_level,
+                tp.preferred_difficulty,
+                (
+                    SELECT json_agg(json_build_object('id', ic.id, 'name', ic.name))
+                    FROM user_interests ui
+                    INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                    WHERE ui.user_id = u.id
+                ) as interests,
+                (
+                    SELECT COUNT(*)::int
+                    FROM travel_buddy_connections tbc
+                    WHERE (tbc.requester_id = u.id OR tbc.requested_id = u.id)
+                    AND tbc.status = 'accepted'
+                ) as buddies_count,
+                (
+                    SELECT COUNT(*)::int
+                    FROM recommendations r
+                    WHERE r.user_id = u.id AND r.status = 'active'
+                ) as recommendations_count,
+                (
+                    SELECT tbc.status
+                    FROM travel_buddy_connections tbc
+                    WHERE ((tbc.requester_id = $1 AND tbc.requested_id = u.id)
+                        OR (tbc.requested_id = $1 AND tbc.requester_id = u.id))
+                    LIMIT 1
+                ) as buddy_status
+            FROM users u
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            LEFT JOIN travel_preferences tp ON u.id = tp.user_id
+            WHERE u.id != $1
+            AND u.account_status = 'active'
+            AND NOT EXISTS (
+                SELECT 1 FROM user_blocks ub
+                WHERE (ub.blocker_id = $1 AND ub.blocked_id = u.id)
+                OR (ub.blocker_id = u.id AND ub.blocked_id = $1)
+            )
+        `;
+
+        const queryParams: any[] = [userId];
+        let paramIndex = 2;
+
+        // Add search filter
+        if (search) {
+            queryText += ` AND (
+                u.full_name ILIKE $${paramIndex} 
+                OR u.username ILIKE $${paramIndex}
+                OR u.bio ILIKE $${paramIndex}
+                OR u.current_location ILIKE $${paramIndex}
+            )`;
+            queryParams.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        // Add city filter
+        if (city) {
+            queryText += ` AND up.cities_visited @> $${paramIndex}::jsonb`;
+            queryParams.push(JSON.stringify([city]));
+            paramIndex++;
+        }
+
+        // Add interests filter
+        if (interests) {
+            const interestsArray = typeof interests === 'string' ? [interests] : interests;
+            queryText += ` AND EXISTS (
+                SELECT 1 FROM user_interests ui
+                INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                WHERE ui.user_id = u.id AND ic.name = ANY($${paramIndex})
+            )`;
+            queryParams.push(interestsArray);
+            paramIndex++;
+        }
+
+        // Add travel style filter
+        if (travelStyle) {
+            queryText += ` AND tp.travel_style = $${paramIndex}`;
+            queryParams.push(travelStyle);
+            paramIndex++;
+        }
+
+        // Add activity level filter
+        if (activityLevel) {
+            queryText += ` AND tp.activity_level = $${paramIndex}`;
+            queryParams.push(activityLevel);
+            paramIndex++;
+        }
+
+        queryText += ` ORDER BY u.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        queryParams.push(Number(limit), offset);
+
+        const result = await pool.query(queryText, queryParams);
+
+        // Get total count
+        let countQuery = `
+            SELECT COUNT(DISTINCT u.id) as total
+            FROM users u
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            LEFT JOIN travel_preferences tp ON u.id = tp.user_id
+            WHERE u.id != $1
+            AND u.account_status = 'active'
+            AND NOT EXISTS (
+                SELECT 1 FROM user_blocks ub
+                WHERE (ub.blocker_id = $1 AND ub.blocked_id = u.id)
+                OR (ub.blocker_id = u.id AND ub.blocked_id = $1)
+            )
+        `;
+
+        const countParams: any[] = [userId];
+        let countParamIndex = 2;
+
+        if (search) {
+            countQuery += ` AND (
+                u.full_name ILIKE $${countParamIndex} 
+                OR u.username ILIKE $${countParamIndex}
+                OR u.bio ILIKE $${countParamIndex}
+                OR u.current_location ILIKE $${countParamIndex}
+            )`;
+            countParams.push(`%${search}%`);
+            countParamIndex++;
+        }
+
+        if (city) {
+            countQuery += ` AND up.cities_visited @> $${countParamIndex}::jsonb`;
+            countParams.push(JSON.stringify([city]));
+            countParamIndex++;
+        }
+
+        if (interests) {
+            const interestsArray = typeof interests === 'string' ? [interests] : interests;
+            countQuery += ` AND EXISTS (
+                SELECT 1 FROM user_interests ui
+                INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                WHERE ui.user_id = u.id AND ic.name = ANY($${countParamIndex})
+            )`;
+            countParams.push(interestsArray);
+            countParamIndex++;
+        }
+
+        if (travelStyle) {
+            countQuery += ` AND tp.travel_style = $${countParamIndex}`;
+            countParams.push(travelStyle);
+            countParamIndex++;
+        }
+
+        if (activityLevel) {
+            countQuery += ` AND tp.activity_level = $${countParamIndex}`;
+            countParams.push(activityLevel);
+            countParamIndex++;
+        }
+
+        const countResult = await pool.query(countQuery, countParams);
+        const total = parseInt(countResult.rows[0].total);
+
+        res.json({
+            success: true,
+            data: {
+                users: result.rows,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    pages: Math.ceil(total / Number(limit))
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Find buddies error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to find buddies'
+        });
+    }
+};

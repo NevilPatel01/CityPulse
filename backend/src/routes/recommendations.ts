@@ -17,7 +17,12 @@ import {
     likeRecommendation,
     unlikeRecommendation,
     checkLikeStatus,
-    getLikedRecommendations
+    getLikedRecommendations,
+    saveRecommendation,
+    unsaveRecommendation,
+    checkSaveStatus,
+    trackView,
+    getSavedRecommendations
 } from '../controllers/recommendations';
 import {
     createRecommendationSchema,
@@ -185,6 +190,43 @@ router.get(
     recommendationLimiter,
     authenticateToken,
     getLikedRecommendations
+);
+
+// Save/Unsave routes
+router.post(
+    '/:id/save',
+    recommendationLimiter,
+    authenticateToken,
+    saveRecommendation
+);
+
+router.delete(
+    '/:id/save',
+    recommendationLimiter,
+    authenticateToken,
+    unsaveRecommendation
+);
+
+router.get(
+    '/:id/save/status',
+    recommendationLimiter,
+    authenticateToken,
+    checkSaveStatus
+);
+
+router.get(
+    '/user/saved',
+    recommendationLimiter,
+    authenticateToken,
+    getSavedRecommendations
+);
+
+// View tracking
+router.post(
+    '/:id/view',
+    recommendationLimiter,
+    optionalAuthenticateToken,
+    trackView
 );
 
 export default router;

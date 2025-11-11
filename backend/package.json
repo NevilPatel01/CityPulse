@@ -11,6 +11,7 @@
     "lint:fix": "pnpm exec tsc --noEmit",
     "db:init": "tsx src/scripts/initDb.ts",
     "db:reset": "tsx src/scripts/reset-db.ts",
+    "db:seed": "./sql/init-database.sh && psql $DATABASE_URL < sql/seed-data.sql",
     "db:manage": "./sql/manage-database.sh",
     "db:init-docker": "./sql/manage-database.sh init",
     "db:reset-docker": "./sql/manage-database.sh reset",

@@ -249,9 +249,17 @@ export function RecommendationCard({
           <h3 className="text-lg font-semibold text-primary hover:text-pulse transition-colors">
             {recommendation.title}
           </h3>
-          <p className="text-sm text-muted">
+          <Link 
+            to={`/cities/${recommendation.city_name}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
             {recommendation.city_name}, {recommendation.country}
-          </p>
+          </Link>
         </div>
 
         {/* Description */}

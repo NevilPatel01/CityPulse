@@ -12,7 +12,7 @@ import {
     generateTestToken,
     cleanupAllTestData,
 } from '../helpers/test-helpers';
-
+import { describe, beforeAll, afterAll, afterEach, beforeEach, expect, it } from '@jest/globals';
 describe('Notification System API', () => {
     const app = createApp();
     let user1: any;
@@ -176,7 +176,7 @@ describe('Notification System API', () => {
             for (let i = 0; i < 3; i++) {
                 await query(
                     `INSERT INTO notifications (user_id, title, message, notification_type)
-                     VALUES ($1, $2, $3, $4)`,
+                        VALUES ($1, $2, $3, $4)`,
                     [user1.id, `Unread ${i}`, 'Test', 'system']
                 );
             }
@@ -184,7 +184,7 @@ describe('Notification System API', () => {
             for (let i = 0; i < 2; i++) {
                 await query(
                     `INSERT INTO notifications (user_id, title, message, notification_type, is_read)
-                     VALUES ($1, $2, $3, $4, $5)`,
+                        VALUES ($1, $2, $3, $4, $5)`,
                     [user1.id, `Read ${i}`, 'Test', 'system', true]
                 );
             }
@@ -270,7 +270,7 @@ describe('Notification System API', () => {
             for (let i = 0; i < 5; i++) {
                 await query(
                     `INSERT INTO notifications (user_id, title, message, notification_type)
-                     VALUES ($1, $2, $3, $4)`,
+                        VALUES ($1, $2, $3, $4)`,
                     [user1.id, `Notification ${i}`, 'Test', 'system']
                 );
             }
@@ -322,8 +322,8 @@ describe('Notification System API', () => {
         beforeEach(async () => {
             const result = await query(
                 `INSERT INTO notifications (user_id, title, message, notification_type)
-                 VALUES ($1, $2, $3, $4)
-                 RETURNING id`,
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING id`,
                 [user1.id, 'Test Notification', 'Test message', 'buddy_request']
             );
             notificationId = result.rows[0].id;
@@ -369,7 +369,7 @@ describe('Notification System API', () => {
             for (let i = 0; i < 3; i++) {
                 await query(
                     `INSERT INTO notifications (user_id, title, message, notification_type, is_read)
-                     VALUES ($1, $2, $3, $4, $5)`,
+                        VALUES ($1, $2, $3, $4, $5)`,
                     [user1.id, `Read ${i}`, 'Test', 'system', true]
                 );
             }
@@ -377,7 +377,7 @@ describe('Notification System API', () => {
             for (let i = 0; i < 2; i++) {
                 await query(
                     `INSERT INTO notifications (user_id, title, message, notification_type)
-                     VALUES ($1, $2, $3, $4)`,
+                        VALUES ($1, $2, $3, $4)`,
                     [user1.id, `Unread ${i}`, 'Test', 'system']
                 );
             }
