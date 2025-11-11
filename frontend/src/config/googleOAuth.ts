@@ -57,28 +57,40 @@ const getGoogleClientSecret = (): string => {
 
 /**
  * Validate that all required Google OAuth environment variables are set 
- * Only validates in development mode to prevent production errors
+ * Validates in both development and production with detailed logging
  */
 export const validateGoogleOAuthConfig = (): void => {
-    // Only validate in development mode
-    if (import.meta.env.MODE === 'development') {
-        const missingVars: string[] = [];
-        
-        if (!getEnvValue('VITE_GOOGLE_CLIENT_ID')) {
-            missingVars.push('VITE_GOOGLE_CLIENT_ID');
-        }
-        
-        if (!getEnvValue('VITE_GOOGLE_CLIENT_SECRET')) {
-            missingVars.push('VITE_GOOGLE_CLIENT_SECRET');
-        }
-        
-        if (!getEnvValue('VITE_GOOGLE_REDIRECT_URI')) {
-            missingVars.push('VITE_GOOGLE_REDIRECT_URI');
-        }
-        
-        if (missingVars.length > 0) {
-            console.warn(`Missing Google OAuth environment variables: ${missingVars.join(', ')}. Please add them to your .env file.`);
-        }
+    const missingVars: string[] = [];
+    
+    console.log('Build ENV:', buildEnvMap);
+    
+    const clientId = getEnvValue('VITE_GOOGLE_CLIENT_ID');
+    const clientSecret = getEnvValue('VITE_GOOGLE_CLIENT_SECRET');
+    const redirectUri = getEnvValue('VITE_GOOGLE_REDIRECT_URI');
+    
+    console.log('Resolved Values:', {
+        clientId: clientId ? `${clientId.substring(0, 20)}...` : 'MISSING',
+        clientSecret: clientSecret ? 'SET' : 'MISSING',
+        redirectUri: redirectUri || 'MISSING'
+    });
+    
+    if (!clientId) {
+        missingVars.push('VITE_GOOGLE_CLIENT_ID');
+    }
+    
+    if (!clientSecret) {
+        missingVars.push('VITE_GOOGLE_CLIENT_SECRET');
+    }
+    
+    if (!redirectUri) {
+        missingVars.push('VITE_GOOGLE_REDIRECT_URI');
+    }
+    
+    if (missingVars.length > 0) {
+        console.error(`❌ Missing Google OAuth environment variables: ${missingVars.join(', ')}`);
+        console.error('Please ensure these are set in your environment configuration.');
+    } else {
+        console.log('✅ All Google OAuth environment variables are set');
     }
 };
 
@@ -95,14 +107,24 @@ export const getGoogleAuthUrl = (
     userEmail?: string,
     prompt?: 'none' | 'consent' | 'select_account'
 ): string => {
+    console.log('🔧 Generating Google Auth URL...');
     validateGoogleOAuthConfig();
     
     const clientId = getEnvValue('VITE_GOOGLE_CLIENT_ID');
     const redirectUri = getEnvValue('VITE_GOOGLE_REDIRECT_URI');
     
     if (!clientId || !redirectUri) {
-        throw new Error('Google OAuth configuration is missing. Please check your environment configuration.');
+        const debugInfo = {
+            windowENV: window.ENV,
+            buildEnv: buildEnvMap,
+            clientId: clientId || 'MISSING',
+            redirectUri: redirectUri || 'MISSING'
+        };
+        console.error('❌ Google OAuth Config Error:', debugInfo);
+        throw new Error(`Google OAuth configuration is missing. Please check your environment configuration.\n\nDebug Info:\n- Client ID: ${clientId ? 'Set' : 'MISSING'}\n- Redirect URI: ${redirectUri || 'MISSING'}\n- window.ENV: ${JSON.stringify(window.ENV)}`);
     }
+    
+    console.log('✅ Building OAuth URL with client ID:', clientId.substring(0, 20) + '...');
     
     const params = new URLSearchParams({
         client_id: clientId,
@@ -117,7 +139,9 @@ export const getGoogleAuthUrl = (
     if (userEmail) params.append('login_hint', userEmail);
     if (prompt) params.append('prompt', prompt);
 
-    return `${GOOGLE_AUTH_URL}?${params.toString()}`;
+    const authUrl = `${GOOGLE_AUTH_URL}?${params.toString()}`;
+    console.log('✅ Generated auth URL successfully');
+    return authUrl;
 };
 
 /**

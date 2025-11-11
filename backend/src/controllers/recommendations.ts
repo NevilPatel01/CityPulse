@@ -1285,7 +1285,7 @@ export const saveRecommendation = async (req: Request, res: Response) => {
 
         // Check if already saved
         const existingSave = await query(
-            'SELECT id FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            'SELECT id FROM user_favorites WHERE recommendation_id = $1 AND user_id = $2',
             [id, userId]
         );
 
@@ -1311,19 +1311,13 @@ export const saveRecommendation = async (req: Request, res: Response) => {
 
         // Add save
         await query(
-            'INSERT INTO recommendation_saves (recommendation_id, user_id) VALUES ($1, $2)',
+            'INSERT INTO user_favorites (recommendation_id, user_id) VALUES ($1, $2)',
             [id, userId]
-        );
-
-        // Update saves count
-        await query(
-            'UPDATE recommendations SET saves_count = saves_count + 1 WHERE id = $1',
-            [id]
         );
 
         // Get updated count
         const countResult = await query(
-            'SELECT saves_count FROM recommendations WHERE id = $1',
+            'SELECT COUNT(*)::integer as saves_count FROM user_favorites WHERE recommendation_id = $1',
             [id]
         );
 
@@ -1352,7 +1346,7 @@ export const unsaveRecommendation = async (req: Request, res: Response) => {
 
         // Check if saved
         const existingSave = await query(
-            'SELECT id FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            'SELECT id FROM user_favorites WHERE recommendation_id = $1 AND user_id = $2',
             [id, userId]
         );
 
@@ -1365,19 +1359,13 @@ export const unsaveRecommendation = async (req: Request, res: Response) => {
 
         // Remove save
         await query(
-            'DELETE FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            'DELETE FROM user_favorites WHERE recommendation_id = $1 AND user_id = $2',
             [id, userId]
-        );
-
-        // Update saves count
-        await query(
-            'UPDATE recommendations SET saves_count = GREATEST(saves_count - 1, 0) WHERE id = $1',
-            [id]
         );
 
         // Get updated count
         const countResult = await query(
-            'SELECT saves_count FROM recommendations WHERE id = $1',
+            'SELECT COUNT(*)::integer as saves_count FROM user_favorites WHERE recommendation_id = $1',
             [id]
         );
 
@@ -1405,7 +1393,7 @@ export const checkSaveStatus = async (req: Request, res: Response) => {
         const userId = (req as any).user?.userId;
 
         const result = await query(
-            'SELECT id FROM recommendation_saves WHERE recommendation_id = $1 AND user_id = $2',
+            'SELECT id FROM user_favorites WHERE recommendation_id = $1 AND user_id = $2',
             [id, userId]
         );
 
@@ -1496,7 +1484,7 @@ export const getSavedRecommendations = async (req: Request, res: Response) => {
                 r.difficulty_level,
                 r.views_count,
                 r.likes_count,
-                r.saves_count,
+                (SELECT COUNT(*) FROM user_favorites WHERE recommendation_id = r.id),
                 r.created_at,
                 u.username,
                 u.full_name,
@@ -1507,7 +1495,7 @@ export const getSavedRecommendations = async (req: Request, res: Response) => {
                     FROM recommendation_photos 
                     WHERE recommendation_id = r.id) as photos,
                 rs.created_at as saved_at
-            FROM recommendation_saves rs
+            FROM user_favorites rs
             JOIN recommendations r ON rs.recommendation_id = r.id
             LEFT JOIN users u ON r.user_id = u.id
             LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
@@ -1520,7 +1508,7 @@ export const getSavedRecommendations = async (req: Request, res: Response) => {
 
         // Get total count
         const countResult = await query(
-            'SELECT COUNT(*) as total FROM recommendation_saves WHERE user_id = $1',
+            'SELECT COUNT(*) as total FROM user_favorites WHERE user_id = $1',
             [userId]
         );
         const total = parseInt(countResult.rows[0].total);

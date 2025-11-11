@@ -28,7 +28,7 @@ export const getFeed = async (req: Request, res: Response) => {
                 r.description,
                 r.user_rating,
                 r.likes_count,
-                r.saves_count as shares_count,
+                (SELECT COUNT(*)::integer FROM user_favorites WHERE recommendation_id = r.id) as shares_count,
                 r.views_count,
                 r.created_at,
                 u.id as user_id,
@@ -41,8 +41,8 @@ export const getFeed = async (req: Request, res: Response) => {
                 'general' as source,
                 COALESCE(
                     (SELECT array_agg(rp.photo_url ORDER BY rp.is_primary DESC) 
-                     FROM recommendation_photos rp 
-                     WHERE rp.recommendation_id = r.id), 
+                        FROM recommendation_photos rp 
+                        WHERE rp.recommendation_id = r.id), 
                     ARRAY[]::varchar[]
                 ) as photos,
                 EXISTS(
@@ -50,7 +50,7 @@ export const getFeed = async (req: Request, res: Response) => {
                     WHERE rl.recommendation_id = r.id AND rl.user_id = $1
                 ) as is_liked,
                 EXISTS(
-                    SELECT 1 FROM recommendation_saves rs 
+                    SELECT 1 FROM user_favorites rs 
                     WHERE rs.recommendation_id = r.id AND rs.user_id = $1
                 ) as is_bookmarked
             FROM recommendations r
@@ -110,7 +110,7 @@ export const getTrendingRecommendations = async (req: Request, res: Response) =>
                 r.description,
                 r.user_rating,
                 r.likes_count,
-                r.saves_count as shares_count,
+                (SELECT COUNT(*)::integer FROM user_favorites WHERE recommendation_id = r.id) as shares_count,
                 r.views_count,
                 r.created_at,
                 u.id as user_id,
@@ -126,13 +126,13 @@ export const getTrendingRecommendations = async (req: Request, res: Response) =>
                         WHERE rp.recommendation_id = r.id), 
                     ARRAY[]::varchar[]
                 ) as photos,
-                (r.likes_count * 2 + COALESCE(r.saves_count, 0) * 3 + r.views_count * 0.1) as engagement_score
+                (r.likes_count * 2 + COALESCE((SELECT COUNT(*) FROM user_favorites WHERE recommendation_id = r.id), 0) * 3 + r.views_count * 0.1) as engagement_score
                 ${userId ? `, EXISTS(
                     SELECT 1 FROM recommendation_likes rl 
                     WHERE rl.recommendation_id = r.id AND rl.user_id = $1
                 ) as is_liked,
                 EXISTS(
-                    SELECT 1 FROM recommendation_saves rs 
+                    SELECT 1 FROM user_favorites rs 
                     WHERE rs.recommendation_id = r.id AND rs.user_id = $1
                 ) as is_bookmarked` : ''}
             FROM recommendations r

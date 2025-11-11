@@ -42,7 +42,7 @@ export const getCityDetails = async (req: Request, res: Response) => {
         r.duration_suggestion,
         r.views_count,
         r.likes_count,
-        r.saves_count,
+        (SELECT COUNT(*)::integer FROM user_favorites WHERE recommendation_id = r.id) as saves_count,
         r.created_at,
         rc.name as category_name,
         rc.id as category_id,
