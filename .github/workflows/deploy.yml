@@ -160,9 +160,14 @@ jobs:
           JWT_SECRET="${{ secrets.JWT_SECRET }}"
           JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}"
 
-          # Google OAuth
+          # Google OAuth (Backend)
           GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
           GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+
+          # Google OAuth (Frontend)
+          VITE_GOOGLE_CLIENT_ID="${{ secrets.VITE_GOOGLE_CLIENT_ID }}"
+          VITE_GOOGLE_CLIENT_SECRET="${{ secrets.VITE_GOOGLE_CLIENT_SECRET }}"
+          VITE_GOOGLE_REDIRECT_URI="${{ secrets.VITE_GOOGLE_REDIRECT_URI }}"
 
           # Email Configuration
           EMAIL_HOST="${{ secrets.EMAIL_HOST }}"
@@ -173,6 +178,7 @@ jobs:
           # URLs
           FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
           BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          VITE_API_URL="${{ secrets.BACKEND_URL }}"
 
           # Docker Images
           BACKEND_IMAGE="${{ env.BACKEND_IMAGE }}"
