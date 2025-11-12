@@ -266,7 +266,7 @@ export const tripService = {
     status?: string;
     limit?: number;
     offset?: number;
-  }): Promise<{ data: PublicTripDiscover[]; pagination: any }> {
+  }): Promise<{ data: PublicTripDiscover[]; pagination: { total: number; page: number; limit: number } }> {
     const params = new URLSearchParams();
     if (filters?.city_id) params.append('city_id', filters.city_id.toString());
     if (filters?.status) params.append('status', filters.status);
@@ -278,7 +278,7 @@ export const tripService = {
       ? `${apiEndpoints.trips.finder.discover}?${queryString}` 
       : apiEndpoints.trips.finder.discover;
     
-    return await apiRequest<{ data: PublicTripDiscover[]; pagination: any }>(url);
+    return await apiRequest<{ data: PublicTripDiscover[]; pagination: { total: number; page: number; limit: number } }>(url);
   },
 
   async getUsersGoingToCity(cityId: number, upcomingOnly: boolean = true): Promise<TravelCompanionMatch[]> {
