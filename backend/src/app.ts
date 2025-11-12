@@ -13,6 +13,7 @@ import notificationRoutes from './routes/notifications';
 import socialRoutes from './routes/social';
 import feedRoutes from './routes/feed';
 import citiesRoutes from './routes/cities';
+import tripsRoutes from './routes/trips';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -162,6 +163,10 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up cities routes...');
     // Cities routes - handles city pages and recommendations by city
     app.use('/api/cities', citiesRoutes);
+
+    console.log('[APP] Setting up trips routes...');
+    // Trips routes - handles trip planning, itinerary, companions, and companion finder
+    app.use('/api/trips', tripsRoutes);
 
     console.log('[APP] Setting up static file serving for uploads...');
     // Serve uploaded images statically with proper CORS headers

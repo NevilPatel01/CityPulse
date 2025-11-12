@@ -292,63 +292,9 @@ CREATE TABLE IF NOT EXISTS user_blocks (
 );
 
 -- =====================================================
--- 9. TRIP PLANNING & MANAGEMENT
+-- 9. TRIP PLANNING & MANAGEMENT (OLD - TO BE REPLACED BY WEEK 9)
+-- (This section will be replaced by the Week 9 comprehensive trip planning system below)
 -- =====================================================
-
--- Trips
-CREATE TABLE IF NOT EXISTS trips (
-    id SERIAL PRIMARY KEY,
-    creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(200) NOT NULL,
-    description TEXT,
-    start_date DATE,
-    end_date DATE,
-    budget_min DECIMAL(10,2),
-    budget_max DECIMAL(10,2),
-    max_companions INTEGER,
-    status VARCHAR(20) DEFAULT 'planning',
-    is_public BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Trip Cities
-CREATE TABLE IF NOT EXISTS trip_cities (
-    id SERIAL PRIMARY KEY,
-    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    city_id INTEGER NOT NULL REFERENCES cities(id) ON DELETE CASCADE,
-    arrival_date DATE,
-    departure_date DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(trip_id, city_id)
-);
-
--- Trip Companions
-CREATE TABLE IF NOT EXISTS trip_companions (
-    id SERIAL PRIMARY KEY,
-    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'invited',
-    role VARCHAR(20) DEFAULT 'companion',
-    invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    responded_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(trip_id, user_id)
-);
-
--- Trip Itinerary
-CREATE TABLE IF NOT EXISTS trip_itinerary (
-    id SERIAL PRIMARY KEY,
-    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    recommendation_id INTEGER REFERENCES recommendations(id) ON DELETE SET NULL,
-    day_number INTEGER NOT NULL,
-    time_slot VARCHAR(20),
-    custom_activity VARCHAR(200),
-    notes TEXT,
-    order_index INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
 -- =====================================================
 -- 10. GAMIFICATION & ACHIEVEMENTS
@@ -673,7 +619,125 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "user";
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "user";
 
 -- =====================================================
--- 19. VERIFICATION
+-- 19.TRIP PLANNING SYSTEM
+-- =====================================================
+
+-- Trips Table
+CREATE TABLE IF NOT EXISTS trips (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(20) DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'cancelled')),
+    privacy VARCHAR(20) DEFAULT 'buddies_only' CHECK (privacy IN ('public', 'buddies_only', 'private')),
+    cover_photo_url VARCHAR(255),
+    is_collaborative BOOLEAN DEFAULT FALSE,
+    total_budget DECIMAL(10, 2),
+    currency VARCHAR(3) DEFAULT 'USD',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Trip Cities (cities to visit in a trip)
+CREATE TABLE IF NOT EXISTS trip_cities (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    city_id INTEGER NOT NULL REFERENCES cities(id) ON DELETE CASCADE,
+    arrival_date DATE,
+    departure_date DATE,
+    visit_order INTEGER NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(trip_id, city_id)
+);
+
+-- Trip Companions (users participating in the trip)
+CREATE TABLE IF NOT EXISTS trip_companions (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'participant' CHECK (role IN ('organizer', 'participant')),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    responded_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(trip_id, user_id)
+);
+
+-- Trip Itinerary (daily activities/schedule)
+CREATE TABLE IF NOT EXISTS trip_itinerary (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    trip_city_id INTEGER REFERENCES trip_cities(id) ON DELETE CASCADE,
+    day_number INTEGER NOT NULL,
+    activity_date DATE,
+    time_slot TIME,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    activity_type VARCHAR(50),
+    duration_minutes INTEGER,
+    estimated_cost DECIMAL(10, 2),
+    location_name VARCHAR(255),
+    location_coordinates POINT,
+    status VARCHAR(20) DEFAULT 'planned' CHECK (status IN ('planned', 'confirmed', 'completed', 'cancelled')),
+    notes TEXT,
+    added_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Trip Recommendations (link recommendations to trip itinerary)
+CREATE TABLE IF NOT EXISTS trip_recommendations (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    itinerary_id INTEGER REFERENCES trip_itinerary(id) ON DELETE CASCADE,
+    recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'wishlist' CHECK (status IN ('wishlist', 'confirmed', 'visited')),
+    added_by INTEGER REFERENCES users(id),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(trip_id, recommendation_id)
+);
+
+-- Trip Comments (discussion/notes on trips)
+CREATE TABLE IF NOT EXISTS trip_comments (
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    comment_text TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- INDEXES FOR TRIP SYSTEM
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_trips_user_id ON trips(user_id);
+CREATE INDEX IF NOT EXISTS idx_trips_status ON trips(status);
+CREATE INDEX IF NOT EXISTS idx_trips_privacy ON trips(privacy);
+CREATE INDEX IF NOT EXISTS idx_trips_dates ON trips(start_date, end_date);
+
+CREATE INDEX IF NOT EXISTS idx_trip_cities_trip_id ON trip_cities(trip_id);
+CREATE INDEX IF NOT EXISTS idx_trip_cities_city_id ON trip_cities(city_id);
+CREATE INDEX IF NOT EXISTS idx_trip_cities_dates ON trip_cities(arrival_date, departure_date);
+
+CREATE INDEX IF NOT EXISTS idx_trip_companions_trip_id ON trip_companions(trip_id);
+CREATE INDEX IF NOT EXISTS idx_trip_companions_user_id ON trip_companions(user_id);
+CREATE INDEX IF NOT EXISTS idx_trip_companions_status ON trip_companions(status);
+
+CREATE INDEX IF NOT EXISTS idx_trip_itinerary_trip_id ON trip_itinerary(trip_id);
+CREATE INDEX IF NOT EXISTS idx_trip_itinerary_city_id ON trip_itinerary(trip_city_id);
+CREATE INDEX IF NOT EXISTS idx_trip_itinerary_date ON trip_itinerary(activity_date);
+
+CREATE INDEX IF NOT EXISTS idx_trip_recommendations_trip_id ON trip_recommendations(trip_id);
+CREATE INDEX IF NOT EXISTS idx_trip_recommendations_rec_id ON trip_recommendations(recommendation_id);
+
+CREATE INDEX IF NOT EXISTS idx_trip_comments_trip_id ON trip_comments(trip_id);
+
+-- =====================================================
+-- 20. VERIFICATION
 -- =====================================================
 
 -- Verify tables were created
