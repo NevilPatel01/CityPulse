@@ -104,6 +104,59 @@ export const apiEndpoints = {
         getBadges: buildApiUrl('api/profile/badges'),
     },
 
+    // Trip Planning endpoints (Week 9)
+    trips: {
+        list: buildApiUrl('api/trips'),
+        create: buildApiUrl('api/trips'),
+        detail: buildApiUrl('api/trips/:id'),
+        update: buildApiUrl('api/trips/:id'),
+        delete: buildApiUrl('api/trips/:id'),
+        
+        // Companion management
+        companions: {
+            invite: buildApiUrl('api/trips/:id/companions'),
+            respond: buildApiUrl('api/trips/:id/companions/respond'),
+            remove: buildApiUrl('api/trips/:id/companions/:companionId'),
+        },
+        
+        // City management
+        cities: {
+            add: buildApiUrl('api/trips/:id/cities'),
+            update: buildApiUrl('api/trips/:id/cities/:cityId'),
+            remove: buildApiUrl('api/trips/:id/cities/:cityId'),
+        },
+        
+        // Itinerary management
+        itinerary: {
+            list: buildApiUrl('api/trips/:id/itinerary'),
+            add: buildApiUrl('api/trips/:id/itinerary'),
+            update: buildApiUrl('api/trips/:id/itinerary/:itemId'),
+            delete: buildApiUrl('api/trips/:id/itinerary/:itemId'),
+        },
+        
+        // Recommendations
+        recommendations: {
+            add: buildApiUrl('api/trips/:id/recommendations'),
+            update: buildApiUrl('api/trips/:id/recommendations/:recId'),
+            remove: buildApiUrl('api/trips/:id/recommendations/:recId'),
+        },
+        
+        // Comments
+        comments: {
+            list: buildApiUrl('api/trips/:id/comments'),
+            add: buildApiUrl('api/trips/:id/comments'),
+            delete: buildApiUrl('api/trips/:id/comments/:commentId'),
+        },
+        
+        // Companion finder
+        finder: {
+            companions: buildApiUrl('api/trips/find/companions'),
+            discover: buildApiUrl('api/trips/discover/trips'),
+            city: buildApiUrl('api/trips/city/:cityId/users'),
+            suggested: buildApiUrl('api/trips/suggested'),
+        },
+    },
+
 };
 
 /**

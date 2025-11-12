@@ -25,6 +25,9 @@ import { EditRecommendationPage } from './pages/EditRecommendationPage';
 import BuddiesPage from './pages/BuddiesPage';
 import CityPage from './pages/CityPage';
 import NotFoundPage from './pages/NotFoundPage';
+import TripsPage from './pages/TripsPage';
+import TripDetailPage from './pages/TripDetailPage';
+import CompanionFinderPage from './pages/CompanionFinderPage';
 
 function App() {
   useEffect(() => {
@@ -116,6 +119,23 @@ function App() {
           <Route path="/recommendations/:id/edit" element={
             <ProtectedRoute>
               <EditRecommendationPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Trip Planning routes */}
+          <Route path="/trips" element={
+            <ProtectedRoute>
+              <TripsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/trips/:id" element={
+            <ProtectedRoute>
+              <TripDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/trips/companions/find" element={
+            <ProtectedRoute>
+              <CompanionFinderPage />
             </ProtectedRoute>
           } />
           

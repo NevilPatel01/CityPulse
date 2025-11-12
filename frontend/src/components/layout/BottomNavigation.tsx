@@ -21,16 +21,16 @@ export const BottomNavigation: React.FC = () => {
             active: location.pathname.startsWith("/search") 
         },
         { 
+            icon: "✈️", 
+            label: "Trips", 
+            path: "/trips",
+            active: location.pathname.startsWith("/trips") 
+        },
+        { 
             icon: "➕", 
             label: "Add", 
             path: "/recommendations/create",
             active: location.pathname === "/recommendations/create" 
-        },
-        { 
-            icon: "💬", 
-            label: "Chat", 
-            path: "/chat",
-            active: location.pathname.startsWith("/chat") 
         },
         { 
             icon: "👤", 
