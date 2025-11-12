@@ -188,7 +188,7 @@ jobs:
       - name: 📦 Create deployment archive
         run: tar -czf deploy.tar.gz -C deploy .
 
-      - name: 🚀 Deploy to Digital Ocean
+      - name: 🚀 Prepare deployment directory
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DO_HOST }}
@@ -199,6 +199,7 @@ jobs:
             # Create deployment directory with root ownership
             mkdir -p /opt/citypulse
             chown -R root:root /opt/citypulse
+            chmod 755 /opt/citypulse
             
             # Switch to deployment directory
             cd /opt/citypulse
@@ -213,16 +214,20 @@ jobs:
             # Clean up old files
             rm -rf backend nginx
             rm -f .env docker-compose.prod.yml
+            
+            echo "✅ Deployment directory ready: /opt/citypulse"
 
       - name: 📤 Upload deployment package
-        uses: appleboy/scp-action@v0.1.5
+        uses: appleboy/scp-action@v0.1.7
         with:
             host: ${{ secrets.DO_HOST }}
             username: root
             key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
             port: ${{ secrets.DO_SSH_PORT }}
             source: deploy.tar.gz
-            target: /opt/citypulse/
+            target: /opt/citypulse
+            strip_components: 0
+            overwrite: true
 
       - name: 🔐 Login to registry and deploy
         uses: appleboy/ssh-action@v1.0.0
