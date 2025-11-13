@@ -78,7 +78,7 @@ export function RecommendationCard({
   };
 
   const handleEdit = () => {
-    navigate(`/recommendations/${recommendation.id}/edit`);
+    navigate(`/@${recommendation.username}/recommendation/${recommendation.id}/edit`);
   };
 
   const formatPrice = () => {
@@ -204,7 +204,7 @@ export function RecommendationCard({
         )}
 
         {/* Card Link - Makes entire card clickable */}
-        <Link to={`/recommendations/${recommendation.id}`} className="block">
+        <Link to={`/@${recommendation.username}/recommendation/${recommendation.id}`} className="block">
           {/* Image */}
           <div className="relative h-48 bg-surface-glass rounded-t-2xl">
         {recommendation.photos && recommendation.photos.length > 0 ? (

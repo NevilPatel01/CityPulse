@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { MapPin, Clock, Users, ExternalLink } from 'lucide-react';
 import { apiRequest } from '../config/api';
 
 interface City {
@@ -90,6 +91,21 @@ export default function CityPage() {
     fetchCityData();
   }, [fetchCityData]);
 
+  // Get featured recommendations (top 3 by rating/views)
+  const featuredRecommendations = recommendations
+    .slice()
+    .sort((a, b) => (b.avgRating * b.viewsCount) - (a.avgRating * a.viewsCount))
+    .slice(0, 3);
+
+  // Get population estimate based on stats (mock data for now)
+  const getPopulation = () => {
+    if (!city) return 'N/A';
+    const visitors = city.stats.visitors;
+    if (visitors > 1000000) return `${(visitors / 1000000).toFixed(1)}M`;
+    if (visitors > 1000) return `${(visitors / 1000).toFixed(0)}K`;
+    return visitors.toString();
+  };
+
   if (loading) {
     return (
       <div className='min-h-screen bg-base flex items-center justify-center'>
@@ -116,198 +132,197 @@ export default function CityPage() {
 
   return (
     <div className='min-h-screen bg-base pb-20'>
-      {/* Hero Section with City Cover */}
-      <div className='relative h-80 bg-surface-glass'>
-        {city.coverImage ? (
-          <img
-            src={city.coverImage}
-            alt={city.name}
-            className='w-full h-full object-cover'
-          />
-        ) : (
-          <div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-pulse/20 to-transparent'>
-            <h1 className='text-6xl font-bold text-pulse'>{city.name}</h1>
-          </div>
-        )}
-        <div className='absolute inset-0 bg-gradient-to-t from-base via-base/50 to-transparent' />
-
-        {/* City Info Overlay */}
-        <div className='absolute bottom-0 left-0 right-0 p-8'>
-          <div className='max-w-7xl mx-auto'>
-            <h1 className='text-5xl font-bold text-text-primary mb-2'>
-              {city.name}
-            </h1>
-            <p className='text-text-muted text-lg mb-4'>{city.country}</p>
-            {city.description && (
-              <p className='text-text-primary max-w-3xl line-clamp-2'>
-                {city.description}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Bar */}
-      <div className='bg-surface-glass backdrop-blur-glass border-b border-border-subtle'>
-        <div className='max-w-7xl mx-auto px-8 py-6'>
-          <div className='flex gap-12'>
-            <div>
-              <div className='text-3xl font-bold text-pulse'>
-                {city.stats.total_recommendations}
+      {/* Main Container with Sidebar Layout */}
+      <div className='max-w-[1400px] mx-auto px-6 py-8'>
+        <div className='flex gap-8'>
+          {/* Left Sidebar - City Info */}
+          <aside className='w-80 flex-shrink-0 sticky top-8 self-start'>
+            <div className='bg-surface-glass backdrop-blur-glass rounded-2xl p-6 border border-border-subtle'>
+              {/* City Header */}
+              <div className='mb-6'>
+                <h1 className='text-3xl font-bold text-text-primary mb-2'>
+                  {city.name}
+                </h1>
+                <p className='text-text-muted flex items-center gap-1'>
+                  <MapPin className='w-4 h-4' />
+                  {city.country}
+                </p>
               </div>
-              <div className='text-text-muted text-sm'>Recommendations</div>
-            </div>
-            <div>
-              <div className='text-3xl font-bold text-pulse'>
-                {city.stats.contributors}
-              </div>
-              <div className='text-text-muted text-sm'>Contributors</div>
-            </div>
-            <div>
-              <div className='text-3xl font-bold text-pulse'>
-                {city.stats.visitors}
-              </div>
-              <div className='text-text-muted text-sm'>Visitors</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Category Filters */}
-      <div className='max-w-7xl mx-auto px-8 py-6'>
-        <div className='flex gap-3 overflow-x-auto scrollbar-hide pb-2'>
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-6 py-2 rounded-full whitespace-nowrap transition ${
-              selectedCategory === 'all'
-                ? 'bg-pulse text-base font-medium'
-                : 'bg-surface-glass text-text-primary hover:bg-surface-glass/80'
-            }`}
-          >
-            All ({city.stats.total_recommendations})
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.name)}
-              className={`px-6 py-2 rounded-full whitespace-nowrap transition ${
-                selectedCategory === category.name
-                  ? 'bg-pulse text-base font-medium'
-                  : 'bg-surface-glass text-text-primary hover:bg-surface-glass/80'
-              }`}
-            >
-              {category.name} ({category.count})
-            </button>
-          ))}
-        </div>
-      </div>
+              {/* City Cover Image */}
+              {city.coverImage && (
+                <div className='mb-6 rounded-xl overflow-hidden'>
+                  <img
+                    src={city.coverImage}
+                    alt={city.name}
+                    className='w-full h-40 object-cover'
+                  />
+                </div>
+              )}
 
-      {/* Recommendations Grid */}
-      <div className='max-w-7xl mx-auto px-8'>
-        {recommendations.length === 0 ? (
-          <div className='text-center py-20'>
-            <p className='text-text-muted text-lg'>No recommendations found</p>
-          </div>
-        ) : (
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {recommendations.map((rec) => (
-              <div
-                key={rec.id}
-                onClick={() => navigate(`/recommendations/${rec.id}`)}
-                className='bg-surface-glass backdrop-blur-glass rounded-2xl overflow-hidden hover-lift cursor-pointer border border-border-subtle'
-              >
-                {/* Image */}
-                <div className='relative h-48 bg-base/50'>
-                  {rec.photos && rec.photos.length > 0 ? (
-                    <img
-                      src={rec.photos[0].url}
-                      alt={rec.title}
-                      className='w-full h-full object-cover'
-                    />
-                  ) : (
-                    <div className='w-full h-full flex items-center justify-center'>
-                      <span className='text-text-muted'>No image</span>
-                    </div>
-                  )}
-                  {/* Category Badge */}
-                  <div
-                    className='absolute top-3 right-3 px-3 py-1 bg-pulse font-medium rounded-full'
-                    style={{ color: 'var(--base)' }}
+              {/* City Stats */}
+              <div className='space-y-4 mb-6'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-text-muted flex items-center gap-2'>
+                    <Users className='w-4 h-4' />
+                    Population
+                  </span>
+                  <span className='text-text-primary font-semibold'>{getPopulation()}</span>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-text-muted flex items-center gap-2'>
+                    <Clock className='w-4 h-4' />
+                    Timezone
+                  </span>
+                  <span className='text-text-primary font-semibold'>
+                    {city.timezone || 'GMT'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visit Website Button */}
+              <button className='w-full py-3 px-4 bg-pulse hover:opacity-90 text-base font-medium rounded-xl transition flex items-center justify-center gap-2'>
+                <ExternalLink className='w-4 h-4' />
+                Visit Website
+              </button>
+            </div>
+          </aside>
+
+          {/* Right Content Area */}
+          <main className='flex-1 min-w-0'>
+            {/* Recommendations Header with Count */}
+            <div className='mb-6'>
+              <h2 className='text-2xl font-bold text-text-primary mb-4'>
+                {city.stats.total_recommendations} Recommendations
+              </h2>
+              
+              {/* Category Badges */}
+              <div className='flex gap-2 flex-wrap'>
+                <button
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                    selectedCategory === 'all'
+                      ? 'bg-pulse text-base'
+                      : 'bg-surface-glass text-text-primary hover:bg-surface-glass/80'
+                  }`}
+                >
+                  All
+                </button>
+                {categories.slice(0, 6).map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.name)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                      selectedCategory === category.name
+                        ? 'bg-pulse text-base'
+                        : 'bg-surface-glass text-text-primary hover:bg-surface-glass/80'
+                    }`}
                   >
-                    {rec.category.name}
-                  </div>
-                </div>
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                {/* Content */}
-                <div className='p-5'>
-                  <h3 className='text-xl font-semibold text-text-primary mb-2 line-clamp-1'>
-                    {rec.title}
-                  </h3>
-                  <p className='text-text-muted text-sm mb-4 line-clamp-2'>
-                    {rec.description}
-                  </p>
-
-                  {/* Creator */}
-                  <div className='flex items-center gap-2 mb-4'>
-                    {rec.creator.profilePhoto ? (
-                      <img
-                        src={rec.creator.profilePhoto}
-                        alt={rec.creator.fullName}
-                        className='w-6 h-6 rounded-full'
-                      />
-                    ) : (
-                      <div className='w-6 h-6 rounded-full bg-pulse/20 flex items-center justify-center'>
-                        <span className='text-pulse text-xs'>
-                          {rec.creator.fullName[0]}
-                        </span>
+            {/* Featured Section - Top 3 Large Cards */}
+            {selectedCategory === 'all' && featuredRecommendations.length > 0 && (
+              <div className='mb-8'>
+                <h3 className='text-xl font-semibold text-text-primary mb-4'>Featured</h3>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  {featuredRecommendations.map((rec) => (
+                    <div
+                      key={rec.id}
+                      onClick={() => navigate(`/@${rec.creator.username}/recommendation/${rec.id}`)}
+                      className='bg-surface-glass backdrop-blur-glass rounded-2xl overflow-hidden hover-lift cursor-pointer border border-border-subtle group'
+                    >
+                      <div className='relative h-56 bg-base/50'>
+                        {rec.photos && rec.photos.length > 0 ? (
+                          <img
+                            src={rec.photos[0].url}
+                            alt={rec.title}
+                            className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
+                          />
+                        ) : (
+                          <div className='w-full h-full flex items-center justify-center'>
+                            <span className='text-text-muted'>No image</span>
+                          </div>
+                        )}
+                        <div className='absolute top-3 right-3 px-3 py-1 bg-pulse/90 backdrop-blur-sm font-medium rounded-full text-sm' style={{ color: 'var(--base)' }}>
+                          {rec.category.name}
+                        </div>
                       </div>
-                    )}
-                    <span className='text-text-muted text-sm'>
-                      {rec.creator.fullName}
-                    </span>
-                  </div>
-
-                  {/* Stats */}
-                  <div className='flex items-center gap-4 text-text-muted text-sm'>
-                    <div className='flex items-center gap-1'>
-                      <span>⭐</span>
-                      <span>
-                        {rec.avgRating > 0
-                          ? rec.avgRating.toFixed(1)
-                          : rec.userRating}
-                      </span>
-                      {rec.ratingsCount > 0 && (
-                        <span className='text-xs'>({rec.ratingsCount})</span>
-                      )}
+                      <div className='p-4'>
+                        <h4 className='text-lg font-semibold text-text-primary mb-2 line-clamp-1'>
+                          {rec.title}
+                        </h4>
+                        <p className='text-text-muted text-sm line-clamp-2 mb-3'>
+                          {rec.description}
+                        </p>
+                        <div className='flex items-center gap-3 text-text-muted text-sm'>
+                          <span className='flex items-center gap-1'>
+                            ⭐ {rec.avgRating > 0 ? rec.avgRating.toFixed(1) : rec.userRating}
+                          </span>
+                          <span className='flex items-center gap-1'>
+                            👁️ {rec.viewsCount}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className='flex items-center gap-1'>
-                      <span>👁️</span>
-                      <span>{rec.viewsCount}</span>
-                    </div>
-                    <div className='flex items-center gap-1'>
-                      <span>💾</span>
-                      <span>{rec.savesCount}</span>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  {rec.tags && rec.tags.length > 0 && (
-                    <div className='flex flex-wrap gap-2 mt-4'>
-                      {rec.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag.id}
-                          className='px-2 py-1 bg-base/50 text-text-muted text-xs rounded-full'
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            )}
+
+            {/* All Recommendations Grid */}
+            <div>
+              <h3 className='text-xl font-semibold text-text-primary mb-4'>
+                All Recommendations
+              </h3>
+              {recommendations.length === 0 ? (
+                <div className='text-center py-20 bg-surface-glass rounded-2xl'>
+                  <p className='text-text-muted text-lg'>No recommendations found</p>
+                </div>
+              ) : (
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {recommendations.map((rec) => (
+                    <div
+                      key={rec.id}
+                      onClick={() => navigate(`/@${rec.creator.username}/recommendation/${rec.id}`)}
+                      className='bg-surface-glass backdrop-blur-glass rounded-xl overflow-hidden hover-lift cursor-pointer border border-border-subtle'
+                    >
+                      <div className='relative h-40 bg-base/50'>
+                        {rec.photos && rec.photos.length > 0 ? (
+                          <img
+                            src={rec.photos[0].url}
+                            alt={rec.title}
+                            className='w-full h-full object-cover'
+                          />
+                        ) : (
+                          <div className='w-full h-full flex items-center justify-center'>
+                            <span className='text-text-muted text-sm'>No image</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className='p-4'>
+                        <h4 className='text-base font-semibold text-text-primary mb-1 line-clamp-1'>
+                          {rec.title}
+                        </h4>
+                        <p className='text-text-muted text-xs mb-2 line-clamp-1'>
+                          {rec.category.name}
+                        </p>
+                        <div className='flex items-center gap-3 text-text-muted text-xs'>
+                          <span>⭐ {rec.avgRating > 0 ? rec.avgRating.toFixed(1) : rec.userRating}</span>
+                          <span>👁️ {rec.viewsCount}</span>
+                          <span>💾 {rec.savesCount}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ interface Recommendation {
   title: string;
   description: string;
   user_id: number;
+  username?: string;
   category_id?: number;
   category_name?: string;
   city_id?: number;
@@ -58,7 +59,8 @@ export function EditRecommendationPage() {
         // Check if user owns this recommendation
         if (data.data.user_id !== Number(user?.id)) {
           showError('You do not have permission to edit this recommendation');
-          navigate(`/recommendations/${id}`);
+          const username = data.data.username || user?.username || '';
+          navigate(`/@${username}/recommendation/${id}`);
           return;
         }
         
@@ -74,7 +76,7 @@ export function EditRecommendationPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, showError, user?.id]);
+  }, [id, navigate, showError, user?.id, user?.username]);
 
   useEffect(() => {
     void loadRecommendation();
@@ -141,10 +143,12 @@ export function EditRecommendationPage() {
             photos: recommendation.photos || [],
           }}
           onSuccess={() => {
-            navigate(`/recommendations/${id}`);
+            const username = recommendation.username || user?.username || '';
+            navigate(`/@${username}/recommendation/${id}`);
           }}
           onCancel={() => {
-            navigate(`/recommendations/${id}`);
+            const username = recommendation.username || user?.username || '';
+            navigate(`/@${username}/recommendation/${id}`);
           }}
         />
       </div>

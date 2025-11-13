@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Button, Textarea, Select, StarRating, FileUpload } from '../ui';
 import { useSafeToast } from '../../hooks/useSafeToast';
+import { useAuth } from '../../hooks/useAuth';
 import { apiRequest } from '../../config/api';
 
 interface CreateRecommendationFormProps {
@@ -129,6 +130,7 @@ export function CreateRecommendationForm({
 }: CreateRecommendationFormProps) {
   const navigate = useNavigate();
   const { showSuccess } = useSafeToast();
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState<FormData>({
     // Basic Information
@@ -389,7 +391,8 @@ export function CreateRecommendationForm({
           onSuccess();
         } else {
           const targetId = isEditing ? recommendationId : data.data?.id;
-          navigate(`/recommendations/${targetId}`);
+          const username = user?.username || '';
+          navigate(`/@${username}/recommendation/${targetId}`);
         }
       } else {
         if (data.errors && Array.isArray(data.errors)) {

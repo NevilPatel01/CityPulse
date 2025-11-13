@@ -111,11 +111,29 @@ function App() {
               <CreateRecommendationPage />
             </ProtectedRoute>
           } />
+          {/* Legacy routes for backward compatibility */}
           <Route path="/recommendations/:id" element={
             <ProtectedRoute>
               <RecommendationDetailPage />
             </ProtectedRoute>
           } />
+          <Route path="/recommendation/:id" element={
+            <ProtectedRoute>
+              <RecommendationDetailPage />
+            </ProtectedRoute>
+          } />
+          {/* New username-based routes */}
+          <Route path="/:username/recommendation/:id" element={
+            <ProtectedRoute>
+              <RecommendationDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/:username/recommendation/:id/edit" element={
+            <ProtectedRoute>
+              <EditRecommendationPage />
+            </ProtectedRoute>
+          } />
+          {/* Legacy edit route for backward compatibility */}
           <Route path="/recommendations/:id/edit" element={
             <ProtectedRoute>
               <EditRecommendationPage />

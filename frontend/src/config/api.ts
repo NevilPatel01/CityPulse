@@ -174,8 +174,8 @@ export const apiRequest = async <T = unknown>(
     console.log('[API] Making request to:', fullUrl);
     console.log('[API] Request options:', options);
 
-    // Get auth token from localStorage
-    const authToken = localStorage.getItem('authToken');
+    // Get auth token from sessionStorage
+    const authToken = sessionStorage.getItem('authToken');
     console.log('[API] Auth token:', authToken ? 'Present' : 'Not found');
     
     const defaultOptions: RequestInit = {

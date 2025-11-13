@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const { showSuccess, showError } = useSafeToast();
 
     // Check if user is authenticated
-    const isAuthenticated = !!user && !!localStorage.getItem('authToken');
+    const isAuthenticated = !!user && !!sessionStorage.getItem('authToken');
 
     // Check authentication status on app start
     useEffect(() => {
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     // Check authentication status
     const checkAuthStatus = async () => {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = sessionStorage.getItem('authToken');
             
             if (!token) {
                 setIsLoading(false);
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         } catch (error) {
             // Token is invalid or expired
             console.error('❌ [AUTH] Auth check failed:', error);
-            localStorage.removeItem('authToken');
+            sessionStorage.removeItem('authToken');
             setUser(null);
         } finally {
             console.log('🏁 [AUTH] Auth check complete, loading finished');
@@ -119,8 +119,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('[AUTH] Login successful for:', data.data.user.email);
             
-            // Store token and user data
-            localStorage.setItem('authToken', data.data.accessToken);
+            // Store token and user data in sessionStorage
+            sessionStorage.setItem('authToken', data.data.accessToken);
             setUser(data.data.user);
             
             // Show success toast
@@ -153,8 +153,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('[AUTH] Registration successful for:', data.data.user.email);
 
-            // Store token and user data
-            localStorage.setItem('authToken', data.data.accessToken);
+            // Store token and user data in sessionStorage
+            sessionStorage.setItem('authToken', data.data.accessToken);
             setUser(data.data.user);
             
             // Show success toast
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         console.log(' [AUTH] User logging out:', user?.email);
         const userName = user?.fullName || 'User';
         
-        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
         setUser(null);
         
         // Show success toast

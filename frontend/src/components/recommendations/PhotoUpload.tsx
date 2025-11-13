@@ -98,8 +98,8 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
         formData.append('photos', file);
       });
 
-      // Get auth token
-      const authToken = localStorage.getItem('authToken');
+      // Get auth token from sessionStorage
+      const authToken = sessionStorage.getItem('authToken');
       
       if (!authToken) {
         showError('Please login to upload photos');
