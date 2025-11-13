@@ -147,13 +147,10 @@ export const generateRandomState = (): string => {
  * SECURITY: Token exchange happens on backend to keep client secret secure
  * @deprecated This function is no longer used - token exchange now happens on backend
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const exchangeCodeForToken = async (code: string): Promise<GoogleOAuthResponse> => {
-    console.log('🔧 Sending authorization code to backend for token exchange...');
-    
-    // Note: This is a placeholder - the actual implementation should call your backend
+export const exchangeCodeForToken = async (): Promise<GoogleOAuthResponse> => {
+    // Note: This function is deprecated and kept for backwards compatibility
     // The backend will handle the token exchange with Google using the client secret
-    // For now, we'll skip this step and let the backend handle it directly
+    // Use the backend endpoint directly: POST /api/auth/google with { code, redirectUri }
     throw new Error('Token exchange should be handled by backend. Send code directly to /api/auth/google');
 };
 
