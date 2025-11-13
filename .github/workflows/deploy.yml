@@ -211,6 +211,12 @@ jobs:
                 tar -czf "backup-$(date +%Y%m%d-%H%M%S).tar.gz" . --exclude='backup-*.tar.gz' || true
             fi
 
+            # Keep only the latest backup, remove all others
+            echo "🧹 Cleaning old backups..."
+            cd /opt/citypulse
+            ls -t backup-*.tar.gz 2>/dev/null | tail -n +2 | xargs -r rm -f
+            echo "✅ Old backups removed, keeping only the latest"
+
             # Clean up old files
             rm -rf backend nginx
             rm -f .env docker-compose.prod.yml
@@ -277,8 +283,10 @@ jobs:
                 docker compose -f docker-compose.prod.yml ps
             fi
 
-            # Cleanup old images
-            docker image prune -f
+            # Cleanup old Docker images (keep only current)
+            echo "🧹 Removing old Docker images..."
+            docker image prune -a -f
+            echo "✅ Docker cleanup complete"
 
   # Job 4: Notification
   notify:
