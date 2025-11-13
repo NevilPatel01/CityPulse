@@ -64,6 +64,16 @@ export function RecommendationDetailPage() {
   const [savesCount, setSavesCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [selectedRating, setSelectedRating] = useState<number>(0);
+  const [showRatingActions, setShowRatingActions] = useState(false);
+  const [userRatings, setUserRatings] = useState<Array<{
+    user_id: number;
+    username: string;
+    full_name: string;
+    profile_picture_url?: string;
+    rating: number;
+    created_at: string;
+  }>>([]);
 
   const checkSaveStatus = useCallback(async () => {
     if (!id || !user) return;
@@ -80,6 +90,34 @@ export function RecommendationDetailPage() {
       console.error('Error checking save status:', error);
     }
   }, [id, user]);
+
+  const fetchUserRatings = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      const data = await apiRequest<{ 
+        success: boolean; 
+        data: {
+          ratings: Array<{
+            user_id: number;
+            username: string;
+            full_name: string;
+            profile_picture_url?: string;
+            rating: number;
+            created_at: string;
+          }>;
+        };
+      }>(
+        `/api/recommendations/${id}/ratings/list`
+      );
+      
+      if (data.success) {
+        setUserRatings(data.data.ratings);
+      }
+    } catch (error) {
+      console.error('Error fetching user ratings:', error);
+    }
+  }, [id]);
 
   const loadRecommendation = useCallback(async () => {
     if (!id) return;
@@ -105,6 +143,9 @@ export function RecommendationDetailPage() {
         if (user) {
           checkSaveStatus();
         }
+        
+        // Fetch all user ratings
+        fetchUserRatings();
       } else {
         showError(data.message || 'Recommendation not found');
         navigate('/recommendations');
@@ -116,7 +157,7 @@ export function RecommendationDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, showError, user, checkSaveStatus]);
+  }, [id, navigate, showError, user, checkSaveStatus, fetchUserRatings]);
 
   useEffect(() => {
     void loadRecommendation();
@@ -148,7 +189,7 @@ export function RecommendationDetailPage() {
     }
   };
 
-  const handleRatingClick = async (rating: number) => {
+  const handleRatingSelect = (rating: number) => {
     if (isOwner) {
       showError('You cannot rate your own recommendation');
       return;
@@ -159,6 +200,13 @@ export function RecommendationDetailPage() {
       return;
     }
 
+    setSelectedRating(rating);
+    setShowRatingActions(true);
+  };
+
+  const handleRatingSubmit = async () => {
+    if (!selectedRating || !id) return;
+
     try {
       const data = await apiRequest<{ 
         success: boolean; 
@@ -168,12 +216,13 @@ export function RecommendationDetailPage() {
         `/api/recommendations/${id}/ratings`,
         {
           method: 'POST',
-          body: JSON.stringify({ rating })
+          body: JSON.stringify({ rating: selectedRating })
         }
       );
 
       if (data.success) {
-        setUserRating(rating);
+        setUserRating(selectedRating);
+        setShowRatingActions(false);
         // Update the recommendation with new average rating
         if (recommendation) {
           setRecommendation({
@@ -182,6 +231,8 @@ export function RecommendationDetailPage() {
             rating_count: data.data.ratingCount
           });
         }
+        // Refresh ratings list
+        fetchUserRatings();
         showSuccess('Rating submitted successfully');
       } else {
         showError(data.message || 'Failed to submit rating');
@@ -190,6 +241,11 @@ export function RecommendationDetailPage() {
       console.error('Error submitting rating:', error);
       showError(error instanceof Error ? error.message : 'An error occurred while submitting your rating');
     }
+  };
+
+  const handleRatingCancel = () => {
+    setSelectedRating(0);
+    setShowRatingActions(false);
   };
 
   const handleLike = async () => {
@@ -293,7 +349,7 @@ export function RecommendationDetailPage() {
   };
 
   const renderStars = (rating?: number, interactive: boolean = false) => {
-    const currentRating = interactive ? (hoveredRating || userRating) : (rating || 0);
+    const currentRating = interactive ? (hoveredRating || selectedRating || userRating) : (rating || 0);
     
     return (
       <div className="flex items-center gap-1">
@@ -301,7 +357,7 @@ export function RecommendationDetailPage() {
           <button
             key={star}
             disabled={!interactive || isOwner}
-            onClick={() => interactive && handleRatingClick(star)}
+            onClick={() => interactive && handleRatingSelect(star)}
             onMouseEnter={() => interactive && setHoveredRating(star)}
             onMouseLeave={() => interactive && setHoveredRating(0)}
             className={`${interactive && !isOwner ? 'cursor-pointer hover:scale-110' : 'cursor-default'} transition-transform`}
@@ -420,66 +476,6 @@ export function RecommendationDetailPage() {
                   <Eye className="w-4 h-4" />
                   {recommendation.views_count} views
                 </span>
-                <button
-                  onClick={handleLike}
-                  disabled={isLiking}
-                  className="inline-flex items-center gap-1 hover:text-pulse transition-colors disabled:opacity-50"
-                >
-                  <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                  {likesCount}
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving || !user}
-                  className="inline-flex items-center gap-1 hover:text-pulse transition-colors disabled:opacity-50"
-                  title={!user ? 'Login to save' : isSaved ? 'Remove from saved' : 'Save recommendation'}
-                >
-                  <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-pulse text-pulse' : ''}`} />
-                  {savesCount}
-                </button>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3">
-                {user && (
-                  <>
-                    <Button
-                      onClick={handleLike}
-                      disabled={isLiking}
-                      variant="outline"
-                      className={`flex items-center gap-2 ${isLiked ? 'border-red-500 text-red-500' : ''}`}
-                    >
-                      <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500' : ''}`} />
-                      {isLiked ? 'Liked' : 'Like'}
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      variant="outline"
-                      className={`flex items-center gap-2 ${isSaved ? 'border-pulse text-pulse' : ''}`}
-                    >
-                      <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-pulse' : ''}`} />
-                      {isSaved ? 'Saved' : 'Save'}
-                    </Button>
-                  </>
-                )}
-                <Button
-                  onClick={handleShare}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  {linkCopied ? (
-                    <>
-                      <Check className="w-4 h-4 text-green-500" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </>
-                  )}
-                </Button>
               </div>
             </div>
             
@@ -567,6 +563,64 @@ export function RecommendationDetailPage() {
               </div>
             )}
 
+            {/* Instagram-style Action Buttons */}
+            <div className="flex items-center justify-between py-3 border-b border-subtle">
+              <div className="flex items-center gap-4">
+                {user && (
+                  <>
+                    <button
+                      onClick={handleLike}
+                      disabled={isLiking}
+                      className="group relative disabled:opacity-50"
+                      title={isLiked ? 'Unlike' : 'Like'}
+                    >
+                      <Heart className={`w-7 h-7 transition-all ${isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-primary hover:text-red-500 hover:scale-110'}`} />
+                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="group relative disabled:opacity-50"
+                      title={isSaved ? 'Unsave' : 'Save'}
+                    >
+                      <Bookmark className={`w-7 h-7 transition-all ${isSaved ? 'fill-pulse text-pulse scale-110' : 'text-primary hover:text-pulse hover:scale-110'}`} />
+                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {savesCount} {savesCount === 1 ? 'save' : 'saves'}
+                      </span>
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleShare}
+                  className="group relative"
+                  title="Share"
+                >
+                  {linkCopied ? (
+                    <Check className="w-7 h-7 text-green-500" />
+                  ) : (
+                    <Share2 className="w-7 h-7 text-primary hover:text-pulse hover:scale-110 transition-all" />
+                  )}
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    Share
+                  </span>
+                </button>
+              </div>
+              
+              {/* Engagement Stats */}
+              <div className="flex items-center gap-4 text-sm text-muted">
+                <span className="hover:text-primary cursor-pointer transition-colors" title="Likes">
+                  {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+                </span>
+                {user && (
+                  <span className="hover:text-primary cursor-pointer transition-colors" title="Saves">
+                    {savesCount} {savesCount === 1 ? 'save' : 'saves'}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Description */}
             <div className="bg-surface-glass backdrop-blur-glass rounded-lg p-6 shadow-glass border border-subtle">
               <h2 className="text-2xl font-semibold text-primary mb-4">About this place</h2>
@@ -587,9 +641,86 @@ export function RecommendationDetailPage() {
                   <div className="mb-2">
                     {renderStars(userRating, true)}
                   </div>
-                  <p className="text-sm text-muted">
+                  <p className="text-sm text-muted mb-3">
                     {userRating > 0 ? `You rated this ${userRating} star${userRating > 1 ? 's' : ''}` : 'Click to rate this recommendation'}
                   </p>
+                  
+                  {/* Cancel / Submit Buttons */}
+                  {showRatingActions && (
+                    <div className="flex gap-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <Button
+                        onClick={handleRatingCancel}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleRatingSubmit}
+                        className="flex-1 bg-pulse hover:bg-pulse/80 text-white"
+                      >
+                        Submit Rating
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* User Ratings List */}
+              {userRatings.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-subtle">
+                  <h3 className="text-lg font-semibold text-primary mb-4">
+                    All Ratings ({userRatings.length})
+                  </h3>
+                  <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-thin">
+                    {userRatings.map((rating) => (
+                      <div key={`${rating.user_id}-${rating.created_at}`} className="flex items-start gap-3 p-3 bg-surface-glass/50 rounded-lg hover:bg-surface-glass transition-colors">
+                        <Link to={`/profile/${rating.username}`}>
+                          {rating.profile_picture_url ? (
+                            <img
+                              src={rating.profile_picture_url}
+                              alt={rating.full_name}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-gradient-to-br from-pulse to-orange-600 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold text-white">
+                                {rating.full_name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </Link>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <Link
+                              to={`/profile/${rating.username}`}
+                              className="font-semibold text-primary hover:text-pulse transition-colors"
+                            >
+                              {rating.full_name}
+                            </Link>
+                            <span className="text-xs text-muted">
+                              {formatDate(rating.created_at)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= rating.rating
+                                    ? 'text-yellow-400 fill-yellow-400'
+                                    : 'text-muted'
+                                }`}
+                              />
+                            ))}
+                            <span className="text-sm text-muted ml-2">
+                              {rating.rating}/5
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

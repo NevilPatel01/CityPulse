@@ -15,7 +15,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
 
   useEffect(() => {
     if (isOpen) {
-      fetchNotifications();
+      // Fetch notifications in background
+      fetchNotifications(true); // Silent fetching
     }
   }, [isOpen, fetchNotifications]);
 

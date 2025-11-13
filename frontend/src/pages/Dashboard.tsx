@@ -7,18 +7,9 @@ import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useFeed } from '../hooks/useFeed';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
-import { getUserStats, getActiveBuddies, getTrendingPosts } from '../services/feedService';
+import { getUserStats, getActiveBuddies } from '../services/feedService';
 import type { UserStats, ActiveBuddy } from '../services/feedService';
 import { Loader2, MapPin } from 'lucide-react';
-
-// Types
-interface RecommendationCardProps {
-    title: string;
-    location: string;
-    rating: number;
-    category: string;
-    image: string;
-}
 
 // Dashboard Components
 const QuickActionsCard = () => {
@@ -112,83 +103,6 @@ const InterestsCard = () => {
                     >
                         {interest}
                     </span>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const TrendingCard = ({ title, location, rating, category, image, onClick }: RecommendationCardProps & { onClick?: () => void }) => (
-    <div 
-        className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl overflow-hidden cursor-pointer hover:bg-white/12 transition-all"
-        onClick={onClick}
-    >
-        <div className="relative h-32 overflow-hidden">
-            <img
-                src={image}
-                alt={title}
-                className="w-full h-full object-cover"
-            />
-            <div className="absolute top-2 right-2">
-                <span className="bg-black/50 text-white px-2 py-1 rounded text-xs">
-                    {category}
-                </span>
-            </div>
-        </div>
-        <div className="p-3">
-            <h4 className="font-medium text-primary text-sm mb-1">{title}</h4>
-            <p className="text-xs text-muted mb-1">{location}</p>
-            <div className="flex items-center gap-1">
-                <span className="text-[var(--accent-amber)] text-sm">★</span>
-                <span className="text-xs font-medium text-primary">{rating}</span>
-            </div>
-        </div>
-    </div>
-);
-
-interface TrendingPost {
-    id: number;
-    title: string;
-    city_name: string;
-    country: string;
-    user_rating: number;
-    category_name: string;
-    photos?: string[];
-}
-
-const TrendingNowCard = ({ trending }: { trending: TrendingPost[] }) => {
-    const navigate = useNavigate();
-    
-    if (!trending || trending.length === 0) {
-        return (
-            <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4">
-                <h3 className="font-semibold text-primary mb-3">Trending Now</h3>
-                <div className="space-y-3">
-                    {[1, 2].map(i => (
-                        <div key={i} className="animate-pulse">
-                            <div className="h-32 bg-white/10 rounded-xl mb-2"></div>
-                            <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
-            <h3 className="font-semibold text-primary">Trending Now</h3>
-            <div className="space-y-3">
-                {trending.slice(0, 3).map((place) => (
-                    <TrendingCard 
-                        key={place.id} 
-                        title={place.title}
-                        location={`${place.city_name}, ${place.country}`}
-                        rating={place.user_rating}
-                        category={place.category_name}
-                        image={place.photos?.[0] || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop'}
-                        onClick={() => navigate(`/recommendation/${place.id}`)}
-                    />
                 ))}
             </div>
         </div>
@@ -320,22 +234,19 @@ export default function Dashboard() {
     // User stats
     const [stats, setStats] = useState<UserStats | null>(null);
     const [buddies, setBuddies] = useState<ActiveBuddy[]>([]);
-    const [trending, setTrending] = useState<TrendingPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load sidebar data
     useEffect(() => {
         const loadDashboardData = async () => {
             try {
-                const [statsRes, buddiesRes, trendingRes] = await Promise.all([
+                const [statsRes, buddiesRes] = await Promise.all([
                     getUserStats(),
-                    getActiveBuddies(10),
-                    getTrendingPosts(1, 3, 7)
+                    getActiveBuddies(10)
                 ]);
 
                 setStats(statsRes.data);
                 setBuddies(buddiesRes.data);
-                setTrending((trendingRes as { data: TrendingPost[] }).data || []);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             }
@@ -377,7 +288,6 @@ export default function Dashboard() {
                 <main id="main-content" role="main" className="pb-20 pt-16">
                     <div className="space-y-6 p-4">
                         <QuickActionsCard />
-                        <TrendingNowCard trending={trending} />
 
                         <section>
                             <div className="flex items-center justify-between mb-4">
@@ -514,7 +424,6 @@ export default function Dashboard() {
 
                         {/* Right Sidebar */}
                         <div className="space-y-6 sticky top-20 h-fit">
-                            <TrendingNowCard trending={trending} />
                             <ActiveBuddiesCard buddies={buddies} />
                             <QuickLinksCard />
                         </div>

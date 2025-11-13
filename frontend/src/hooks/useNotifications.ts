@@ -4,7 +4,8 @@ import type { Notification } from '../services/notificationService';
 import { useAuth } from './useAuth';
 import { useNotificationSocket } from './useNotificationSocket';
 
-const POLL_INTERVAL = 30000; // 30 seconds (fallback when WebSocket disconnects)
+const POLL_INTERVAL = 30000; // 30 seconds fallback when WebSocket disconnects
+const CACHE_DURATION = 60000; // Cache notifications for 60 seconds
 
 export const useNotifications = () => {
     const { isAuthenticated } = useAuth();
@@ -13,6 +14,8 @@ export const useNotifications = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const pollIntervalRef = useRef<number | null>(null);
+    const lastFetchRef = useRef<number>(0);
+    const isFetchingRef = useRef<boolean>(false);
 
     // Handle incoming WebSocket notifications
     const handleNewNotification = useCallback((notification: Record<string, unknown>) => {
@@ -72,11 +75,26 @@ export const useNotifications = () => {
         }
     });
 
-    // Fetch notifications
-    const fetchNotifications = useCallback(async (silent = false) => {
+    // Fetch notifications with caching and deduplication
+    const fetchNotifications = useCallback(async (silent = false, force = false) => {
         if (!isAuthenticated) return;
 
+        // Check if already fetching
+        if (isFetchingRef.current) {
+            console.log('📦 Already fetching notifications, skipping...');
+            return;
+        }
+
+        // Check cache (skip if forced or cache is stale)
+        const now = Date.now();
+        const timeSinceLastFetch = now - lastFetchRef.current;
+        if (!force && timeSinceLastFetch < CACHE_DURATION && notifications.length > 0) {
+            console.log('💾 Using cached notifications');
+            return;
+        }
+
         try {
+            isFetchingRef.current = true;
             if (!silent) setIsLoading(true);
             setError(null);
 
@@ -84,15 +102,18 @@ export const useNotifications = () => {
             if (response.success) {
                 setNotifications(response.data.notifications);
                 setUnreadCount(response.data.unreadCount);
+                lastFetchRef.current = now;
+                console.log('✅ Notifications fetched:', response.data.notifications.length);
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to fetch notifications';
             if (!silent) setError(errorMessage);
             console.error('Fetch notifications error:', err);
         } finally {
+            isFetchingRef.current = false;
             if (!silent) setIsLoading(false);
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, notifications.length]);
 
     // Fetch unread count only (lighter operation for polling)
     const fetchUnreadCount = useCallback(async () => {
@@ -177,18 +198,21 @@ export const useNotifications = () => {
         }
     }, []);
 
-    // Start polling when authenticated
+    // Initial fetch and start polling when authenticated
     useEffect(() => {
         if (isAuthenticated) {
+            // Pre-fetch notifications when user logs in
+            fetchNotifications(true); // Silent fetch in background
             startPolling();
         } else {
             stopPolling();
             setNotifications([]);
             setUnreadCount(0);
+            lastFetchRef.current = 0; // Reset cache
         }
 
         return () => stopPolling();
-    }, [isAuthenticated, startPolling, stopPolling]);
+    }, [isAuthenticated, startPolling, stopPolling, fetchNotifications]);
 
     // Pause polling when tab is not visible
     useEffect(() => {
@@ -213,7 +237,7 @@ export const useNotifications = () => {
         fetchUnreadCount,
         markNotificationAsRead,
         markAllNotificationsAsRead,
-        refresh: () => fetchNotifications(true),
+        refresh: () => fetchNotifications(true, true), // Silent + Force refresh
         isWebSocketEnabled: true // WebSocket is now integrated
     };
 };
