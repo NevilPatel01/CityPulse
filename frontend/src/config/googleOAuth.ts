@@ -35,7 +35,6 @@ export interface GoogleOAuthResponse {
 const runtimeEnv = typeof window !== 'undefined' ? window.ENV : undefined;
 const buildEnvMap = {
     VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    VITE_GOOGLE_CLIENT_SECRET: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
     VITE_GOOGLE_REDIRECT_URI: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
 } as const;
 type GoogleEnvKey = keyof typeof buildEnvMap;
@@ -50,10 +49,8 @@ export const googleOAuthConfig: GoogleOAuthConfig = {
     scope: 'openid email profile'
 };
 
-// Environment variables for Google OAuth
-const getGoogleClientSecret = (): string => {
-    return getEnvValue('VITE_GOOGLE_CLIENT_SECRET') || '';
-};
+// Note: Client Secret is kept on backend for security
+// Frontend only uses Client ID and Redirect URI
 
 /**
  * Validate that all required Google OAuth environment variables are set 
@@ -65,21 +62,15 @@ export const validateGoogleOAuthConfig = (): void => {
     console.log('Build ENV:', buildEnvMap);
     
     const clientId = getEnvValue('VITE_GOOGLE_CLIENT_ID');
-    const clientSecret = getEnvValue('VITE_GOOGLE_CLIENT_SECRET');
     const redirectUri = getEnvValue('VITE_GOOGLE_REDIRECT_URI');
     
     console.log('Resolved Values:', {
         clientId: clientId ? `${clientId.substring(0, 20)}...` : 'MISSING',
-        clientSecret: clientSecret ? 'SET' : 'MISSING',
         redirectUri: redirectUri || 'MISSING'
     });
     
     if (!clientId) {
         missingVars.push('VITE_GOOGLE_CLIENT_ID');
-    }
-    
-    if (!clientSecret) {
-        missingVars.push('VITE_GOOGLE_CLIENT_SECRET');
     }
     
     if (!redirectUri) {
@@ -152,46 +143,18 @@ export const generateRandomState = (): string => {
 };
 
 /**
- * Exchange authorization code for access token save in backend using JWT
+ * Exchange authorization code for access token via backend
+ * SECURITY: Token exchange happens on backend to keep client secret secure
+ * @deprecated This function is no longer used - token exchange now happens on backend
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const exchangeCodeForToken = async (code: string): Promise<GoogleOAuthResponse> => {
-    const clientSecret = getGoogleClientSecret();
+    console.log('🔧 Sending authorization code to backend for token exchange...');
     
-    if (!clientSecret) {
-        throw new Error('Google Client Secret is not configured. Please add VITE_GOOGLE_CLIENT_SECRET to your environment configuration.');
-    }
-
-    console.log('🔧 Exchanging code for token with Google...');
-    
-    try {
-        const response = await fetch(GOOGLE_TOKEN_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                client_id: googleOAuthConfig.clientId,
-                client_secret: clientSecret,
-                code,
-                grant_type: 'authorization_code',
-                redirect_uri: googleOAuthConfig.redirectUri,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Token exchange failed:', response.status, errorText);
-            throw new Error(`Failed to exchange code for token: ${response.status} ${errorText}`);
-        }
-
-        const tokenData = await response.json();
-        console.log('✅ Token exchange successful');
-        return tokenData;
-        
-    } catch (error) {
-        console.error('❌ Error during token exchange:', error);
-        throw error;
-    }
+    // Note: This is a placeholder - the actual implementation should call your backend
+    // The backend will handle the token exchange with Google using the client secret
+    // For now, we'll skip this step and let the backend handle it directly
+    throw new Error('Token exchange should be handled by backend. Send code directly to /api/auth/google');
 };
 
 /**

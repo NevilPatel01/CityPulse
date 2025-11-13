@@ -164,9 +164,8 @@ jobs:
           GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
           GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
 
-          # Google OAuth (Frontend)
+          # Google OAuth (Frontend - Client Secret is kept on backend only)
           VITE_GOOGLE_CLIENT_ID="${{ secrets.VITE_GOOGLE_CLIENT_ID }}"
-          VITE_GOOGLE_CLIENT_SECRET="${{ secrets.VITE_GOOGLE_CLIENT_SECRET }}"
           VITE_GOOGLE_REDIRECT_URI="${{ secrets.VITE_GOOGLE_REDIRECT_URI }}"
 
           # Email Configuration

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getGoogleAuthUrl, exchangeCodeForToken, getGoogleUserInfo } from '../config/googleOAuth';
+import { getGoogleAuthUrl, googleOAuthConfig } from '../config/googleOAuth';
 import { apiEndpoints, apiRequest } from '../config/api';
 import { useAuth } from './useAuth';
 
@@ -45,7 +45,7 @@ export const useGoogleOAuth = () => {
             console.log('[OAUTH] Generated auth URL:', authUrl);
 
             // Store the current path to redirect back after OAuth
-            localStorage.setItem('oauth_redirect_path', window.location.pathname);
+            sessionStorage.setItem('oauth_redirect_path', window.location.pathname);
             console.log('[OAUTH] Stored redirect path:', window.location.pathname);
 
             // Open Google OAuth in the same window
@@ -67,27 +67,9 @@ export const useGoogleOAuth = () => {
         try {
             setState({ isLoading: true, error: null });
 
-            console.log('Step 1: Exchanging code for access token...');
-            // Exchange code for access token
-            const tokenResponse = await exchangeCodeForToken(code);
-            console.log('Token response received:', { ...tokenResponse, access_token: tokenResponse.access_token?.substring(0, 20) + '...' });
-
-            console.log('Step 2: Getting user info from Google...');
-            // Get user info from Google
-            const googleUser = await getGoogleUserInfo(tokenResponse.access_token);
-            console.log('Google user info:', googleUser);
-
-            console.log('Step 3: Sending user data to backend at:', apiEndpoints.auth.googleOAuth);
-            // Send Google user data to our backend for authentication
-            const authPayload = {
-                googleId: googleUser.id,
-                email: googleUser.email,
-                name: googleUser.name,
-                picture: googleUser.picture,
-                accessToken: tokenResponse.access_token,
-            };
-            console.log('Auth payload:', authPayload);
-
+            console.log('Step 1: Sending authorization code to backend...');
+            // SECURITY: Send authorization code to backend
+            // Backend will exchange code for token using client secret (kept secure on server)
             const authResponse = await apiRequest<GoogleAuthResponse>(
                 apiEndpoints.auth.googleOAuth,
                 {
@@ -95,22 +77,25 @@ export const useGoogleOAuth = () => {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(authPayload),
+                    body: JSON.stringify({
+                        code: code,
+                        redirectUri: googleOAuthConfig.redirectUri
+                    }),
                 }
             );
             console.log('Backend auth response:', authResponse);
 
-            // Store JWT token and user data
-            localStorage.setItem('authToken', authResponse.data.accessToken);
-            console.log('Auth token stored in localStorage');
+            // Store JWT token and user data in sessionStorage (not localStorage)
+            sessionStorage.setItem('authToken', authResponse.data.accessToken);
+            console.log('Auth token stored in sessionStorage');
 
             // Update auth context with the user data
             updateUser(authResponse.data.user);
             console.log('✅ Auth context updated with user data');
 
             // Get the stored redirect path or default to dashboard
-            const redirectPath = localStorage.getItem('oauth_redirect_path') || '/dashboard';
-            localStorage.removeItem('oauth_redirect_path');
+            const redirectPath = sessionStorage.getItem('oauth_redirect_path') || '/dashboard';
+            sessionStorage.removeItem('oauth_redirect_path');
             console.log('Redirecting to:', redirectPath);
 
             // Add a small delay to ensure context update propagates

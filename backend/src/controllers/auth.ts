@@ -427,15 +427,67 @@ export const changePassword = async (req: Request, res: Response) => {
 // Google OAuth authentication
 export const googleOAuth = async (req: Request, res: Response) => {
     try {
-        const { googleId, email, name, picture, accessToken }: GoogleOAuthUser = req.body;
+        const { code, redirectUri } = req.body;
 
-        console.log('🔧 Google OAuth request received:', { googleId, email, name, picture: !!picture });
+        console.log('🔧 Google OAuth request received with authorization code');
 
         // Validate required fields
+        if (!code) {
+            return res.status(400).json({
+                success: false,
+                message: 'Authorization code is required'
+            });
+        }
+
+        // Exchange authorization code for access token (SECURE: happens on backend)
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: process.env.GOOGLE_CLIENT_ID || '',
+                client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+                code,
+                grant_type: 'authorization_code',
+                redirect_uri: redirectUri || process.env.FRONTEND_URL + '/auth/google/callback',
+            }),
+        });
+
+        if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            console.error('❌ Token exchange failed:', tokenResponse.status, errorText);
+            return res.status(400).json({
+                success: false,
+                message: 'Failed to exchange authorization code',
+                error: errorText
+            });
+        }
+
+        const tokenData = await tokenResponse.json() as { access_token: string; token_type: string };
+        console.log('✅ Token exchange successful');
+
+        // Get user info from Google
+        const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenData.access_token}`);
+        
+        if (!userInfoResponse.ok) {
+            console.error('❌ Failed to get user info');
+            return res.status(400).json({
+                success: false,
+                message: 'Failed to get user information from Google'
+            });
+        }
+
+        const googleUser = await userInfoResponse.json() as { id: string; email: string; name: string; picture?: string };
+        console.log('✅ User info retrieved:', googleUser.email);
+
+        const { id: googleId, email, name, picture } = googleUser;
+
+        // Validate user data
         if (!googleId || !email || !name) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required Google OAuth data'
+                message: 'Invalid user data received from Google'
             });
         }
 

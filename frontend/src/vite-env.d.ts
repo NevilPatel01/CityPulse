@@ -1,9 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-    // Google OAuth Configuration
+    // Google OAuth Configuration (Frontend only - Client Secret is kept on backend)
     readonly VITE_GOOGLE_CLIENT_ID?: string
-    readonly VITE_GOOGLE_CLIENT_SECRET?: string
     readonly VITE_GOOGLE_REDIRECT_URI?: string
 
     // API Configuration  

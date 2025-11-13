@@ -21,6 +21,7 @@ WORKDIR /workspace/frontend
 EXPOSE 3000
 
 # Create startup script to generate env.js and start Vite
+# Create startup script to generate env.js (without client secret) and start Vite
 RUN echo '#!/bin/sh' > /tmp/start-dev.sh && \
     echo 'echo "Generating runtime environment configuration..."' >> /tmp/start-dev.sh && \
     echo 'mkdir -p public' >> /tmp/start-dev.sh && \
@@ -28,7 +29,6 @@ RUN echo '#!/bin/sh' > /tmp/start-dev.sh && \
     echo 'window.ENV = {' >> /tmp/start-dev.sh && \
     echo '  VITE_API_URL: '"'"'${VITE_API_URL}'"'"',' >> /tmp/start-dev.sh && \
     echo '  VITE_GOOGLE_CLIENT_ID: '"'"'${VITE_GOOGLE_CLIENT_ID}'"'"',' >> /tmp/start-dev.sh && \
-    echo '  VITE_GOOGLE_CLIENT_SECRET: '"'"'${VITE_GOOGLE_CLIENT_SECRET}'"'"',' >> /tmp/start-dev.sh && \
     echo '  VITE_GOOGLE_REDIRECT_URI: '"'"'${VITE_GOOGLE_REDIRECT_URI}'"'"'' >> /tmp/start-dev.sh && \
     echo '};' >> /tmp/start-dev.sh && \
     echo 'EOF' >> /tmp/start-dev.sh && \
