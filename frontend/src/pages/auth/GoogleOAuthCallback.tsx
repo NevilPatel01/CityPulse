@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useGoogleOAuth } from '../../hooks/useGoogleOAuth';
 
@@ -6,8 +6,15 @@ const GoogleOAuthCallback = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { handleOAuthCallback } = useGoogleOAuth();
+    const hasProcessed = useRef(false);
 
     useEffect(() => {
+        // Prevent duplicate processing (React StrictMode runs effects twice)
+        if (hasProcessed.current) {
+            console.log('⏭️ OAuth callback already processed, skipping...');
+            return;
+        }
+
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
@@ -20,6 +27,7 @@ const GoogleOAuthCallback = () => {
 
         if (error) {
             console.error('❌ OAuth error from Google:', error);
+            hasProcessed.current = true;
             navigate('/login', {
                 state: { error: `Google OAuth failed: ${error}` },
             });
@@ -28,9 +36,11 @@ const GoogleOAuthCallback = () => {
 
         if (code) {
             console.log('✅ Authorization code received, processing...');
+            hasProcessed.current = true;
             handleOAuthCallback(code);
         } else {
             console.error('❌ No authorization code received');
+            hasProcessed.current = true;
             navigate('/login', {
                 state: {
                     error: 'Invalid OAuth callback - no authorization code received',

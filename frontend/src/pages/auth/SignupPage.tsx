@@ -38,6 +38,19 @@ const SignupPage = () => {
   });
   const [errors, setErrors] = useState<SignupFormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [passwordsMatch, setPasswordsMatch] = useState(false);
+
+  // Check if all required fields are filled
+  const isFormComplete = 
+    formData.username.trim() !== '' &&
+    formData.fullName.trim() !== '' &&
+    formData.email.trim() !== '' &&
+    formData.password !== '' &&
+    formData.confirmPassword !== '' &&
+    formData.acceptTerms;
+
+  // Check if form is valid for submission
+  const isFormValid = isFormComplete && passwordsMatch && Object.keys(errors).length === 0;
 
   const validateForm = (): SignupFormErrors => {
     const newErrors: SignupFormErrors = {};
@@ -94,10 +107,21 @@ const SignupPage = () => {
   ) => {
     const value = field === 'acceptTerms' ? e.target.checked : e.target.value;
     
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Check if passwords match after update
+      if (field === 'password' || field === 'confirmPassword') {
+        const pass = field === 'password' ? value as string : updated.password;
+        const confirmPass = field === 'confirmPassword' ? value as string : updated.confirmPassword;
+        setPasswordsMatch(pass !== '' && confirmPass !== '' && pass === confirmPass);
+      }
+      
+      return updated;
+    });
     
     // Clear field error when user starts typing/changing
     if (errors[field]) {
@@ -215,6 +239,7 @@ const SignupPage = () => {
           value={formData.confirmPassword}
           onChange={handleInputChange('confirmPassword')}
           error={errors.confirmPassword}
+          success={passwordsMatch}
           disabled={isLoading}
           autoComplete="new-password"
           required
@@ -252,7 +277,7 @@ const SignupPage = () => {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading}
+          disabled={isLoading || !isFormValid}
         >
           {isLoading ? 'Creating account...' : 'Create account'}
         </Button>

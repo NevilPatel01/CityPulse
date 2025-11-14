@@ -11,7 +11,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({ achievement, showProgress 
     const isCompleted = achievement.is_completed;
     const progress = achievement.current_progress || 0;
     const target = achievement.target_value;
-    const progressPercentage = achievement.progress_percentage || 0;
+    const progressPercentage = Number(achievement.progress_percentage || 0);
 
     // Format completion date
     const formatDate = (dateString: string | null) => {
@@ -24,12 +24,12 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({ achievement, showProgress 
         });
     };
 
-    // Get tier color based on target value
+    // Get tier color based on target value using brand colors
     const getTierColor = (targetValue: number) => {
-        if (targetValue <= 5) return 'from-amber-500 to-yellow-500'; // Bronze
-        if (targetValue <= 15) return 'from-gray-400 to-gray-500'; // Silver
-        if (targetValue <= 30) return 'from-yellow-500 to-yellow-600'; // Gold
-        return 'from-purple-500 to-pink-500'; // Platinum
+        if (targetValue <= 5) return 'from-amber-500 to-amber-600'; // Bronze
+        if (targetValue <= 15) return 'from-slate-400 to-slate-500'; // Silver  
+        if (targetValue <= 30) return 'from-yellow-400 to-yellow-500'; // Gold
+        return 'from-rose-500 to-rose-600'; // Platinum (pulse theme)
     };
 
     const tierColor = getTierColor(target);

@@ -14,7 +14,9 @@ export const registerSchema = z.object({
         .max(30, 'Username cannot be longer than 30 characters')
         .regex(/^[a-zA-Z0-9]+$/, 'Username must only contain alphanumeric characters'),
 
-    email: z.email('Please provide a valid email address'),
+    email: z.string()
+        .email('Please provide a valid email address')
+        .transform(val => val.toLowerCase().trim()),
 
     password: z.string()
         .min(8, 'Password must be at least 8 characters long')
@@ -47,7 +49,9 @@ export const registerSchema = z.object({
 
 // User login validation schema
 export const loginSchema = z.object({
-    email: z.email('Please provide a valid email address'),
+    email: z.string()
+        .email('Please provide a valid email address')
+        .transform(val => val.toLowerCase().trim()),
 
     password: z.string()
         .min(1, 'Password is required')
@@ -55,7 +59,9 @@ export const loginSchema = z.object({
 
 // Password reset request validation schema
 export const resetPasswordRequestSchema = z.object({
-    email: z.email('Please provide a valid email address')
+    email: z.string()
+        .email('Please provide a valid email address')
+        .transform(val => val.toLowerCase().trim())
 });
 
 // Verify reset code validation schema

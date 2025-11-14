@@ -1018,6 +1018,43 @@ export const getUserRating = async (req: Request, res: Response) => {
     }
 };
 
+// Get all ratings for a recommendation
+export const getRatingsList = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const result = await query(
+            `SELECT 
+                rr.user_id,
+                u.username,
+                u.full_name,
+                up.profile_photo_url as profile_picture_url,
+                rr.rating,
+                rr.created_at
+            FROM recommendation_ratings rr
+            JOIN users u ON rr.user_id = u.id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            WHERE rr.recommendation_id = $1
+            ORDER BY rr.created_at DESC`,
+            [id]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                ratings: result.rows
+            }
+        });
+    } catch (error: any) {
+        console.error('Get ratings list error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch ratings',
+            error: error.message
+        });
+    }
+};
+
 // Delete user's rating
 export const deleteRating = async (req: Request, res: Response) => {
     try {

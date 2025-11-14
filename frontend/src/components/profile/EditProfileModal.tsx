@@ -114,10 +114,10 @@ export function EditProfileModal({ isOpen, onClose, profile, onSave }: EditProfi
         bio: formData.bio,
         currentLocation: formData.currentLocation,
         hometown: formData.hometown,
-        instagramUrl: formData.socialLinks.instagram,
-        facebookUrl: formData.socialLinks.linkedin, // Map linkedin to facebook for now
-        whatsappContact: formData.socialLinks.email, // Map email to whatsapp for now
-        websiteUrl: formData.socialLinks.website, // Add website URL
+        instagramUrl: formData.socialLinks.instagram?.trim() || undefined,
+        facebookUrl: formData.socialLinks.linkedin?.trim() || undefined, // Map linkedin to facebook for now
+        whatsappContact: formData.socialLinks.email?.trim() || undefined, // Map email to whatsapp for now
+        websiteUrl: formData.socialLinks.website?.trim() || undefined, // Add website URL
         // Add cities visited data
         citiesVisited: formData.citiesVisited,
         // Add username if changed

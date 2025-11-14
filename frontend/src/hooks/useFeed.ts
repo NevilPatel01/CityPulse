@@ -37,6 +37,13 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
     const requestLocation = useCallback(() => {
         if (!enableLocation) return;
 
+        // Check if location permission was already denied in this session
+        const locationDenied = localStorage.getItem('locationPermissionDenied');
+        if (locationDenied === 'true') {
+            console.log('[Feed] Location permission was previously denied');
+            return;
+        }
+
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -44,10 +51,14 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude
                     });
+                    // Clear the denied flag if permission is granted
+                    localStorage.removeItem('locationPermissionDenied');
                     console.log('[Feed] Location enabled:', position.coords);
                 },
                 (error) => {
                     console.warn('[Feed] Location denied or unavailable:', error);
+                    // Store that permission was denied so we don't ask again
+                    localStorage.setItem('locationPermissionDenied', 'true');
                     showWarning('Location access denied. Showing all posts.');
                 }
             );
@@ -165,10 +176,27 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
 
     // Load initial feed when location changes or on mount
     useEffect(() => {
-        if (!enableLocation || location || !enableLocation) {
+        // If location is not enabled, load immediately
+        // If location is enabled, wait for location to be set or timeout
+        if (!enableLocation) {
+            loadInitialFeed();
+        } else if (location) {
+            // Location was successfully obtained
             loadInitialFeed();
         }
-    }, [location, enableLocation, loadInitialFeed]);
+        // If location is enabled but not obtained yet, 
+        // loadInitialFeed will be called after timeout or location grant
+        
+        // Add timeout to load feed even if location is denied/delayed
+        const timeout = setTimeout(() => {
+            if (enableLocation && !location && state.posts.length === 0) {
+                console.log('[Feed] Loading feed without location after timeout');
+                loadInitialFeed();
+            }
+        }, 3000); // 3 second timeout
+        
+        return () => clearTimeout(timeout);
+    }, [location, enableLocation, loadInitialFeed, state.posts.length]);
 
     return {
         posts: state.posts,

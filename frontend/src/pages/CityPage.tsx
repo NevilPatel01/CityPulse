@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Users, ExternalLink } from 'lucide-react';
 import { apiRequest } from '../config/api';
+import { Header } from '../components/layout/Header';
 
 interface City {
   id: number;
@@ -132,6 +133,7 @@ export default function CityPage() {
 
   return (
     <div className='min-h-screen bg-base pb-20'>
+      <Header />
       {/* Main Container with Sidebar Layout */}
       <div className='max-w-[1400px] mx-auto px-6 py-8'>
         <div className='flex gap-8'>
@@ -276,7 +278,7 @@ export default function CityPage() {
             {/* All Recommendations Grid */}
             <div>
               <h3 className='text-xl font-semibold text-text-primary mb-4'>
-                All Recommendations
+                {selectedCategory === 'all' && featuredRecommendations.length > 0 ? 'More Recommendations' : 'All Recommendations'}
               </h3>
               {recommendations.length === 0 ? (
                 <div className='text-center py-20 bg-surface-glass rounded-2xl'>
@@ -288,32 +290,38 @@ export default function CityPage() {
                     <div
                       key={rec.id}
                       onClick={() => navigate(`/${rec.creator.username}/recommendation/${rec.id}`)}
-                      className='bg-surface-glass backdrop-blur-glass rounded-xl overflow-hidden hover-lift cursor-pointer border border-border-subtle'
+                      className='bg-surface-glass backdrop-blur-glass rounded-2xl overflow-hidden hover-lift cursor-pointer border border-border-subtle group'
                     >
-                      <div className='relative h-40 bg-base/50'>
+                      <div className='relative h-56 bg-base/50'>
                         {rec.photos && rec.photos.length > 0 ? (
                           <img
                             src={rec.photos[0].url}
                             alt={rec.title}
-                            className='w-full h-full object-cover'
+                            className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
                           />
                         ) : (
                           <div className='w-full h-full flex items-center justify-center'>
-                            <span className='text-text-muted text-sm'>No image</span>
+                            <span className='text-text-muted'>No image</span>
                           </div>
                         )}
+                        <div className='absolute top-3 right-3 px-3 py-1 bg-pulse/90 backdrop-blur-sm font-medium rounded-full text-sm' style={{ color: 'var(--base)' }}>
+                          {rec.category.name}
+                        </div>
                       </div>
                       <div className='p-4'>
-                        <h4 className='text-base font-semibold text-text-primary mb-1 line-clamp-1'>
+                        <h4 className='text-lg font-semibold text-text-primary mb-2 line-clamp-1'>
                           {rec.title}
                         </h4>
-                        <p className='text-text-muted text-xs mb-2 line-clamp-1'>
-                          {rec.category.name}
+                        <p className='text-text-muted text-sm line-clamp-2 mb-3'>
+                          {rec.description}
                         </p>
-                        <div className='flex items-center gap-3 text-text-muted text-xs'>
-                          <span>⭐ {rec.avgRating > 0 ? rec.avgRating.toFixed(1) : rec.userRating}</span>
-                          <span>👁️ {rec.viewsCount}</span>
-                          <span>💾 {rec.savesCount}</span>
+                        <div className='flex items-center gap-3 text-text-muted text-sm'>
+                          <span className='flex items-center gap-1'>
+                            ⭐ {rec.avgRating > 0 ? rec.avgRating.toFixed(1) : rec.userRating}
+                          </span>
+                          <span className='flex items-center gap-1'>
+                            👁️ {rec.viewsCount}
+                          </span>
                         </div>
                       </div>
                     </div>

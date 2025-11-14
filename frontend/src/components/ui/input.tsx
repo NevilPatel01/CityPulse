@@ -5,6 +5,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   helperText?: string;
+  success?: boolean;
   isRequired?: boolean;
   showRequiredIndicator?: boolean;
 }
@@ -15,6 +16,7 @@ export const Input = reactForwardRef<HTMLInputElement, InputProps>(
     label, 
     error, 
     helperText, 
+    success = false,
     id, 
     isRequired = false,
     showRequiredIndicator = true,
@@ -33,6 +35,7 @@ export const Input = reactForwardRef<HTMLInputElement, InputProps>(
     ].filter(Boolean).join(' ') || undefined;
 
     const hasError = Boolean(error);
+    const hasSuccess = success && !hasError;
 
     return (
       <div className='space-y-2'>
@@ -73,6 +76,8 @@ export const Input = reactForwardRef<HTMLInputElement, InputProps>(
             ${
               hasError
                 ? 'border-red-500 focus:ring-red-500 focus:border-red-500 hover:border-red-500'
+                : hasSuccess
+                ? 'border-green-500 focus:ring-green-500 focus:border-green-500 hover:border-green-500'
                 : ''
             }
             ${className}

@@ -85,7 +85,7 @@ export const useGoogleOAuth = () => {
             );
             console.log('Backend auth response:', authResponse);
 
-            // Store JWT token and user data in sessionStorage (not localStorage)
+            // Store JWT token in sessionStorage
             sessionStorage.setItem('authToken', authResponse.data.accessToken);
             console.log('Auth token stored in sessionStorage');
 

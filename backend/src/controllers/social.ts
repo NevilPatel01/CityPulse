@@ -428,9 +428,16 @@ export const getUserStats = async (req: Request, res: Response) => {
             [userId, 'active']
         );
 
-        // Get buddies count
+        // Get buddies count (accepted travel buddy connections)
         const buddiesCount = await pool.query(
-            'SELECT COUNT(*) as count FROM buddies WHERE user_id = $1 AND status = $2',
+            `SELECT COUNT(DISTINCT 
+                CASE 
+                    WHEN requester_id = $1 THEN requested_id
+                    WHEN requested_id = $1 THEN requester_id
+                END
+            ) as count 
+            FROM travel_buddy_connections 
+            WHERE (requester_id = $1 OR requested_id = $1) AND status = $2`,
             [userId, 'accepted']
         );
 

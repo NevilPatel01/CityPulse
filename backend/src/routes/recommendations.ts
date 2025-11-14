@@ -13,6 +13,7 @@ import {
     getCities,
     submitRating,
     getUserRating,
+    getRatingsList,
     deleteRating,
     likeRecommendation,
     unlikeRecommendation,
@@ -154,6 +155,12 @@ router.get(
     recommendationLimiter,
     authenticateToken,
     getUserRating
+);
+
+router.get(
+    '/:id/ratings/list',
+    recommendationLimiter,
+    getRatingsList
 );
 
 router.delete(

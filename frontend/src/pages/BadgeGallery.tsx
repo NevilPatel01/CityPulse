@@ -3,6 +3,7 @@ import type { UserAchievement, AchievementStats } from '../types/achievement';
 import { apiEndpoints, apiRequest } from '../config/api';
 import { BadgeCard } from '../components/achievements/BadgeCard';
 import { Trophy, Target, TrendingUp, Award } from 'lucide-react';
+import { Header } from '../components/layout/Header';
 
 type FilterType = 'all' | 'completed' | 'in-progress' | 'locked';
 type SortType = 'recent' | 'progress' | 'name';
@@ -47,6 +48,9 @@ export const BadgeGallery: React.FC = () => {
     };
 
     const getFilteredAchievements = () => {
+        if (!achievements || !Array.isArray(achievements)) {
+            return [];
+        }
         let filtered = [...achievements];
 
         // Apply filter
@@ -99,6 +103,7 @@ export const BadgeGallery: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-900 py-8">
+            <Header />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="mb-8">

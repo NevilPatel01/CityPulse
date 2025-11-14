@@ -205,20 +205,6 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       )}
-
-              {/* Achievements Section */}
-              <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-primary text-lg font-semibold">Achievements</h3>
-                  <a 
-                    href={isOwnProfile ? '/achievements' : `/profile/${username}/achievements`}
-                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                  >
-                    View All →
-                  </a>
-                </div>
-                <AchievementProgress username={isOwnProfile ? undefined : username} />
-              </div>
             </aside>
 
             {/* Right Content - Profile Info and Tabs */}
@@ -454,20 +440,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Achievements for Mobile View - Hidden on desktop */}
-              <div className="lg:hidden bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-primary text-lg font-semibold">Achievements</h3>
-                  <a 
-                    href={isOwnProfile ? '/achievements' : `/profile/${username}/achievements`}
-                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                  >
-                    View All →
-                  </a>
-                </div>
-                <AchievementProgress username={isOwnProfile ? undefined : username} />
-              </div>
-
               {/* Tabs Section */}
               <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
                 {/* Mobile-optimized scrollable tabs */}
@@ -554,8 +526,8 @@ export default function ProfilePage() {
                   )}
                   {activeTab === 2 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-primary mb-4">Achievements</h3>
-                      <p className="text-muted">Your achievements will appear here...</p>
+                      <h3 className="text-lg font-semibold text-primary mb-6">Achievements</h3>
+                      <AchievementProgress username={isOwnProfile ? undefined : username} />
                     </div>
                   )}
                   {activeTab === 3 && (

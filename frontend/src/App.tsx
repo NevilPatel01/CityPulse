@@ -27,7 +27,6 @@ import NotFoundPage from './pages/NotFoundPage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CompanionFinderPage from './pages/CompanionFinderPage';
-import { BadgeGallery } from './pages/BadgeGallery';
 
 function App() {
   useEffect(() => {
@@ -160,13 +159,6 @@ function App() {
           <Route path="/buddies" element={
             <ProtectedRoute>
               <BuddiesPage />
-            </ProtectedRoute>
-          } />
-          
-          {/* Achievement routes */}
-          <Route path="/achievements" element={
-            <ProtectedRoute>
-              <BadgeGallery />
             </ProtectedRoute>
           } />
           

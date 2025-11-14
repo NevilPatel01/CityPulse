@@ -1,8 +1,23 @@
 -- =====================================================
--- Migration: Add Notifications and Achievements Tables
+-- Migration: Add Missing Tables (Notifications, Achievements, User Blocks)
 -- Date: 2025-11-14
--- Description: Adds missing notifications and achievements tables
+-- Description: Adds all missing tables required for the application
 -- =====================================================
+
+-- =====================================================
+-- USER BLOCKS TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS user_blocks (
+    id SERIAL PRIMARY KEY,
+    blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason VARCHAR(100),
+    blocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(blocker_id, blocked_id),
+    CHECK (blocker_id != blocked_id)
+);
 
 -- =====================================================
 -- ACHIEVEMENTS SYSTEM
@@ -56,6 +71,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- =====================================================
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
+
+-- User blocks indexes
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocker ON user_blocks(blocker_id);
+CREATE INDEX IF NOT EXISTS idx_user_blocks_blocked ON user_blocks(blocked_id);
 
 -- Achievements indexes
 CREATE INDEX IF NOT EXISTS idx_achievements_type ON achievements(achievement_type);

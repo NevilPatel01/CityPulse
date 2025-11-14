@@ -40,15 +40,19 @@ export const register = async (req: Request, res: Response) => {
             phone
         } = req.body;
 
-        // Check if user already exists
+        // Convert email and username to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedUsername = username.toLowerCase().trim();
+
+        // Check if user already exists (case-insensitive check)
         const existingUserResult = await query(
-            'SELECT id, email, username FROM users WHERE email = $1 OR username = $2',
-            [email, username]
+            'SELECT id, email, username FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2',
+            [normalizedEmail, normalizedUsername]
         );
 
         if (existingUserResult.rows.length > 0) {
             const existingUser = existingUserResult.rows[0];
-            const field = existingUser.email === email ? 'email' : 'username';
+            const field = existingUser.email === normalizedEmail ? 'email' : 'username';
             return res.status(409).json({
                 success: false,
                 message: `User with this ${field} already exists`
@@ -64,8 +68,8 @@ export const register = async (req: Request, res: Response) => {
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at`,
             [
-                username,
-                email,
+                normalizedUsername,
+                normalizedEmail,
                 passwordHash,
                 fullName,
                 bio || null,
@@ -131,10 +135,13 @@ export const login = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 
+        // Convert email to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
         // Find user
         const userResult = await query(
             'SELECT * FROM users WHERE email = $1',
-            [email]
+            [normalizedEmail]
         );
 
         const user = userResult.rows[0];
@@ -483,8 +490,11 @@ export const googleOAuth = async (req: Request, res: Response) => {
 
         const { id: googleId, email, name, picture } = googleUser;
 
+        // Convert email to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
         // Validate user data
-        if (!googleId || !email || !name) {
+        if (!googleId || !normalizedEmail || !name) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid user data received from Google'
@@ -494,7 +504,7 @@ export const googleOAuth = async (req: Request, res: Response) => {
         // Check if user already exists (by email or google ID)
         const existingUserResult = await query(
             'SELECT * FROM users WHERE email = $1 OR google_id = $2',
-            [email, googleId]
+            [normalizedEmail, googleId]
         );
 
         let user;
@@ -520,7 +530,7 @@ export const googleOAuth = async (req: Request, res: Response) => {
             console.log('🔧 Creating new user from Google OAuth');
 
             // Extract username from email (before @)
-            const username = email.split('@')[0] + '_' + Math.random().toString(36).substring(2, 8);
+            const username = normalizedEmail.split('@')[0] + '_' + Math.random().toString(36).substring(2, 8);
 
             const userResult = await query(
                 `INSERT INTO users (
@@ -530,7 +540,7 @@ export const googleOAuth = async (req: Request, res: Response) => {
                 RETURNING id, username, email, full_name, google_id, is_google_user, role, account_status, email_verified, created_at`,
                 [
                     username,
-                    email,
+                    normalizedEmail,
                     name,
                     googleId,
                     true,
@@ -609,17 +619,20 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     try {
         const { email } = req.body;
 
-        console.log('🔐 Password reset requested for:', email);
+        // Convert email to lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
+        console.log('🔐 Password reset requested for:', normalizedEmail);
 
         // Check if user exists
         const userResult = await query(
             'SELECT id, email, username, full_name, is_google_user FROM users WHERE email = $1',
-            [email]
+            [normalizedEmail]
         );
 
         // Always return success to prevent email enumeration
         if (userResult.rows.length === 0) {
-            console.log('Password reset requested for non-existent email:', email);
+            console.log('Password reset requested for non-existent email:', normalizedEmail);
             return res.json({
                 success: true,
                 message: 'If an account with this email exists, you will receive a password reset code.'
@@ -630,7 +643,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
         // Allow Google OAuth users to set backup passwords
         if (user.is_google_user) {
-            console.log('Password reset requested for Google OAuth user:', email);
+            console.log('Password reset requested for Google OAuth user:', normalizedEmail);
             console.log('Allowing backup password setup for OAuth user');
         }
 
@@ -653,15 +666,15 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
             `INSERT INTO password_reset_tokens 
                 (user_id, email, security_code, reset_token, expires_at) 
                 VALUES ($1, $2, $3, $4, $5)`,
-            [user.id, email, securityCode, resetToken, expiresAt]
+            [user.id, normalizedEmail, securityCode, resetToken, expiresAt]
         );
 
         console.log('[RESET] Token stored in database successfully');
 
         // Send email with security code
         try {
-            await sendPasswordResetEmail(email, securityCode, user.username);
-            console.log('Password reset email sent to:', email);
+            await sendPasswordResetEmail(normalizedEmail, securityCode, user.username);
+            console.log('Password reset email sent to:', normalizedEmail);
         } catch (emailError) {
             console.error('Failed to send password reset email:', emailError);
             // Clean up the token if email fails

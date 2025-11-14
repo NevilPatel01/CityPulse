@@ -112,16 +112,6 @@ export const BadgeNotification: React.FC<BadgeNotificationProps> = ({ achievemen
                         </div>
                     </div>
 
-                    {/* Call to Action */}
-                    <div className="mt-4 text-center">
-                        <a
-                            href="/achievements"
-                            className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                            <Trophy className="w-4 h-4" />
-                            View All Achievements
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>

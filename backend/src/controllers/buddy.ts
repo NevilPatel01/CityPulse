@@ -1017,7 +1017,7 @@ export const discoverBuddies = async (req: Request, res: Response) => {
             ),
             friends_of_friends AS (
                 -- Get friends of friends (people connected to user's buddies)
-                SELECT DISTINCT
+                SELECT 
                     CASE 
                         WHEN tbc.requester_id = ub.buddy_id THEN tbc.requested_id
                         ELSE tbc.requester_id
@@ -1037,7 +1037,7 @@ export const discoverBuddies = async (req: Request, res: Response) => {
                 END NOT IN (SELECT buddy_id FROM user_buddies)
                 GROUP BY user_id
             )
-            SELECT DISTINCT
+            SELECT 
                 u.id,
                 u.username,
                 u.full_name,
@@ -1047,12 +1047,6 @@ export const discoverBuddies = async (req: Request, res: Response) => {
                 up.profile_photo_url,
                 up.cities_visited,
                 COALESCE(fof.mutual_connections, 0) as mutual_connections,
-                (
-                    SELECT json_agg(json_build_object('id', ic.id, 'name', ic.name))
-                    FROM user_interests ui
-                    INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
-                    WHERE ui.user_id = u.id
-                ) as interests,
                 (
                     SELECT COUNT(*)::int
                     FROM travel_buddy_connections tbc
@@ -1075,7 +1069,8 @@ export const discoverBuddies = async (req: Request, res: Response) => {
                 CASE 
                     WHEN fof.user_id IS NOT NULL THEN 1  -- Friends of friends
                     ELSE 2                                -- Unknown users
-                END as connection_level
+                END as connection_level,
+                u.created_at
             FROM users u
             LEFT JOIN user_profiles up ON u.id = up.user_id
             LEFT JOIN friends_of_friends fof ON u.id = fof.user_id
@@ -1167,10 +1162,27 @@ export const discoverBuddies = async (req: Request, res: Response) => {
         const countResult = await pool.query(countQuery, countParams);
         const total = parseInt(countResult.rows[0].total);
 
+        // Fetch interests separately for each user to avoid DISTINCT ON conflicts
+        const usersWithInterests = await Promise.all(
+            result.rows.map(async (user) => {
+                const interestsResult = await pool.query(
+                    `SELECT json_agg(json_build_object('id', ic.id, 'name', ic.name)) as interests
+                     FROM user_interests ui
+                     INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                     WHERE ui.user_id = $1`,
+                    [user.id]
+                );
+                return {
+                    ...user,
+                    interests: interestsResult.rows[0]?.interests || null
+                };
+            })
+        );
+
         res.json({
             success: true,
             data: {
-                users: result.rows,
+                users: usersWithInterests,
                 pagination: {
                     page: Number(page),
                     limit: Number(limit),

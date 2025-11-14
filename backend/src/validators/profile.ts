@@ -7,10 +7,10 @@ export const updateProfileSchema = z.object({
     currentLocation: z.string().max(100, 'Current location must be 100 characters or less').optional(),
     hometown: z.string().max(100, 'Hometown must be 100 characters or less').optional(),
     phone: z.string().max(20, 'Phone number must be 20 characters or less').optional(),
-    instagramUrl: z.string().url('Invalid Instagram URL').or(z.string().length(0)).optional(),
-    facebookUrl: z.string().url('Invalid Facebook URL').or(z.string().length(0)).optional(),
-    linkedinUrl: z.string().url('Invalid LinkedIn URL').or(z.string().length(0)).optional(),
-    websiteUrl: z.string().url('Invalid Website URL').or(z.string().length(0)).optional(),
+    instagramUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Instagram URL').optional()),
+    facebookUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Facebook URL').optional()),
+    linkedinUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid LinkedIn URL').optional()),
+    websiteUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Website URL').optional()),
     whatsappContact: z.string().max(50, 'WhatsApp contact must be 50 characters or less').optional(),
     profileVisibility: z.enum(['public', 'private'], {
         message: 'Profile visibility must be either public or private'
@@ -127,16 +127,21 @@ export const validateSocialUrl = (url: string, platform: string): boolean => {
 export const validateSocialUrls = (data: any) => {
     const errors: string[] = [];
     
-    if (data.instagramUrl && !validateSocialUrl(data.instagramUrl, 'instagram')) {
+    // Trim and check if URLs are not empty before validating
+    const instagramUrl = data.instagramUrl?.trim();
+    const facebookUrl = data.facebookUrl?.trim();
+    const websiteUrl = data.websiteUrl?.trim();
+    
+    if (instagramUrl && instagramUrl.length > 0 && !validateSocialUrl(instagramUrl, 'instagram')) {
         errors.push('Instagram URL must be a valid Instagram profile URL');
     }
     
-    if (data.facebookUrl && !validateSocialUrl(data.facebookUrl, 'facebook')) {
+    if (facebookUrl && facebookUrl.length > 0 && !validateSocialUrl(facebookUrl, 'facebook')) {
         errors.push('Facebook URL must be a valid Facebook profile URL');
     }
     
     // Allow any valid URL for website
-    if (data.websiteUrl && !validateSocialUrl(data.websiteUrl, 'website')) {
+    if (websiteUrl && websiteUrl.length > 0 && !validateSocialUrl(websiteUrl, 'website')) {
         errors.push('Website URL must be a valid URL');
     }
     

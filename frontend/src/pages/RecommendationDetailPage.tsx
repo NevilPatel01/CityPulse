@@ -632,7 +632,7 @@ export function RecommendationDetailPage() {
 
             {/* Rating Section */}
             <div className="bg-surface-glass backdrop-blur-glass rounded-lg p-6 shadow-glass border border-subtle">
-              <h2 className="text-2xl font-semibold text-primary mb-4">Rate this place</h2>
+              <h2 className="text-xl font-semibold text-primary mb-4">Rate this place</h2>
               {isOwner ? (
                 <p className="text-muted">You cannot rate your own recommendation</p>
               ) : !user ? (
@@ -761,9 +761,6 @@ export function RecommendationDetailPage() {
                   <span className="text-muted">Average Rating</span>
                   <div className="flex items-center gap-2">
                     {renderStars(recommendation.average_rating || recommendation.user_rating || 0)}
-                    {recommendation.rating_count !== undefined && recommendation.rating_count > 0 && (
-                      <span className="text-sm text-muted">({recommendation.rating_count} {recommendation.rating_count === 1 ? 'rating' : 'ratings'})</span>
-                    )}
                   </div>
                 </div>
                 

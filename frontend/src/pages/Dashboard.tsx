@@ -90,6 +90,7 @@ const YourStatsCard = ({ stats }: { stats: UserStats | null }) => {
 };
 
 const InterestsCard = () => {
+    const navigate = useNavigate();
     const interests = ["Coffee", "Food", "Hiking", "Places", "Culture"];
 
     return (
@@ -99,7 +100,8 @@ const InterestsCard = () => {
                 {interests.map((interest, index) => (
                     <span
                         key={index}
-                        className="bg-white/10 text-primary px-3 py-1 rounded-full text-sm border border-white/20"
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(interest)}`)}
+                        className="bg-white/10 text-primary px-3 py-1 rounded-full text-sm border border-white/20 cursor-pointer hover:bg-white/20 transition-colors"
                     >
                         {interest}
                     </span>
@@ -190,15 +192,25 @@ const ActiveBuddiesCard = ({ buddies }: { buddies: ActiveBuddy[] }) => {
 };
 
 const QuickLinksCard = () => {
-    const links = ["Saved Places", "Trip Planning", "Local Events", "Settings"];
+    const navigate = useNavigate();
+    const links = [
+        { label: "Saved Places", path: "/profile" },
+        { label: "Trip Planning", path: "/trips" },
+        { label: "Local Events", path: "/explore" },
+        { label: "Settings", path: "/settings" }
+    ];
 
     return (
         <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
             <h3 className="font-semibold text-primary">Quick Links</h3>
             <div className="space-y-2">
                 {links.map((link, index) => (
-                    <div key={index} className="text-sm text-muted hover:text-primary cursor-pointer">
-                        {link}
+                    <div 
+                        key={index} 
+                        onClick={() => navigate(link.path)}
+                        className="text-sm text-muted hover:text-primary cursor-pointer hover:bg-white/5 p-2 -m-2 rounded transition-colors"
+                    >
+                        {link.label}
                     </div>
                 ))}
             </div>
@@ -241,14 +253,23 @@ export default function Dashboard() {
         const loadDashboardData = async () => {
             try {
                 const [statsRes, buddiesRes] = await Promise.all([
-                    getUserStats(),
-                    getActiveBuddies(10)
+                    getUserStats().catch(err => {
+                        console.error('Failed to load user stats:', err);
+                        return { data: { recommendations: 0, citiesVisited: 0, buddies: 0, likesReceived: 0, totalViews: 0 } };
+                    }),
+                    getActiveBuddies(10).catch(err => {
+                        console.error('Failed to load active buddies:', err);
+                        return { data: [] };
+                    })
                 ]);
 
                 setStats(statsRes.data);
                 setBuddies(buddiesRes.data);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
+                // Set default values to prevent UI crash
+                setStats({ recommendations: 0, citiesVisited: 0, buddies: 0, likesReceived: 0, totalViews: 0 });
+                setBuddies([]);
             }
         };
 
