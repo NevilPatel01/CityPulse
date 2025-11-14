@@ -5,7 +5,7 @@ import crypto from 'crypto';
 const EMAIL_CONFIG = {
     service: process.env.EMAIL_SERVICE || 'gmail',
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
+    port: parseInt(process.env.EMAIL_PORT || '2525'),
     secure: process.env.EMAIL_SECURE === 'true',
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS,
@@ -14,13 +14,22 @@ const EMAIL_CONFIG = {
 
 // Create transporter
 function createTransporter() {
+    const port = EMAIL_CONFIG.port;
+    const isSecure = EMAIL_CONFIG.secure || port === 465;
+    const requireTLS = port === 587 || port === 2525;
+
     return nodemailer.createTransport({
         host: EMAIL_CONFIG.host,
-        port: EMAIL_CONFIG.port,
-        secure: EMAIL_CONFIG.secure,
+        port: port,
+        secure: isSecure, // true for 465, false for other ports
+        requireTLS: requireTLS, // true for 587 and 2525
         auth: {
             user: EMAIL_CONFIG.user,
             pass: EMAIL_CONFIG.password,
+        },
+        tls: {
+            // Do not fail on invalid certs (useful for some SMTP providers)
+            rejectUnauthorized: false,
         },
     });
 }
