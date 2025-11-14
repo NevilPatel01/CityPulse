@@ -5,7 +5,7 @@ export function CreateRecommendationPage() {
   const navigate = useNavigate();
 
   const handleSuccess = () => {
-    navigate('/recommendations');
+    navigate('/dashboard');
   };
 
   const handleCancel = () => {

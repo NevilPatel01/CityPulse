@@ -157,6 +157,15 @@ export const apiEndpoints = {
         },
     },
 
+    // Achievement endpoints (Week 10)
+    achievements: {
+        all: buildApiUrl('api/achievements'),
+        recent: buildApiUrl('api/achievements/recent'),
+        user: (username: string) => buildApiUrl(`api/achievements/user/${username}`),
+        myProgress: buildApiUrl('api/achievements/my/progress'),
+        myStats: buildApiUrl('api/achievements/my/stats'),
+    },
+
 };
 
 /**

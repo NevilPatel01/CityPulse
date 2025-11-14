@@ -18,7 +18,6 @@ import Dashboard from './pages/Dashboard.tsx';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import SearchPage from './pages/SearchPage';
-import { RecommendationsPage } from './pages/RecommendationsPage';
 import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
 import { RecommendationDetailPage } from './pages/RecommendationDetailPage';
 import { EditRecommendationPage } from './pages/EditRecommendationPage';
@@ -28,6 +27,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CompanionFinderPage from './pages/CompanionFinderPage';
+import { BadgeGallery } from './pages/BadgeGallery';
 
 function App() {
   useEffect(() => {
@@ -105,7 +105,6 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/recommendations" element={<RecommendationsPage />} />
           <Route path="/recommendations/create" element={
             <ProtectedRoute>
               <CreateRecommendationPage />
@@ -122,7 +121,7 @@ function App() {
               <RecommendationDetailPage />
             </ProtectedRoute>
           } />
-          {/* New username-based routes */}
+          {/* Username-based routes without @ symbol */}
           <Route path="/:username/recommendation/:id" element={
             <ProtectedRoute>
               <RecommendationDetailPage />
@@ -161,6 +160,13 @@ function App() {
           <Route path="/buddies" element={
             <ProtectedRoute>
               <BuddiesPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Achievement routes */}
+          <Route path="/achievements" element={
+            <ProtectedRoute>
+              <BadgeGallery />
             </ProtectedRoute>
           } />
           

@@ -392,7 +392,7 @@ export function CreateRecommendationForm({
         } else {
           const targetId = isEditing ? recommendationId : data.data?.id;
           const username = user?.username || '';
-          navigate(`/@${username}/recommendation/${targetId}`);
+          navigate(`/${username}/recommendation/${targetId}`);
         }
       } else {
         if (data.errors && Array.isArray(data.errors)) {

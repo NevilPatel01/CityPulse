@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { query } from '../lib/database';
 import { processImage, generateFilename, deleteRecommendationFolder } from '../utils/imageUpload';
 import { notifyRecommendationLike, notifyRecommendationRating } from '../utils/notifications';
+import { checkAndAwardAchievements } from './achievements';
 
 // Get all recommendations with pagination and filters
 export const getRecommendations = async (req: Request, res: Response) => {
@@ -367,6 +368,15 @@ export const createRecommendation = async (req: Request, res: Response) => {
             }
 
             console.log('[CREATE_REC] Recommendation created successfully');
+            
+            // Check and award achievements
+            checkAndAwardAchievements(userId, 'recommendations_created').catch(err => {
+                console.error('[CREATE_REC] Error checking achievements:', err);
+            });
+            checkAndAwardAchievements(userId, 'cities_visited').catch(err => {
+                console.error('[CREATE_REC] Error checking achievements:', err);
+            });
+            
             res.status(201).json({
                 success: true,
                 message: 'Recommendation created successfully',

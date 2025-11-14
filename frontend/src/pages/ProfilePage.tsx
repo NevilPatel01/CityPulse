@@ -9,6 +9,7 @@ import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { profileService } from '../services/profileService';
 import { apiRequest } from '../config/api';
 import { RecommendationsList } from '../components/recommendations/RecommendationsList';
+import { AchievementProgress } from '../components/achievements/AchievementProgress';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -18,7 +19,7 @@ export default function ProfilePage() {
   // Additional auth guard for extra protection
   useAuthGuard({ requireAuth: true });
   
-  const { profile, stats, badges, loading, error, refetch } = useProfile(username || '');
+  const { profile, stats, loading, error, refetch } = useProfile(username || '');
   const [activeTab, setActiveTab] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [localImages, setLocalImages] = useState<{
@@ -205,24 +206,18 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-              {/* Badges Section */}
+              {/* Achievements Section */}
               <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                <h3 className="text-primary text-lg font-semibold mb-4">Badges</h3>
-                {badges && badges.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-3">
-                    {badges.map((badge, index) => (
-                      <div key={index} className="w-12 h-12 bg-gray-700/50 rounded-lg flex items-center justify-center">
-                        <span className="text-muted text-lg">{badge.icon || '🏆'}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-muted text-sm mb-2">🌟</div>
-                    <p className="text-muted text-sm">No badges yet</p>
-                    <p className="text-muted text-xs mt-1">Start exploring to earn your first badge!</p>
-                  </div>
-                )}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-primary text-lg font-semibold">Achievements</h3>
+                  <a 
+                    href={isOwnProfile ? '/achievements' : `/profile/${username}/achievements`}
+                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                  >
+                    View All →
+                  </a>
+                </div>
+                <AchievementProgress username={isOwnProfile ? undefined : username} />
               </div>
             </aside>
 
@@ -459,24 +454,18 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Badges for Mobile View - Hidden on desktop */}
+              {/* Achievements for Mobile View - Hidden on desktop */}
               <div className="lg:hidden bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                <h3 className="text-primary text-lg font-semibold mb-4">Badges</h3>
-                {badges && badges.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-3">
-                    {badges.map((badge, index) => (
-                      <div key={index} className="w-12 h-12 bg-gray-700/50 rounded-lg flex items-center justify-center">
-                        <span className="text-muted text-lg">{badge.icon || '🏆'}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-muted text-sm mb-2">🌟</div>
-                    <p className="text-muted text-sm">No badges yet</p>
-                    <p className="text-muted text-xs mt-1">Start exploring to earn your first badge!</p>
-                  </div>
-                )}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-primary text-lg font-semibold">Achievements</h3>
+                  <a 
+                    href={isOwnProfile ? '/achievements' : `/profile/${username}/achievements`}
+                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                  >
+                    View All →
+                  </a>
+                </div>
+                <AchievementProgress username={isOwnProfile ? undefined : username} />
               </div>
 
               {/* Tabs Section */}

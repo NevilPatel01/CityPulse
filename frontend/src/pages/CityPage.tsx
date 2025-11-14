@@ -232,7 +232,7 @@ export default function CityPage() {
                   {featuredRecommendations.map((rec) => (
                     <div
                       key={rec.id}
-                      onClick={() => navigate(`/@${rec.creator.username}/recommendation/${rec.id}`)}
+                      onClick={() => navigate(`/${rec.creator.username}/recommendation/${rec.id}`)}
                       className='bg-surface-glass backdrop-blur-glass rounded-2xl overflow-hidden hover-lift cursor-pointer border border-border-subtle group'
                     >
                       <div className='relative h-56 bg-base/50'>
@@ -287,7 +287,7 @@ export default function CityPage() {
                   {recommendations.map((rec) => (
                     <div
                       key={rec.id}
-                      onClick={() => navigate(`/@${rec.creator.username}/recommendation/${rec.id}`)}
+                      onClick={() => navigate(`/${rec.creator.username}/recommendation/${rec.id}`)}
                       className='bg-surface-glass backdrop-blur-glass rounded-xl overflow-hidden hover-lift cursor-pointer border border-border-subtle'
                     >
                       <div className='relative h-40 bg-base/50'>

@@ -70,7 +70,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
                 shares_count: post.shares_count + 1
             });
 
-            const url = `${window.location.origin}/@${post.username}/recommendation/${post.id}`;
+            const url = `${window.location.origin}/${post.username}/recommendation/${post.id}`;
             const text = `Check out: ${post.title}`;
 
             switch (platform) {
@@ -106,7 +106,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
     };
 
     const handleCardClick = () => {
-        navigate(`/@${post.username}/recommendation/${post.id}`);
+        navigate(`/${post.username}/recommendation/${post.id}`);
     };
 
     const handleProfileClick = (e: React.MouseEvent) => {

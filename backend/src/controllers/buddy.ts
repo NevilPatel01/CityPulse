@@ -307,6 +307,11 @@ export const acceptBuddyRequest = async (req: Request, res: Response) => {
 
         await client.query('COMMIT');
 
+        // Check achievements for both users after buddy connection
+        const { checkAndAwardAchievements } = require('./achievements');
+        await checkAndAwardAchievements(userId, 'travel_buddies_connected');
+        await checkAndAwardAchievements(buddyRequest.requester_id, 'travel_buddies_connected');
+
         res.json({
             success: true,
             message: 'Buddy request accepted'
@@ -972,6 +977,214 @@ export const findBuddies = async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             message: 'Failed to find buddies'
+        });
+    }
+};
+
+// Discover buddies with network-based ordering (friends-of-friends first)
+export const discoverBuddies = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        const { 
+            search, 
+            page = 1, 
+            limit = 20 
+        } = req.query;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        const offset = (Number(page) - 1) * Number(limit);
+
+        // Complex query that orders users by connection level:
+        // 1. Friends of friends (mutual connections) - highest priority
+        // 2. Unknown users - lower priority
+        let queryText = `
+            WITH user_buddies AS (
+                -- Get all current user's buddies
+                SELECT 
+                    CASE 
+                        WHEN requester_id = $1 THEN requested_id
+                        ELSE requester_id
+                    END as buddy_id
+                FROM travel_buddy_connections
+                WHERE (requester_id = $1 OR requested_id = $1)
+                AND status = 'accepted'
+            ),
+            friends_of_friends AS (
+                -- Get friends of friends (people connected to user's buddies)
+                SELECT DISTINCT
+                    CASE 
+                        WHEN tbc.requester_id = ub.buddy_id THEN tbc.requested_id
+                        ELSE tbc.requester_id
+                    END as user_id,
+                    COUNT(DISTINCT ub.buddy_id) as mutual_connections
+                FROM user_buddies ub
+                INNER JOIN travel_buddy_connections tbc 
+                    ON (tbc.requester_id = ub.buddy_id OR tbc.requested_id = ub.buddy_id)
+                WHERE tbc.status = 'accepted'
+                AND CASE 
+                    WHEN tbc.requester_id = ub.buddy_id THEN tbc.requested_id
+                    ELSE tbc.requester_id
+                END != $1
+                AND CASE 
+                    WHEN tbc.requester_id = ub.buddy_id THEN tbc.requested_id
+                    ELSE tbc.requester_id
+                END NOT IN (SELECT buddy_id FROM user_buddies)
+                GROUP BY user_id
+            )
+            SELECT DISTINCT
+                u.id,
+                u.username,
+                u.full_name,
+                u.bio,
+                u.current_location,
+                u.hometown,
+                up.profile_photo_url,
+                up.cities_visited,
+                COALESCE(fof.mutual_connections, 0) as mutual_connections,
+                (
+                    SELECT json_agg(json_build_object('id', ic.id, 'name', ic.name))
+                    FROM user_interests ui
+                    INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                    WHERE ui.user_id = u.id
+                ) as interests,
+                (
+                    SELECT COUNT(*)::int
+                    FROM travel_buddy_connections tbc
+                    WHERE (tbc.requester_id = u.id OR tbc.requested_id = u.id)
+                    AND tbc.status = 'accepted'
+                ) as buddies_count,
+                (
+                    SELECT COUNT(*)::int
+                    FROM recommendations r
+                    WHERE r.user_id = u.id AND r.status = 'active'
+                ) as recommendations_count,
+                (
+                    SELECT tbc.status
+                    FROM travel_buddy_connections tbc
+                    WHERE ((tbc.requester_id = $1 AND tbc.requested_id = u.id)
+                        OR (tbc.requested_id = $1 AND tbc.requester_id = u.id))
+                    LIMIT 1
+                ) as buddy_status,
+                -- Add connection level for ordering
+                CASE 
+                    WHEN fof.user_id IS NOT NULL THEN 1  -- Friends of friends
+                    ELSE 2                                -- Unknown users
+                END as connection_level
+            FROM users u
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            LEFT JOIN friends_of_friends fof ON u.id = fof.user_id
+            WHERE u.id != $1
+            AND u.account_status = 'active'
+            AND u.id NOT IN (SELECT buddy_id FROM user_buddies)
+            AND NOT EXISTS (
+                SELECT 1 FROM user_blocks ub
+                WHERE (ub.blocker_id = $1 AND ub.blocked_id = u.id)
+                OR (ub.blocker_id = u.id AND ub.blocked_id = $1)
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM travel_buddy_connections tbc
+                WHERE ((tbc.requester_id = $1 AND tbc.requested_id = u.id)
+                    OR (tbc.requested_id = $1 AND tbc.requester_id = u.id))
+                AND tbc.status IN ('pending', 'accepted')
+            )
+        `;
+
+        const queryParams: any[] = [userId];
+        let paramIndex = 2;
+
+        // Add search filter
+        if (search) {
+            queryText += ` AND (
+                u.full_name ILIKE $${paramIndex} 
+                OR u.username ILIKE $${paramIndex}
+                OR u.bio ILIKE $${paramIndex}
+                OR u.current_location ILIKE $${paramIndex}
+            )`;
+            queryParams.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        // Order by: connection_level (friends of friends first), then by mutual connections count, then by creation date
+        queryText += ` ORDER BY 
+            connection_level ASC, 
+            mutual_connections DESC NULLS LAST,
+            u.created_at DESC 
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        queryParams.push(Number(limit), offset);
+
+        const result = await pool.query(queryText, queryParams);
+
+        // Get total count
+        let countQuery = `
+            WITH user_buddies AS (
+                SELECT 
+                    CASE 
+                        WHEN requester_id = $1 THEN requested_id
+                        ELSE requester_id
+                    END as buddy_id
+                FROM travel_buddy_connections
+                WHERE (requester_id = $1 OR requested_id = $1)
+                AND status = 'accepted'
+            )
+            SELECT COUNT(DISTINCT u.id) as total
+            FROM users u
+            WHERE u.id != $1
+            AND u.account_status = 'active'
+            AND u.id NOT IN (SELECT buddy_id FROM user_buddies)
+            AND NOT EXISTS (
+                SELECT 1 FROM user_blocks ub
+                WHERE (ub.blocker_id = $1 AND ub.blocked_id = u.id)
+                OR (ub.blocker_id = u.id AND ub.blocked_id = $1)
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM travel_buddy_connections tbc
+                WHERE ((tbc.requester_id = $1 AND tbc.requested_id = u.id)
+                    OR (tbc.requested_id = $1 AND tbc.requester_id = u.id))
+                AND tbc.status IN ('pending', 'accepted')
+            )
+        `;
+
+        const countParams: any[] = [userId];
+        let countParamIndex = 2;
+
+        if (search) {
+            countQuery += ` AND (
+                u.full_name ILIKE $${countParamIndex} 
+                OR u.username ILIKE $${countParamIndex}
+                OR u.bio ILIKE $${countParamIndex}
+                OR u.current_location ILIKE $${countParamIndex}
+            )`;
+            countParams.push(`%${search}%`);
+            countParamIndex++;
+        }
+
+        const countResult = await pool.query(countQuery, countParams);
+        const total = parseInt(countResult.rows[0].total);
+
+        res.json({
+            success: true,
+            data: {
+                users: result.rows,
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total,
+                    pages: Math.ceil(total / Number(limit))
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Discover buddies error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to discover buddies'
         });
     }
 };

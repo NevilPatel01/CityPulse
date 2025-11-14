@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useAuth } from '../hooks/useAuth';
@@ -60,19 +60,19 @@ export function EditRecommendationPage() {
         if (data.data.user_id !== Number(user?.id)) {
           showError('You do not have permission to edit this recommendation');
           const username = data.data.username || user?.username || '';
-          navigate(`/@${username}/recommendation/${id}`);
+          navigate(`/${username}/recommendation/${id}`);
           return;
         }
         
         setRecommendation(data.data);
       } else {
         showError(data.message || 'Recommendation not found');
-        navigate('/recommendations');
+        navigate(-1);
       }
     } catch (error) {
       console.error('Error loading recommendation:', error);
       showError(error instanceof Error ? error.message : 'An error occurred while loading the recommendation');
-      navigate('/recommendations');
+      navigate(-1);
     } finally {
       setLoading(false);
     }
@@ -98,9 +98,9 @@ export function EditRecommendationPage() {
       <div className="min-h-screen bg-base flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Recommendation not found</h1>
-          <Link to="/recommendations" className="text-pulse hover:underline">
-            Back to Recommendations
-          </Link>
+          <button onClick={() => navigate(-1)} className="text-pulse hover:underline">
+            Go Back
+          </button>
         </div>
       </div>
     );
@@ -113,13 +113,13 @@ export function EditRecommendationPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link
-            to={`/recommendations/${id}`}
+          <button
+            onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             Back to Recommendation
-          </Link>
+          </button>
         </div>
 
         {/* Edit Form */}
@@ -144,11 +144,11 @@ export function EditRecommendationPage() {
           }}
           onSuccess={() => {
             const username = recommendation.username || user?.username || '';
-            navigate(`/@${username}/recommendation/${id}`);
+            navigate(`/${username}/recommendation/${id}`);
           }}
           onCancel={() => {
             const username = recommendation.username || user?.username || '';
-            navigate(`/@${username}/recommendation/${id}`);
+            navigate(`/${username}/recommendation/${id}`);
           }}
         />
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Star, MapPin, Calendar, Clock, Eye, Heart, AlertTriangle, Edit, Trash2, ArrowLeft, Bookmark, Share2, Check } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ImageCarousel } from '../components/recommendations/ImageCarousel';
@@ -148,12 +148,12 @@ export function RecommendationDetailPage() {
         fetchUserRatings();
       } else {
         showError(data.message || 'Recommendation not found');
-        navigate('/recommendations');
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Error loading recommendation:', error);
       showError(error instanceof Error ? error.message : 'An error occurred while loading the recommendation');
-      navigate('/recommendations');
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }
@@ -398,11 +398,12 @@ export function RecommendationDetailPage() {
       <div className="min-h-screen bg-base flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-primary mb-4">Recommendation not found</h1>
-          <Link to="/recommendations">
-            <Button className="bg-pulse hover:bg-pulse/80 text-white">
-              Back to Recommendations
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => navigate('/dashboard')}
+            className="bg-pulse hover:bg-pulse/80 text-white"
+          >
+            Go to Dashboard
+          </Button>
         </div>
       </div>
     );
@@ -448,13 +449,13 @@ export function RecommendationDetailPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Link
-          to="/recommendations"
+        <button
+          onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-muted hover:text-primary transition-colors mb-6 group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          Back to Recommendations
-        </Link>
+          Back
+        </button>
 
         {/* Header */}
         <div className="mb-8">
@@ -488,7 +489,7 @@ export function RecommendationDetailPage() {
               {isOwner && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => navigate(`/@${recommendation.username}/recommendation/${id}/edit`)}
+                    onClick={() => navigate(`/${recommendation.username}/recommendation/${id}/edit`)}
                     className="p-2 text-muted hover:text-pulse transition-colors"
                     aria-label="Edit recommendation"
                   >
