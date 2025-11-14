@@ -5,6 +5,8 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useSafeToast } from '../hooks/useSafeToast';
 import { Header } from '../components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { ChangePasswordModal } from '../components/settings/ChangePasswordModal';
+import { EmailNotificationsModal } from '../components/settings/EmailNotificationsModal';
 import { apiRequest, buildApiUrl } from '../config/api';
 
 interface PrivacySettings {
@@ -24,12 +26,23 @@ export default function SettingsPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showEmailNotificationsModal, setShowEmailNotificationsModal] = useState(false);
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
     profileVisibility: 'public',
     locationSharing: true,
     socialLinksVisible: true,
     travelBuddyRequestsEnabled: true,
   });
+  const [originalPrivacySettings, setOriginalPrivacySettings] = useState<PrivacySettings>({
+    profileVisibility: 'public',
+    locationSharing: true,
+    socialLinksVisible: true,
+    travelBuddyRequestsEnabled: true,
+  });
+
+  // Check if privacy settings have changed
+  const hasPrivacyChanges = JSON.stringify(privacySettings) !== JSON.stringify(originalPrivacySettings);
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -58,6 +71,7 @@ export default function SettingsPage() {
         );
         if (response.success) {
           setPrivacySettings(response.data);
+          setOriginalPrivacySettings(response.data); // Store original values
         }
       } catch (error) {
         console.error('Failed to load privacy settings:', error);
@@ -79,6 +93,7 @@ export default function SettingsPage() {
         }
       );
       showSuccess('Success', 'Privacy settings updated successfully');
+      setOriginalPrivacySettings(privacySettings); // Update original after successful save
     } catch (error) {
       console.error('Failed to save privacy settings:', error);
       showError('Error', 'Failed to save privacy settings');
@@ -212,8 +227,8 @@ export default function SettingsPage() {
                 <div className="pt-4 border-t border-subtle">
                   <button
                     onClick={handleSavePrivacySettings}
-                    disabled={isSavingPrivacy}
-                    className="w-full bg-pulse text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/80 transition-colors disabled:opacity-50"
+                    disabled={isSavingPrivacy || !hasPrivacyChanges}
+                    className="w-full bg-pulse text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSavingPrivacy ? 'Saving...' : 'Save Privacy Settings'}
                   </button>
@@ -232,7 +247,10 @@ export default function SettingsPage() {
                     <h3 className="font-medium text-primary">Change Password</h3>
                     <p className="text-sm text-muted">Update your password</p>
                   </div>
-                  <button className="bg-surface-glass border border-subtle text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/10 transition-colors">
+                  <button 
+                    onClick={() => setShowChangePasswordModal(true)}
+                    className="bg-surface-glass border border-subtle text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/10 transition-colors"
+                  >
                     Change
                   </button>
                 </div>
@@ -242,7 +260,10 @@ export default function SettingsPage() {
                     <h3 className="font-medium text-primary">Email Settings</h3>
                     <p className="text-sm text-muted">Manage email notifications</p>
                   </div>
-                  <button className="bg-surface-glass border border-subtle text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/10 transition-colors">
+                  <button 
+                    onClick={() => setShowEmailNotificationsModal(true)}
+                    className="bg-surface-glass border border-subtle text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/10 transition-colors"
+                  >
                     Manage
                   </button>
                 </div>
@@ -286,6 +307,16 @@ export default function SettingsPage() {
           </div>
         </div>
       </main>
+
+      {/* Modals */}
+      <ChangePasswordModal 
+        isOpen={showChangePasswordModal} 
+        onClose={() => setShowChangePasswordModal(false)} 
+      />
+      <EmailNotificationsModal 
+        isOpen={showEmailNotificationsModal} 
+        onClose={() => setShowEmailNotificationsModal(false)} 
+      />
     </div>
   );
 }

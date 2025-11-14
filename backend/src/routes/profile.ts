@@ -8,7 +8,9 @@ import {
     getUserStats,
     getUserBadges,
     getPrivacySettings,
-    updatePrivacySettings
+    updatePrivacySettings,
+    getEmailPreferences,
+    updateEmailPreferences
 } from '../controllers/profile';
 import {
     updateProfileSchema,
@@ -115,6 +117,21 @@ router.put(
     profileLimiter,
     authenticateToken,
     updatePrivacySettings
+);
+
+// Email preferences routes
+router.get(
+    '/email-preferences',
+    profileLimiter,
+    authenticateToken,
+    getEmailPreferences
+);
+
+router.put(
+    '/email-preferences',
+    profileLimiter,
+    authenticateToken,
+    updateEmailPreferences
 );
 
 export default router;

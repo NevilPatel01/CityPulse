@@ -1043,3 +1043,156 @@ export const updatePrivacySettings = async (req: Request, res: Response) => {
         });
     }
 };
+
+// Get email preferences
+export const getEmailPreferences = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+
+        // Check if preferences exist
+        const result = await query(
+            `SELECT buddy_requests, recommendations, trips, achievements, 
+                    weekly_digest, marketing
+             FROM email_preferences 
+             WHERE user_id = $1`,
+            [userId]
+        );
+
+        // If no preferences exist, return defaults
+        const preferences = result.rows[0] || {
+            buddy_requests: true,
+            recommendations: true,
+            trips: true,
+            achievements: true,
+            weekly_digest: false,
+            marketing: false
+        };
+
+        res.json({
+            success: true,
+            data: {
+                buddyRequests: preferences.buddy_requests,
+                recommendations: preferences.recommendations,
+                trips: preferences.trips,
+                achievements: preferences.achievements,
+                weeklyDigest: preferences.weekly_digest,
+                marketing: preferences.marketing
+            }
+        });
+
+    } catch (error) {
+        console.error('Get email preferences error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch email preferences'
+        });
+    }
+};
+
+// Update email preferences
+export const updateEmailPreferences = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+        const {
+            buddyRequests,
+            recommendations,
+            trips,
+            achievements,
+            weeklyDigest,
+            marketing
+        } = req.body;
+
+        // Check if preferences exist
+        const preferencesCheck = await query(
+            'SELECT id FROM email_preferences WHERE user_id = $1',
+            [userId]
+        );
+
+        if (preferencesCheck.rows.length === 0) {
+            // Create email preferences
+            await query(
+                `INSERT INTO email_preferences (
+                    user_id, buddy_requests, recommendations, trips, 
+                    achievements, weekly_digest, marketing
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [
+                    userId,
+                    buddyRequests !== undefined ? buddyRequests : true,
+                    recommendations !== undefined ? recommendations : true,
+                    trips !== undefined ? trips : true,
+                    achievements !== undefined ? achievements : true,
+                    weeklyDigest !== undefined ? weeklyDigest : false,
+                    marketing !== undefined ? marketing : false
+                ]
+            );
+        } else {
+            // Update email preferences
+            const updateFields = [];
+            const updateValues = [];
+            let paramCount = 1;
+
+            if (buddyRequests !== undefined) {
+                updateFields.push(`buddy_requests = $${paramCount++}`);
+                updateValues.push(buddyRequests);
+            }
+            if (recommendations !== undefined) {
+                updateFields.push(`recommendations = $${paramCount++}`);
+                updateValues.push(recommendations);
+            }
+            if (trips !== undefined) {
+                updateFields.push(`trips = $${paramCount++}`);
+                updateValues.push(trips);
+            }
+            if (achievements !== undefined) {
+                updateFields.push(`achievements = $${paramCount++}`);
+                updateValues.push(achievements);
+            }
+            if (weeklyDigest !== undefined) {
+                updateFields.push(`weekly_digest = $${paramCount++}`);
+                updateValues.push(weeklyDigest);
+            }
+            if (marketing !== undefined) {
+                updateFields.push(`marketing = $${paramCount++}`);
+                updateValues.push(marketing);
+            }
+
+            if (updateFields.length > 0) {
+                updateFields.push(`updated_at = NOW()`);
+                updateValues.push(userId);
+
+                const updateQuery = `
+                    UPDATE email_preferences 
+                    SET ${updateFields.join(', ')}
+                    WHERE user_id = $${paramCount}
+                `;
+                await query(updateQuery, updateValues);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: 'Email preferences updated successfully'
+        });
+
+    } catch (error) {
+        console.error('Update email preferences error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update email preferences'
+        });
+    }
+};
