@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../hooks/useAuth';
@@ -14,13 +14,25 @@ import { AchievementProgress } from '../components/achievements/AchievementProgr
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user: currentUser } = useAuth();
   
   // Additional auth guard for extra protection
   useAuthGuard({ requireAuth: true });
   
   const { profile, stats, loading, error, refetch } = useProfile(username || '');
-  const [activeTab, setActiveTab] = useState(0);
+  
+  // Read tab from URL params on initial load
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (tabParam !== null) {
+      const tabIndex = parseInt(tabParam, 10);
+      if (!isNaN(tabIndex) && tabIndex >= 0 && tabIndex <= 3) {
+        return tabIndex;
+      }
+    }
+    return 0;
+  });
   const [showEditModal, setShowEditModal] = useState(false);
   const [localImages, setLocalImages] = useState<{
     profile?: string;

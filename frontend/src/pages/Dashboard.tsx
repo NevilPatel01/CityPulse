@@ -36,6 +36,7 @@ const QuickActionsCard = () => {
 
 const YourStatsCard = ({ stats }: { stats: UserStats | null }) => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     
     if (!stats) {
         return (
@@ -56,12 +57,12 @@ const YourStatsCard = ({ stats }: { stats: UserStats | null }) => {
         { 
             label: "Recommendations", 
             value: stats.recommendations,
-            onClick: () => navigate('/my-recommendations')
+            onClick: () => navigate(`/profile/${user?.username}?tab=0`)
         },
         { 
             label: "Cities Visited", 
             value: stats.citiesVisited,
-            onClick: () => navigate('/cities')
+            onClick: () => navigate(`/profile/${user?.username}?tab=1`)
         },
         { 
             label: "Buddies", 
@@ -89,19 +90,38 @@ const YourStatsCard = ({ stats }: { stats: UserStats | null }) => {
     );
 };
 
-const InterestsCard = () => {
-    const navigate = useNavigate();
+const InterestsCard = ({ 
+    selectedInterest, 
+    onSelectInterest 
+}: { 
+    selectedInterest: string | null;
+    onSelectInterest: (interest: string | null) => void;
+}) => {
     const interests = ["Coffee", "Food", "Hiking", "Places", "Culture"];
 
     return (
         <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
-            <h3 className="font-semibold text-primary">Interests</h3>
+            <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-primary">Interests</h3>
+                {selectedInterest && (
+                    <button
+                        onClick={() => onSelectInterest(null)}
+                        className="text-xs text-pulse hover:text-pulse/80"
+                    >
+                        Clear
+                    </button>
+                )}
+            </div>
             <div className="flex flex-wrap gap-2">
                 {interests.map((interest, index) => (
                     <span
                         key={index}
-                        onClick={() => navigate(`/search?q=${encodeURIComponent(interest)}`)}
-                        className="bg-white/10 text-primary px-3 py-1 rounded-full text-sm border border-white/20 cursor-pointer hover:bg-white/20 transition-colors"
+                        onClick={() => onSelectInterest(interest === selectedInterest ? null : interest)}
+                        className={`px-3 py-1 rounded-full text-sm border cursor-pointer transition-colors ${
+                            interest === selectedInterest
+                                ? 'bg-pulse text-white border-pulse'
+                                : 'bg-white/10 text-primary border-white/20 hover:bg-white/20'
+                        }`}
                     >
                         {interest}
                     </span>
@@ -247,6 +267,12 @@ export default function Dashboard() {
     const [stats, setStats] = useState<UserStats | null>(null);
     const [buddies, setBuddies] = useState<ActiveBuddy[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
+
+    // Filter posts by selected interest
+    const filteredPosts = selectedInterest 
+        ? posts.filter(post => post.category_name.toLowerCase() === selectedInterest.toLowerCase())
+        : posts;
 
     // Load sidebar data
     useEffect(() => {
@@ -309,10 +335,16 @@ export default function Dashboard() {
                 <main id="main-content" role="main" className="pb-20 pt-16">
                     <div className="space-y-6 p-4">
                         <QuickActionsCard />
+                        <InterestsCard 
+                            selectedInterest={selectedInterest}
+                            onSelectInterest={setSelectedInterest}
+                        />
 
                         <section>
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-primary">Your Feed</h2>
+                                <h2 className="text-lg font-semibold text-primary">
+                                    {selectedInterest ? `${selectedInterest} Recommendations` : 'Your Feed'}
+                                </h2>
                                 <button 
                                     onClick={refresh}
                                     className="text-sm text-pulse hover:text-pulse/80"
@@ -321,11 +353,11 @@ export default function Dashboard() {
                                 </button>
                             </div>
                             <div className="space-y-4">
-                                {feedLoading && posts.length === 0 ? (
+                                {feedLoading && filteredPosts.length === 0 ? (
                                     <div className="flex justify-center py-12">
                                         <Loader2 className="animate-spin text-pulse" size={32} />
                                     </div>
-                                ) : posts.length === 0 ? (
+                                ) : filteredPosts.length === 0 ? (
                                     <div className="text-center py-12 bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl">
                                         <p className="text-muted mb-4">No posts yet</p>
                                         <p className="text-sm text-muted mb-6">Start following buddies or explore recommendations</p>
@@ -338,7 +370,7 @@ export default function Dashboard() {
                                     </div>
                                 ) : (
                                     <>
-                                        {posts.map((post) => (
+                                        {filteredPosts.map((post) => (
                                             <FeedPostCard 
                                                 key={post.id} 
                                                 post={post} 
@@ -349,10 +381,10 @@ export default function Dashboard() {
                                         
                                         {/* Infinite scroll trigger */}
                                         <div ref={observerTarget} className="py-4 text-center">
-                                            {feedLoading && (
+                                            {feedLoading && !selectedInterest && (
                                                 <Loader2 className="animate-spin text-pulse mx-auto" size={24} />
                                             )}
-                                            {!hasMore && posts.length > 0 && (
+                                            {!hasMore && filteredPosts.length > 0 && !selectedInterest && (
                                                 <p className="text-muted text-sm">You're all caught up! 🎉</p>
                                             )}
                                         </div>
@@ -373,14 +405,19 @@ export default function Dashboard() {
                         <div className="space-y-6 sticky top-20 h-fit">
                             <QuickActionsCard />
                             <YourStatsCard stats={stats} />
-                            <InterestsCard />
+                            <InterestsCard 
+                                selectedInterest={selectedInterest}
+                                onSelectInterest={setSelectedInterest}
+                            />
                         </div>
 
                         {/* Center Feed */}
                         <div className="space-y-6">
                             <section>
                                 <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-semibold text-primary">Your Feed</h2>
+                                    <h2 className="text-xl font-semibold text-primary">
+                                        {selectedInterest ? `${selectedInterest} Recommendations` : 'Your Feed'}
+                                    </h2>
                                     <button 
                                         onClick={refresh}
                                         className="text-sm text-pulse hover:text-pulse/80 flex items-center gap-2"
@@ -390,11 +427,11 @@ export default function Dashboard() {
                                     </button>
                                 </div>
                                 
-                                {feedLoading && posts.length === 0 ? (
+                                {feedLoading && filteredPosts.length === 0 ? (
                                     <div className="flex justify-center py-12">
                                         <Loader2 className="animate-spin text-pulse" size={40} />
                                     </div>
-                                ) : posts.length === 0 ? (
+                                ) : filteredPosts.length === 0 ? (
                                     <div className="text-center py-16 bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl">
                                         <p className="text-muted mb-4 text-lg">No posts in your feed yet</p>
                                         <p className="text-sm text-muted mb-6">Start following buddies or explore recommendations</p>
@@ -408,7 +445,7 @@ export default function Dashboard() {
                                 ) : (
                                     <>
                                         <div className="space-y-4">
-                                            {posts.map((post) => (
+                                            {filteredPosts.map((post) => (
                                                 <FeedPostCard 
                                                     key={post.id} 
                                                     post={post} 
@@ -420,13 +457,13 @@ export default function Dashboard() {
                                         
                                         {/* Infinite scroll trigger */}
                                         <div ref={observerTarget} className="py-8 text-center">
-                                            {feedLoading && (
+                                            {feedLoading && !selectedInterest && (
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="animate-spin text-pulse" size={24} />
                                                     <span className="text-muted">Loading more posts...</span>
                                                 </div>
                                             )}
-                                            {!hasMore && posts.length > 0 && (
+                                            {!hasMore && filteredPosts.length > 0 && !selectedInterest && (
                                                 <div className="py-4">
                                                     <p className="text-muted">You're all caught up! 🎉</p>
                                                     <button 

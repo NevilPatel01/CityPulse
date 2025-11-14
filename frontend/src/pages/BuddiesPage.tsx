@@ -53,6 +53,11 @@ export default function BuddiesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Helper function to get user initials
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,11 +172,39 @@ export default function BuddiesPage() {
     try {
       await sendBuddyRequest(userId);
       showSuccess('Success', 'Buddy request sent');
-      setSearchResults([]);
-      setSearchQuery('');
+      
+      // Update user's status in state
+      const updateUserStatus = (user: User) => 
+        user.id === userId ? { ...user, buddy_status: 'pending' as const } : user;
+      
+      setSearchResults(prev => prev.map(updateUserStatus));
+      setAllUsers(prev => prev.map(updateUserStatus));
     } catch (err) {
       const error = err as Error;
       showError('Error', error.message || 'Failed to send request');
+    }
+  };
+
+  const handleCancelRequestInDiscover = async (userId: number) => {
+    try {
+      // First get the request ID from sent requests
+      const sentRequestsData = await getSentBuddyRequests();
+      const request = sentRequestsData.data.requests.find(r => r.id === userId);
+      
+      if (request) {
+        await cancelBuddyRequest(request.id);
+        showSuccess('Success', 'Buddy request cancelled');
+        
+        // Update user's status in state
+        const updateUserStatus = (user: User) => 
+          user.id === userId ? { ...user, buddy_status: null } : user;
+        
+        setSearchResults(prev => prev.map(updateUserStatus));
+        setAllUsers(prev => prev.map(updateUserStatus));
+      }
+    } catch (err) {
+      const error = err as Error;
+      showError('Error', error.message || 'Failed to cancel request');
     }
   };
 
@@ -181,11 +214,19 @@ export default function BuddiesPage() {
         <Card key={buddy.id} className="bg-surface-glass border-subtle">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <img
-                src={buddy.profile_photo_url || '/default-avatar.png'}
-                alt={buddy.full_name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
+              {buddy.profile_photo_url ? (
+                <img
+                  src={buddy.profile_photo_url}
+                  alt={buddy.full_name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-pulse rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg font-semibold">
+                    {getInitials(buddy.full_name)}
+                  </span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <h3 className="text-primary font-semibold truncate">{buddy.full_name}</h3>
                 <p className="text-muted text-sm">@{buddy.username}</p>
@@ -224,11 +265,19 @@ export default function BuddiesPage() {
         <Card key={request.id} className="bg-surface-glass border-subtle">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <img
-                src={request.profile_photo_url || '/default-avatar.png'}
-                alt={request.full_name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
+              {request.profile_photo_url ? (
+                <img
+                  src={request.profile_photo_url}
+                  alt={request.full_name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-pulse rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg font-semibold">
+                    {getInitials(request.full_name)}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <h3 className="text-primary font-semibold">{request.full_name}</h3>
                 <p className="text-muted text-sm">@{request.username}</p>
@@ -275,11 +324,19 @@ export default function BuddiesPage() {
         <Card key={request.id} className="bg-surface-glass border-subtle">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <img
-                src={request.profile_photo_url || '/default-avatar.png'}
-                alt={request.full_name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
+              {request.profile_photo_url ? (
+                <img
+                  src={request.profile_photo_url}
+                  alt={request.full_name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-pulse rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg font-semibold">
+                    {getInitials(request.full_name)}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <h3 className="text-primary font-semibold">{request.full_name}</h3>
                 <p className="text-muted text-sm">@{request.username}</p>
@@ -315,11 +372,19 @@ export default function BuddiesPage() {
         <Card key={user.id} className="bg-surface-glass border-subtle">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <img
-                src={user.profile_photo_url || '/default-avatar.png'}
-                alt={user.full_name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
+              {user.profile_photo_url ? (
+                <img
+                  src={user.profile_photo_url}
+                  alt={user.full_name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-pulse rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg font-semibold">
+                    {getInitials(user.full_name)}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <h3 className="text-primary font-semibold">{user.full_name}</h3>
                 <p className="text-muted text-sm">@{user.username}</p>
@@ -377,11 +442,19 @@ export default function BuddiesPage() {
               <Card key={user.id} className="bg-surface-glass border-subtle">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <img
-                      src={user.profile_photo_url || '/default-avatar.png'}
-                      alt={user.full_name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
+                    {user.profile_photo_url ? (
+                      <img
+                        src={user.profile_photo_url}
+                        alt={user.full_name}
+                        className="w-16 h-16 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-pulse rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-lg font-semibold">
+                          {getInitials(user.full_name)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
@@ -413,10 +486,10 @@ export default function BuddiesPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled
-                            className="text-xs"
+                            onClick={() => handleCancelRequestInDiscover(user.id)}
+                            className="text-xs border-error text-error hover:bg-error hover:text-white"
                           >
-                            Request Pending
+                            Cancel Request
                           </Button>
                         ) : (
                           <Button

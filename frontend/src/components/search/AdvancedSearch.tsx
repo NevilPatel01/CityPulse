@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import SearchBar from './SearchBar';
 import SearchFilters from './SearchFilters';
 import SearchResults from './SearchResults';
 import FilterDrawer from './FilterDrawer';
@@ -152,24 +151,6 @@ const AdvancedSearch: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-base">
-            {/* Header with Search Bar */}
-            <div className="sticky top-0 z-30 bg-surface-glass backdrop-blur-glass border-b border-subtle">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                    <SearchBar
-                        value={filters.q}
-                        onChange={(q: string) => updateFilters({ q })}
-                        onSearch={performSearch}
-                        sortBy={filters.sortBy}
-                        onSortChange={(sortBy: string) => updateFilters({ sortBy: sortBy as 'relevant' | 'rating' | 'recent' | 'price_low' | 'price_high' })}
-                        view={filters.view}
-                        onViewChange={(view: 'grid' | 'list') => updateFilters({ view })}
-                        onFilterClick={() => setIsFilterDrawerOpen(true)}
-                        showFilters={isMobile}
-                        resultsCount={results?.total || 0}
-                    />
-                </div>
-            </div>
-
             <div className="max-w-7xl mx-auto px-4 py-6">
                 <div className="flex gap-6">
                     {/* Desktop Sidebar Filters */}
