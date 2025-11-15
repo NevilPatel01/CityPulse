@@ -6,7 +6,8 @@ interface NotificationData {
     userId: number;
     title: string;
     message: string;
-    notificationType: 'buddy_request' | 'buddy_accepted' | 'buddy_declined' | 'recommendation_like' | 'recommendation_comment' | 'recommendation_rating' | 'trip_invite' | 'achievement_unlocked' | 'system';
+    type?: 'buddy_request' | 'buddy_accepted' | 'buddy_declined' | 'recommendation_like' | 'recommendation_comment' | 'recommendation_rating' | 'trip_invite' | 'trip_accepted' | 'trip_removed' | 'achievement_unlocked' | 'system';
+    notificationType?: 'buddy_request' | 'buddy_accepted' | 'buddy_declined' | 'recommendation_like' | 'recommendation_comment' | 'recommendation_rating' | 'trip_invite' | 'trip_accepted' | 'trip_removed' | 'achievement_unlocked' | 'system';
     relatedId?: number;
     relatedUserId?: number;
     actionUrl?: string;
@@ -18,6 +19,7 @@ export const createNotification = async (
     data: NotificationData
 ): Promise<void> => {
     try {
+        const notifType = data.type || data.notificationType || 'system';
         const result = await client.query(
             `INSERT INTO notifications (user_id, title, message, notification_type, related_id, related_user_id, action_url)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -26,7 +28,7 @@ export const createNotification = async (
                 data.userId,
                 data.title,
                 data.message,
-                data.notificationType,
+                notifType,
                 data.relatedId || null,
                 data.relatedUserId || null,
                 data.actionUrl || null

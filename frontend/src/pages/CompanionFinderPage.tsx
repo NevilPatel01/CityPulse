@@ -7,6 +7,7 @@ import { Header } from '../components/layout/Header';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { tripService } from '../services/tripService';
 import type { TravelCompanionMatch, PublicTripDiscover } from '../types/trip';
+import Avatar from '../components/ui/Avatar';
 import '../styles/CompanionFinderPage.css';
 
 const CompanionFinderPage = () => {
@@ -209,9 +210,10 @@ const CompanionFinderPage = () => {
                   {companions.map((match) => (
                     <div key={`${match.id}-${match.trip_id}`} className="companion-card">
                       <div className="card-header">
-                        <img
-                          src={match.profile_photo_url || '/default-avatar.png'}
-                          alt={match.username}
+                        <Avatar
+                          src={match.profile_photo_url}
+                          name={match.full_name || match.username}
+                          size="md"
                           className="avatar"
                         />
                         <div className="user-info">

@@ -8,6 +8,8 @@ import { Header } from '../components/layout/Header';
 import { useAuth } from '../hooks/useAuth';
 import { useSafeToast } from '../hooks/useSafeToast';
 import { apiRequest, apiConfig } from '../config/api';
+import { ReportModal } from '../components/modals/ReportModal';
+import { reportPost } from '../services/feedService';
 
 interface Recommendation {
   id: number;
@@ -48,6 +50,7 @@ export function RecommendationDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { showError, showSuccess } = useSafeToast();
+  const [showReportModal, setShowReportModal] = useState(false);
   
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -840,6 +843,7 @@ export function RecommendationDetailPage() {
             {!isOwner && (
               <Button
                 variant="outline"
+                onClick={() => setShowReportModal(true)}
                 className="w-full flex items-center justify-center gap-2 text-muted hover:text-red-400 hover:border-red-400"
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -849,6 +853,27 @@ export function RecommendationDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <ReportModal
+          title="Report Recommendation"
+          onClose={() => setShowReportModal(false)}
+          onSubmit={async (reason, description) => {
+            try {
+              await reportPost(
+                Number(id),
+                reason as 'spam' | 'inappropriate' | 'misleading' | 'offensive' | 'copyright' | 'other',
+                description
+              );
+              showSuccess('Report submitted successfully. Thank you for your feedback.');
+              setShowReportModal(false);
+            } catch {
+              showError('Failed to submit report. Please try again.');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

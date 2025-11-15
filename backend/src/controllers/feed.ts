@@ -21,7 +21,8 @@ export const getFeed = async (req: Request, res: Response) => {
         const offset = (Number(page) - 1) * Number(limit);
         const totalLimit = Number(limit);
 
-        const query = `
+        // Get recommendations
+        const recommendationsQuery = `
             SELECT 
                 r.id,
                 r.title,
@@ -38,7 +39,7 @@ export const getFeed = async (req: Request, res: Response) => {
                 rc.name as category_name,
                 c.name as city_name,
                 c.country,
-                'general' as source,
+                'recommendation' as content_type,
                 COALESCE(
                     (SELECT array_agg(rp.photo_url ORDER BY rp.is_primary DESC) 
                         FROM recommendation_photos rp 
@@ -61,25 +62,86 @@ export const getFeed = async (req: Request, res: Response) => {
             LEFT JOIN cities c ON rec_city.city_id = c.id
             WHERE r.status = 'active'
             ORDER BY r.created_at DESC
-            LIMIT $2 OFFSET $3
+            LIMIT $2
         `;
 
-        const result = await pool.query(query, [userId, totalLimit, offset]);
+        // Get trips based on privacy settings
+        const tripsQuery = `
+            SELECT 
+                t.id,
+                t.title,
+                t.description,
+                t.start_date,
+                t.end_date,
+                t.status,
+                t.privacy,
+                t.cover_photo_url,
+                t.created_at,
+                t.user_id,
+                u.username as creator_username,
+                u.full_name as creator_name,
+                up.profile_photo_url as creator_photo,
+                'trip' as content_type,
+                (SELECT COUNT(*) FROM trip_companions WHERE trip_id = t.id AND status = 'accepted') as companions_count,
+                (SELECT json_agg(json_build_object('id', c.id, 'name', c.name, 'country', c.country))
+                 FROM trip_cities tc
+                 JOIN cities c ON tc.city_id = c.id
+                 WHERE tc.trip_id = t.id) as cities
+            FROM trips t
+            JOIN users u ON t.user_id = u.id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            WHERE 
+                (
+                    -- Public trips: everyone can see
+                    t.privacy = 'public'
+                    OR
+                    -- Buddies only: must be a buddy or companion
+                    (t.privacy = 'buddies_only' AND (
+                        t.user_id = $1
+                        OR EXISTS (
+                            SELECT 1 FROM travel_buddy_connections
+                            WHERE ((requester_id = $1 AND requested_id = t.user_id) 
+                                OR (requester_id = t.user_id AND requested_id = $1))
+                            AND status = 'accepted'
+                        )
+                        OR EXISTS (
+                            SELECT 1 FROM trip_companions
+                            WHERE trip_id = t.id AND user_id = $1
+                        )
+                    ))
+                    OR
+                    -- Private: only owner can see
+                    (t.privacy = 'private' AND t.user_id = $1)
+                )
+            ORDER BY t.created_at DESC
+            LIMIT $2
+        `;
+
+        const [recommendationsResult, tripsResult] = await Promise.all([
+            pool.query(recommendationsQuery, [userId, totalLimit]),
+            pool.query(tripsQuery, [userId, Math.floor(totalLimit / 2)])
+        ]);
+
+        // Combine and sort by created_at
+        const combinedResults = [
+            ...recommendationsResult.rows,
+            ...tripsResult.rows
+        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+         .slice(0, totalLimit);
 
         res.status(200).json({
             success: true,
-            data: result.rows,
+            data: combinedResults,
             pagination: {
                 page: Number(page),
                 limit: Number(limit),
-                total: result.rows.length,
-                hasMore: result.rows.length >= totalLimit
+                total: combinedResults.length,
+                hasMore: combinedResults.length >= totalLimit
             },
             debug: {
-                buddyCount: 0,
-                trendingCount: 0,
-                interestCount: result.rows.length,
-                locationFilter: false
+                recommendationsCount: recommendationsResult.rows.length,
+                tripsCount: tripsResult.rows.length,
+                totalCount: combinedResults.length
             }
         });
 

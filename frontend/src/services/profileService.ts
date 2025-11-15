@@ -12,6 +12,8 @@ export interface UserProfile {
   citiesVisited?: string[];
   instagramUrl?: string;
   facebookUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
   whatsappContact?: string;
   websiteUrl?: string;
   email?: string;
@@ -45,6 +47,8 @@ export interface UserProfile {
   socialLinks?: {
     instagram?: string;
     facebook?: string;
+    twitter?: string;
+    linkedin?: string;
     whatsapp?: string;
   };
   isOwnProfile: boolean;
@@ -71,7 +75,10 @@ export interface ProfileUpdateData {
   phone?: string;
   instagramUrl?: string;
   facebookUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
   whatsappContact?: string;
+  websiteUrl?: string;
   profileVisibility?: 'public' | 'private';
   locationSharing?: boolean;
   socialLinksVisible?: boolean;

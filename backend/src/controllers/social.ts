@@ -256,8 +256,8 @@ export const reportRecommendation = async (req: Request, res: Response) => {
 
         // Check if user already reported this recommendation
         const existingReport = await pool.query(
-            'SELECT id FROM recommendation_reports WHERE reporter_id = $1 AND recommendation_id = $2',
-            [userId, recommendationId]
+            'SELECT id FROM content_reports WHERE reporter_id = $1 AND reported_content_type = $2 AND reported_content_id = $3',
+            [userId, 'recommendation', recommendationId]
         );
 
         if (existingReport.rows.length > 0) {
@@ -268,9 +268,9 @@ export const reportRecommendation = async (req: Request, res: Response) => {
         }
 
         await pool.query(
-            `INSERT INTO recommendation_reports (recommendation_id, reporter_id, report_reason, description)
-             VALUES ($1, $2, $3, $4)`,
-            [recommendationId, userId, reason, description]
+            `INSERT INTO content_reports (reporter_id, reported_content_type, reported_content_id, report_reason, description)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [userId, 'recommendation', recommendationId, reason, description]
         );
 
         res.status(201).json({

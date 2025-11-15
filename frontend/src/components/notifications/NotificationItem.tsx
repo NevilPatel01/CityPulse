@@ -79,7 +79,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       onMarkAsRead(notification.id);
     }
     if (notification.action_url) {
-      navigate(notification.action_url);
+      // Redirect buddy notifications to requests tab
+      if (notification.notification_type === 'buddy_request' || notification.notification_type === 'buddy_accepted') {
+        navigate('/buddies?tab=requests');
+      } else {
+        navigate(notification.action_url);
+      }
     }
   };
 

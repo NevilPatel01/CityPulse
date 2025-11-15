@@ -116,7 +116,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                 {item.category && (
                     <div className="absolute top-3 right-3">
                         <span className="bg-pulse text-white text-xs font-medium px-2 py-1 rounded-full">
-                            {item.category.name}
+                            {typeof item.category === 'string' ? item.category : item.category.name}
                         </span>
                     </div>
                 )}
@@ -144,7 +144,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                     </Link>
                     {item.city && item.type !== 'city' && (
                         <Link
-                            to={`/cities/${item.city.name}`}
+                            to={`/cities/${typeof item.city === 'string' ? item.city : item.city.name}`}
                             onClick={closeSearch}
                             className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1"
                         >
@@ -152,7 +152,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            {item.city.name}, {item.city.country}
+                            {typeof item.city === 'string' ? item.city : `${item.city.name}, ${item.city.country}`}
                         </Link>
                     )}
                 </div>
@@ -286,7 +286,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                     {item.category && (
                         <div className="absolute top-3 right-3">
                             <span className="bg-pulse text-white text-xs font-medium px-2 py-1 rounded-full">
-                                {item.category.name}
+                                {typeof item.category === 'string' ? item.category : item.category.name}
                             </span>
                         </div>
                     )}
@@ -314,7 +314,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                         </Link>
                         {item.city && item.type !== 'city' && (
                             <Link
-                                to={`/cities/${item.city.name}`}
+                                to={`/cities/${typeof item.city === 'string' ? item.city : item.city.name}`}
                                 onClick={closeSearch}
                                 className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1 mt-1"
                             >
@@ -322,7 +322,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                {item.city.name}, {item.city.country}
+                                {typeof item.city === 'string' ? item.city : `${item.city.name}, ${item.city.country}`}
                             </Link>
                         )}
                     </div>

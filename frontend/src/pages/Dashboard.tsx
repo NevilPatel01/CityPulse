@@ -7,19 +7,23 @@ import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useFeed } from '../hooks/useFeed';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
+import { TripFeedCard } from '../components/trips/TripFeedCard';
 import { getUserStats, getActiveBuddies } from '../services/feedService';
 import type { UserStats, ActiveBuddy } from '../services/feedService';
+import type { Trip } from '../types/trip';
 import { Loader2, MapPin } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
+import { CreateRecommendationForm } from '../components/recommendations/CreateRecommendationForm';
 
 // Dashboard Components
-const QuickActionsCard = () => {
+const QuickActionsCard = ({ onAddRecommendation }: { onAddRecommendation: () => void }) => {
     const navigate = useNavigate();
     
     return (
         <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
             <h3 className="font-semibold text-primary">Quick Actions</h3>
             <button 
-                onClick={() => navigate('/create-recommendation')}
+                onClick={onAddRecommendation}
                 className="w-full bg-pulse text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-pulse/90 transition-colors"
             >
                 Add Recommendation
@@ -240,7 +244,7 @@ const QuickLinksCard = () => {
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { isAuthenticated, isLoading: authLoading } = useAuth();
+    const { isAuthenticated, isLoading: authLoading, user } = useAuth();
     
     // Additional auth guard for extra protection
     useAuthGuard({ requireAuth: true });
@@ -268,11 +272,26 @@ export default function Dashboard() {
     const [buddies, setBuddies] = useState<ActiveBuddy[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
+    const [showRecommendationModal, setShowRecommendationModal] = useState(false);
 
-    // Filter posts by selected interest
-    const filteredPosts = selectedInterest 
-        ? posts.filter(post => post.category_name.toLowerCase() === selectedInterest.toLowerCase())
-        : posts;
+    // Separate posts by content type and filter/sort
+    const recommendations = posts
+        .filter(post => 
+            post.content_type === 'recommendation' &&
+            (!selectedInterest || post.category_name?.toLowerCase() === selectedInterest.toLowerCase()) &&
+            post.username !== user?.username
+        )
+        .sort((a, b) => {
+            // Posts with images come first
+            const aHasImage = (a.photos && a.photos.length > 0) ? 1 : 0;
+            const bHasImage = (b.photos && b.photos.length > 0) ? 1 : 0;
+            return bHasImage - aHasImage;
+        });
+    
+    const trips = posts.filter(post => post.content_type === 'trip');
+    
+    // Combine filtered recommendations and all trips
+    const filteredPosts = [...recommendations, ...trips];
 
     // Load sidebar data
     useEffect(() => {
@@ -304,6 +323,12 @@ export default function Dashboard() {
         }
     }, [isAuthenticated, authLoading]);
 
+    // Handle recommendation creation success
+    const handleRecommendationSuccess = () => {
+        setShowRecommendationModal(false);
+        refresh(); // Refresh the feed
+    };
+
     // Redirect if not authenticated
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -334,7 +359,7 @@ export default function Dashboard() {
             <div className="lg:hidden">
                 <main id="main-content" role="main" className="pb-20 pt-16">
                     <div className="space-y-6 p-4">
-                        <QuickActionsCard />
+                        <QuickActionsCard onAddRecommendation={() => setShowRecommendationModal(true)} />
                         <InterestsCard 
                             selectedInterest={selectedInterest}
                             onSelectInterest={setSelectedInterest}
@@ -371,12 +396,19 @@ export default function Dashboard() {
                                 ) : (
                                     <>
                                         {filteredPosts.map((post) => (
-                                            <FeedPostCard 
-                                                key={post.id} 
-                                                post={post} 
-                                                onUpdate={updatePost}
-                                                onRemove={removePost}
-                                            />
+                                            post.content_type === 'trip' ? (
+                                                <TripFeedCard 
+                                                    key={`trip-${post.id}`} 
+                                                    trip={post as unknown as Trip}
+                                                />
+                                            ) : (
+                                                <FeedPostCard 
+                                                    key={`rec-${post.id}`} 
+                                                    post={post} 
+                                                    onUpdate={updatePost}
+                                                    onRemove={removePost}
+                                                />
+                                            )
                                         ))}
                                         
                                         {/* Infinite scroll trigger */}
@@ -403,7 +435,7 @@ export default function Dashboard() {
                     <div className="grid grid-cols-[280px_1fr_320px] gap-6 container mx-auto px-4 py-6">
                         {/* Left Sidebar */}
                         <div className="space-y-6 sticky top-20 h-fit">
-                            <QuickActionsCard />
+                            <QuickActionsCard onAddRecommendation={() => setShowRecommendationModal(true)} />
                             <YourStatsCard stats={stats} />
                             <InterestsCard 
                                 selectedInterest={selectedInterest}
@@ -446,12 +478,19 @@ export default function Dashboard() {
                                     <>
                                         <div className="space-y-4">
                                             {filteredPosts.map((post) => (
-                                                <FeedPostCard 
-                                                    key={post.id} 
-                                                    post={post} 
-                                                    onUpdate={updatePost}
-                                                    onRemove={removePost}
-                                                />
+                                                post.content_type === 'trip' ? (
+                                                    <TripFeedCard 
+                                                        key={`trip-${post.id}`} 
+                                                        trip={post as unknown as Trip}
+                                                    />
+                                                ) : (
+                                                    <FeedPostCard 
+                                                        key={`rec-${post.id}`} 
+                                                        post={post} 
+                                                        onUpdate={updatePost}
+                                                        onRemove={removePost}
+                                                    />
+                                                )
                                             ))}
                                         </div>
                                         
@@ -488,6 +527,19 @@ export default function Dashboard() {
                     </div>
                 </main>
             </div>
+
+            {/* Recommendation Creation Modal */}
+            <Modal
+                isOpen={showRecommendationModal}
+                onClose={() => setShowRecommendationModal(false)}
+                title="Create Recommendation"
+                size="xl"
+            >
+                <CreateRecommendationForm
+                    onSuccess={handleRecommendationSuccess}
+                    onCancel={() => setShowRecommendationModal(false)}
+                />
+            </Modal>
         </div>
     );
 }

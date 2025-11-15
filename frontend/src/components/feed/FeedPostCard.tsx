@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, Bookmark, Share2, Flag, MapPin, Star } from 'lucide-react';
 import type { FeedPost } from '../../services/feedService';
+import Avatar from '../ui/Avatar';
 import { 
     toggleBookmark, 
     recordShare, 
@@ -10,6 +11,7 @@ import {
 } from '../../services/feedService';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { ReportModal } from '../modals/ReportModal';
 
 interface FeedPostCardProps {
     post: FeedPost;
@@ -123,10 +125,11 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3" onClick={handleProfileClick}>
-                        <img 
-                            src={post.profile_picture_url || '/default-avatar.png'} 
-                            alt={post.full_name}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-accent-teal/30"
+                        <Avatar 
+                            src={post.profile_picture_url} 
+                            name={post.full_name}
+                            size="sm"
+                            className="border-2 border-accent-teal/30"
                         />
                         <div>
                             <p className="font-semibold text-text-primary">{post.full_name}</p>
@@ -272,85 +275,11 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
             {/* Report Modal */}
             {showReportModal && (
                 <ReportModal 
+                    title="Report Post"
                     onClose={() => setShowReportModal(false)}
                     onSubmit={handleReport}
                 />
             )}
         </>
-    );
-};
-
-// Simple Report Modal Component
-interface ReportModalProps {
-    onClose: () => void;
-    onSubmit: (reason: string, description?: string) => void;
-}
-
-const ReportModal: React.FC<ReportModalProps> = ({ onClose, onSubmit }) => {
-    const [reason, setReason] = useState('');
-    const [description, setDescription] = useState('');
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (reason) {
-            onSubmit(reason, description);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-surface-glass backdrop-blur-lg border border-white/10 rounded-xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-xl font-bold text-text-primary mb-4">Report Post</h3>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-text-secondary mb-2">
-                            Reason *
-                        </label>
-                        <select 
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            className="w-full bg-base border border-white/10 rounded-lg px-4 py-2 text-text-primary"
-                            required
-                        >
-                            <option value="">Select a reason</option>
-                            <option value="spam">Spam</option>
-                            <option value="inappropriate">Inappropriate content</option>
-                            <option value="misleading">Misleading information</option>
-                            <option value="offensive">Offensive content</option>
-                            <option value="copyright">Copyright violation</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-text-secondary mb-2">
-                            Additional details (optional)
-                        </label>
-                        <textarea 
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            className="w-full bg-base border border-white/10 rounded-lg px-4 py-2 text-text-primary resize-none"
-                            rows={3}
-                            placeholder="Provide more context..."
-                        />
-                    </div>
-                    <div className="flex gap-3">
-                        <button 
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            type="submit"
-                            className="flex-1 px-4 py-2 bg-error hover:bg-error/90 rounded-lg transition-colors font-semibold"
-                            disabled={!reason}
-                        >
-                            Submit Report
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
     );
 };

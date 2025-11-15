@@ -9,7 +9,7 @@ interface CardProps {
   ariaLabelledBy?: string;
   ariaDescribedBy?: string;
   isInteractive?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   tabIndex?: number;
 }
 
@@ -39,11 +39,11 @@ export const Card: React.FC<CardProps> = ({
     onKeyDown: (e: React.KeyboardEvent) => {
       if ((e.key === 'Enter' || e.key === ' ') && onClick) {
         e.preventDefault();
-        onClick();
+        onClick(e as unknown as React.MouseEvent<HTMLElement>);
       }
     },
     onClick
-  } : {};
+  } : { onClick };
 
   const ariaProps = {
     role: !isInteractive ? role : interactiveProps.role,

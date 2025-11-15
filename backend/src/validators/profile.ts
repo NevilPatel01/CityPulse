@@ -9,6 +9,7 @@ export const updateProfileSchema = z.object({
     phone: z.string().max(20, 'Phone number must be 20 characters or less').optional(),
     instagramUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Instagram URL').optional()),
     facebookUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Facebook URL').optional()),
+    twitterUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Twitter URL').optional()),
     linkedinUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid LinkedIn URL').optional()),
     websiteUrl: z.preprocess((val) => val === '' ? undefined : val, z.string().url('Invalid Website URL').optional()),
     whatsappContact: z.string().max(50, 'WhatsApp contact must be 50 characters or less').optional(),
@@ -105,8 +106,8 @@ export const validateSocialUrl = (url: string, platform: string): boolean => {
     try {
         const urlObj = new URL(url);
         
-        // Allow any valid URL for general social links
-        if (platform === 'website' || platform === 'linkedin' || platform === 'email') {
+        // Allow any valid URL for website
+        if (platform === 'website') {
             return true;
         }
         
@@ -114,7 +115,11 @@ export const validateSocialUrl = (url: string, platform: string): boolean => {
             case 'instagram':
                 return urlObj.hostname === 'www.instagram.com' || urlObj.hostname === 'instagram.com';
             case 'facebook':
-                return urlObj.hostname === 'www.facebook.com' || urlObj.hostname === 'facebook.com';
+                return urlObj.hostname === 'www.facebook.com' || urlObj.hostname === 'facebook.com' || urlObj.hostname === 'fb.com' || urlObj.hostname === 'm.facebook.com';
+            case 'twitter':
+                return urlObj.hostname === 'www.twitter.com' || urlObj.hostname === 'twitter.com' || urlObj.hostname === 'x.com' || urlObj.hostname === 'www.x.com';
+            case 'linkedin':
+                return urlObj.hostname === 'www.linkedin.com' || urlObj.hostname === 'linkedin.com';
             default:
                 return true;
         }
@@ -130,14 +135,24 @@ export const validateSocialUrls = (data: any) => {
     // Trim and check if URLs are not empty before validating
     const instagramUrl = data.instagramUrl?.trim();
     const facebookUrl = data.facebookUrl?.trim();
+    const twitterUrl = data.twitterUrl?.trim();
+    const linkedinUrl = data.linkedinUrl?.trim();
     const websiteUrl = data.websiteUrl?.trim();
     
     if (instagramUrl && instagramUrl.length > 0 && !validateSocialUrl(instagramUrl, 'instagram')) {
-        errors.push('Instagram URL must be a valid Instagram profile URL');
+        errors.push('Instagram URL must be a valid Instagram profile URL (instagram.com)');
     }
     
     if (facebookUrl && facebookUrl.length > 0 && !validateSocialUrl(facebookUrl, 'facebook')) {
-        errors.push('Facebook URL must be a valid Facebook profile URL');
+        errors.push('Facebook URL must be a valid Facebook profile URL (facebook.com)');
+    }
+    
+    if (twitterUrl && twitterUrl.length > 0 && !validateSocialUrl(twitterUrl, 'twitter')) {
+        errors.push('Twitter URL must be a valid Twitter/X profile URL (twitter.com or x.com)');
+    }
+    
+    if (linkedinUrl && linkedinUrl.length > 0 && !validateSocialUrl(linkedinUrl, 'linkedin')) {
+        errors.push('LinkedIn URL must be a valid LinkedIn profile URL (linkedin.com)');
     }
     
     // Allow any valid URL for website

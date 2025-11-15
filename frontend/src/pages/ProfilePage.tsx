@@ -10,6 +10,11 @@ import { profileService } from '../services/profileService';
 import { apiRequest } from '../config/api';
 import { RecommendationsList } from '../components/recommendations/RecommendationsList';
 import { AchievementProgress } from '../components/achievements/AchievementProgress';
+import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeline';
+import { Modal } from '../components/ui/Modal';
+import { CreateRecommendationForm } from '../components/recommendations/CreateRecommendationForm';
+import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
+import type { UserAchievement } from '../types/achievement';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -34,11 +39,14 @@ export default function ProfilePage() {
     return 0;
   });
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
   const [localImages, setLocalImages] = useState<{
     profile?: string;
     cover?: string;
   }>({});
   const [recommendationCount, setRecommendationCount] = useState<number>(0);
+  const [newlyUnlockedAchievements, setNewlyUnlockedAchievements] = useState<UserAchievement[]>([]);
+  const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
 
@@ -65,6 +73,71 @@ export default function ProfilePage() {
     }
   }, [profile?.id]);
 
+  // Check for newly unlocked achievements
+  useEffect(() => {
+    const checkNewAchievements = async () => {
+      if (!isOwnProfile || !profile?.id) return;
+
+      try {
+        // Get user's achievements
+        const response = await apiRequest<{
+          success: boolean;
+          data: {
+            completed: UserAchievement[];
+            inProgress: UserAchievement[];
+          };
+        }>(`/api/achievements/user/${username}`);
+
+        if (response.success && response.data.completed) {
+          // Get previously shown achievements from localStorage
+          const shownAchievements = JSON.parse(
+            localStorage.getItem(`shown_achievements_${profile.id}`) || '[]'
+          );
+
+          // Find newly unlocked achievements
+          const newAchievements = response.data.completed.filter(
+            (achievement) => !shownAchievements.includes(achievement.id)
+          );
+
+          if (newAchievements.length > 0) {
+            setNewlyUnlockedAchievements(newAchievements);
+            setCurrentAchievementIndex(0);
+
+            // Mark them as shown
+            const updatedShown = [
+              ...shownAchievements,
+              ...newAchievements.map((a) => a.id),
+            ];
+            localStorage.setItem(
+              `shown_achievements_${profile.id}`,
+              JSON.stringify(updatedShown)
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error checking achievements:', error);
+      }
+    };
+
+    checkNewAchievements();
+  }, [isOwnProfile, profile?.id, username]);
+
+  // Handle closing achievement modal and showing next one
+  const handleCloseAchievementModal = () => {
+    if (currentAchievementIndex < newlyUnlockedAchievements.length - 1) {
+      setCurrentAchievementIndex(currentAchievementIndex + 1);
+    } else {
+      setNewlyUnlockedAchievements([]);
+      setCurrentAchievementIndex(0);
+    }
+  };
+
+  // Handle recommendation creation success
+  const handleRecommendationSuccess = () => {
+    setShowRecommendationModal(false);
+    refetch(); // Refresh profile data
+  };
+
   const handleEditProfile = () => {
     setShowEditModal(true);
   };
@@ -79,8 +152,9 @@ export default function ProfilePage() {
     socialLinks?: {
       twitter?: string;
       instagram?: string;
+      facebook?: string;
       linkedin?: string;
-      email?: string;
+      whatsapp?: string;
       website?: string;
     };
   }) => {
@@ -481,7 +555,7 @@ export default function ProfilePage() {
                         <h3 className="text-lg font-semibold text-primary">My Recommendations</h3>
                         {isOwnProfile && recommendationCount > 0 && (
                           <button
-                            onClick={() => navigate('/recommendations/create')}
+                            onClick={() => setShowRecommendationModal(true)}
                             className="bg-pulse hover:bg-pulse/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 hover-lift"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,7 +577,7 @@ export default function ProfilePage() {
                             <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
                             <p className="text-muted mb-4">Share your favorite places with the community</p>
                             <button
-                              onClick={() => navigate('/recommendations/create')}
+                              onClick={() => setShowRecommendationModal(true)}
                               className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -532,8 +606,11 @@ export default function ProfilePage() {
                   )}
                   {activeTab === 1 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-primary mb-4">Travel History</h3>
-                      <p className="text-muted">Your travel history will appear here...</p>
+                      <h3 className="text-lg font-semibold text-primary mb-6">Travel History</h3>
+                      <TravelHistoryTimeline 
+                        userId={profile?.id} 
+                        username={username}
+                      />
                     </div>
                   )}
                   {activeTab === 2 && (
@@ -568,16 +645,41 @@ export default function ProfilePage() {
             hometown: profile.hometown,
             citiesVisited: profile.citiesVisited || [],
             socialLinks: {
-              twitter: '',
-              instagram: profile.instagramUrl,
-              linkedin: profile.facebookUrl, // Map facebook to linkedin for now
-              email: profile.whatsappContact, // Map whatsapp to email for now
-              website: profile.websiteUrl,
+              twitter: profile.twitterUrl || '',
+              instagram: profile.instagramUrl || '',
+              facebook: profile.facebookUrl || '',
+              linkedin: profile.linkedinUrl || '',
+              whatsapp: profile.whatsappContact || '',
+              website: profile.websiteUrl || '',
             },
           }}
           onSave={handleSaveProfile}
         />
       )}
+
+      {/* Recommendation Creation Modal */}
+      {isOwnProfile && (
+        <Modal
+          isOpen={showRecommendationModal}
+          onClose={() => setShowRecommendationModal(false)}
+          title="Create Recommendation"
+          size="xl"
+        >
+          <CreateRecommendationForm
+            onSuccess={handleRecommendationSuccess}
+            onCancel={() => setShowRecommendationModal(false)}
+          />
+        </Modal>
+      )}
+
+      {/* Achievement Unlock Modal */}
+      {newlyUnlockedAchievements.length > 0 && (
+        <BadgeUnlockModal
+          achievement={newlyUnlockedAchievements[currentAchievementIndex]}
+          onClose={handleCloseAchievementModal}
+        />
+      )}
+
       <BottomNavigation />
     </div>
   );

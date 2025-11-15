@@ -175,10 +175,11 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
 
             case 'cities_visited':
                 const cityResult = await query(
-                    'SELECT COUNT(DISTINCT city_id) as count FROM recommendations WHERE user_id = $1',
+                    `SELECT jsonb_array_length(COALESCE(cities_visited, '[]'::jsonb)) as count 
+                     FROM user_profiles WHERE user_id = $1`,
                     [userId]
                 );
-                currentValue = parseInt(cityResult.rows[0].count);
+                currentValue = cityResult.rows.length > 0 ? parseInt(cityResult.rows[0].count || '0') : 0;
                 break;
 
             case 'travel_buddies_connected':
@@ -192,9 +193,9 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
             case 'ratings_received':
                 const ratingResult = await query(
                     `SELECT COUNT(*) as count 
-                     FROM recommendation_ratings rr
-                     JOIN recommendations r ON rr.recommendation_id = r.id
-                     WHERE r.user_id = $1`,
+                        FROM recommendation_ratings rr
+                        JOIN recommendations r ON rr.recommendation_id = r.id
+                        WHERE r.user_id = $1`,
                     [userId]
                 );
                 currentValue = parseInt(ratingResult.rows[0].count);
@@ -203,9 +204,9 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
             case 'likes_received':
                 const likeResult = await query(
                     `SELECT COUNT(*) as count 
-                     FROM recommendation_likes rl
-                     JOIN recommendations r ON rl.recommendation_id = r.id
-                     WHERE r.user_id = $1`,
+                        FROM recommendation_likes rl
+                        JOIN recommendations r ON rl.recommendation_id = r.id
+                        WHERE r.user_id = $1`,
                     [userId]
                 );
                 currentValue = parseInt(likeResult.rows[0].count);
@@ -238,7 +239,7 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
                 const isCompleted = currentValue >= achievement.target_value;
                 await query(
                     `INSERT INTO user_achievements (user_id, achievement_id, current_progress, is_completed, completed_at)
-                     VALUES ($1, $2, $3, $4, $5)`,
+                        VALUES ($1, $2, $3, $4, $5)`,
                     [userId, achievement.id, currentValue, isCompleted, isCompleted ? new Date() : null]
                 );
 
@@ -257,8 +258,8 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
                     // Achievement just completed!
                     await query(
                         `UPDATE user_achievements 
-                         SET current_progress = $1, is_completed = TRUE, completed_at = NOW(), updated_at = NOW()
-                         WHERE user_id = $2 AND achievement_id = $3`,
+                            SET current_progress = $1, is_completed = TRUE, completed_at = NOW(), updated_at = NOW()
+                            WHERE user_id = $2 AND achievement_id = $3`,
                         [currentValue, userId, achievement.id]
                     );
 
@@ -271,8 +272,8 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
                     // Update progress
                     await query(
                         `UPDATE user_achievements 
-                         SET current_progress = $1, updated_at = NOW()
-                         WHERE user_id = $2 AND achievement_id = $3`,
+                            SET current_progress = $1, updated_at = NOW()
+                            WHERE user_id = $2 AND achievement_id = $3`,
                         [currentValue, userId, achievement.id]
                     );
                 }

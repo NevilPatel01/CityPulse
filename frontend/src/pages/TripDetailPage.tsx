@@ -8,8 +8,11 @@ import { BottomNavigation } from '../components/layout/BottomNavigation';
 import ItineraryView from '../components/trips/ItineraryView';
 import TripForm from '../components/trips/TripForm';
 import ItineraryItemModal from '../components/trips/ItineraryItemModal';
+import { InviteCompanionsModal } from '../components/trips/InviteCompanionsModal';
+import Avatar from '../components/ui/Avatar';
 import { tripService } from '../services/tripService';
 import type { Trip, TripCompanion, TripComment, CreateTripData, TripItineraryItem } from '../types/trip';
+import { useAuth } from '../hooks/useAuth';
 import '../styles/TripDetailPage.css';
 
 type TabType = 'overview' | 'itinerary' | 'companions' | 'comments';
@@ -19,12 +22,14 @@ const TripDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const { user } = useAuth();
   
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showEditForm, setShowEditForm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   
   // Comments state
   const [comments, setComments] = useState<TripComment[]>([]);
@@ -170,6 +175,21 @@ const TripDetailPage = () => {
       console.error('Error deleting itinerary item:', error);
     }
   };
+
+  const handleRemoveCompanion = async (companionId: number) => {
+    if (!id || !window.confirm('Remove this companion from the trip?')) return;
+
+    try {
+      await tripService.removeCompanion(Number(id), companionId);
+      showSuccess('Companion removed');
+      await loadTrip(); // Reload trip to get updated companions
+    } catch (error) {
+      showError('Failed to remove companion');
+      console.error('Error removing companion:', error);
+    }
+  };
+
+  const isOrganizer = user && trip && trip.user_id === Number(user.id);
 
   const getPrivacyIcon = (privacy: string) => {
     switch (privacy) {
@@ -397,13 +417,23 @@ const TripDetailPage = () => {
 
           {activeTab === 'companions' && (
             <div className="companions-tab">
+              {isOrganizer && trip.privacy !== 'private' && (
+                <div className="tab-header-actions">
+                  <button onClick={() => setShowInviteModal(true)} className="btn-primary">
+                    <Plus className="btn-icon" />
+                    Invite Companions
+                  </button>
+                </div>
+              )}
+              
               {trip.companions && trip.companions.length > 0 ? (
                 <div className="companions-list">
                   {trip.companions.map((companion: TripCompanion) => (
                     <div key={companion.companion_id || companion.id} className="companion-card">
-                      <img
-                        src={companion.profile_photo_url || '/default-avatar.png'}
-                        alt={companion.username}
+                      <Avatar
+                        src={companion.profile_photo_url}
+                        name={companion.username}
+                        size="md"
                         className="companion-avatar"
                       />
                       <div className="companion-info">
@@ -415,6 +445,15 @@ const TripDetailPage = () => {
                           {companion.status}
                         </span>
                       </div>
+                      {isOrganizer && companion.status === 'accepted' && (
+                        <button 
+                          onClick={() => handleRemoveCompanion(companion.user_id)}
+                          className="btn-danger btn-sm"
+                          style={{ marginLeft: 'auto' }}
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -422,7 +461,12 @@ const TripDetailPage = () => {
                 <div className="empty-state">
                   <Users className="empty-icon" />
                   <p>No companions yet</p>
-                  <button className="btn-primary">Invite Companions</button>
+                  {isOrganizer && trip.privacy !== 'private' && (
+                    <button onClick={() => setShowInviteModal(true)} className="btn-primary">
+                      <Plus className="btn-icon" />
+                      Invite Companions
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -449,9 +493,10 @@ const TripDetailPage = () => {
                 {comments.map(comment => (
                   <div key={comment.comment_id || comment.id} className="comment-card">
                     <div className="comment-header">
-                      <img
-                        src={comment.profile_photo_url || '/default-avatar.png'}
-                        alt={comment.username}
+                      <Avatar
+                        src={comment.profile_photo_url}
+                        name={comment.username}
+                        size="sm"
                         className="comment-avatar"
                       />
                       <div className="comment-meta">
@@ -504,6 +549,22 @@ const TripDetailPage = () => {
             setEditingItineraryItem(undefined);
           }}
           isLoading={isSubmittingItinerary}
+        />
+      )}
+
+      {showInviteModal && trip && id && (
+        <InviteCompanionsModal
+          tripId={Number(id)}
+          existingCompanions={trip.companions?.filter(c => c.username).map(c => ({ 
+            user_id: c.user_id, 
+            username: c.username! 
+          })) || []}
+          onClose={() => setShowInviteModal(false)}
+          onInvite={async (userId: number) => {
+            await tripService.inviteCompanion(Number(id), userId);
+            showSuccess('Companion invited!');
+            await loadTrip();
+          }}
         />
       )}
       

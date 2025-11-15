@@ -20,6 +20,8 @@ export const getProfile = async (req: Request, res: Response) => {
                     COALESCE(up.cover_photo_url, NULL) as cover_photo_url,
                     COALESCE(up.instagram_url, NULL) as instagram_url,
                     COALESCE(up.facebook_url, NULL) as facebook_url,
+                    COALESCE(up.twitter_url, NULL) as twitter_url,
+                    COALESCE(up.linkedin_url, NULL) as linkedin_url,
                     COALESCE(up.whatsapp_contact, NULL) as whatsapp_contact,
                     COALESCE(up.website_url, NULL) as website_url,
                     COALESCE(up.profile_visibility, 'public') as profile_visibility,
@@ -42,6 +44,19 @@ export const getProfile = async (req: Request, res: Response) => {
 
         const user = userResult.rows[0];
 
+        // Parse cities_visited from JSONB (user's manually added cities)
+        let citiesVisitedFromProfile = [];
+        try {
+            if (user.cities_visited) {
+                citiesVisitedFromProfile = typeof user.cities_visited === 'string' 
+                    ? JSON.parse(user.cities_visited) 
+                    : user.cities_visited;
+            }
+        } catch (error) {
+            console.error('[PROFILE] Error parsing cities_visited:', error);
+            citiesVisitedFromProfile = [];
+        }
+
         // Get cities visited from user's recommendations
         const citiesResult = await query(
             `SELECT DISTINCT c.name, c.country
@@ -53,8 +68,13 @@ export const getProfile = async (req: Request, res: Response) => {
             [user.id]
         );
 
-        const citiesVisited = citiesResult.rows.map(row => `${row.name}, ${row.country}`);
-        console.log('Cities visited from recommendations:', citiesVisited);
+        const citiesFromRecommendations = citiesResult.rows.map(row => `${row.name}, ${row.country}`);
+        
+        // Combine both sources and remove duplicates
+        const allCities = [...new Set([...citiesVisitedFromProfile, ...citiesFromRecommendations])];
+        console.log('[PROFILE] Cities from profile:', citiesVisitedFromProfile);
+        console.log('[PROFILE] Cities from recommendations:', citiesFromRecommendations);
+        console.log('[PROFILE] Combined cities:', allCities);
 
         // If user_profiles record doesn't exist, create it with default values
         if (!user.profile_photo_url && user.id === currentUserId) {
@@ -74,6 +94,8 @@ export const getProfile = async (req: Request, res: Response) => {
                             COALESCE(up.cover_photo_url, NULL) as cover_photo_url,
                             COALESCE(up.instagram_url, NULL) as instagram_url,
                             COALESCE(up.facebook_url, NULL) as facebook_url,
+                            COALESCE(up.twitter_url, NULL) as twitter_url,
+                            COALESCE(up.linkedin_url, NULL) as linkedin_url,
                             COALESCE(up.whatsapp_contact, NULL) as whatsapp_contact,
                             COALESCE(up.profile_visibility, 'public') as profile_visibility,
                             COALESCE(up.location_sharing, true) as location_sharing,
@@ -105,22 +127,21 @@ export const getProfile = async (req: Request, res: Response) => {
         // Get user stats from actual tables
         const statsResult = await query(
             `SELECT 
-                (SELECT COUNT(DISTINCT rc.city_id)
-                    FROM recommendations r
-                    JOIN recommendation_cities rc ON r.id = rc.recommendation_id
-                    WHERE r.user_id = $1) as cities_count,
                 (SELECT COUNT(*)
                     FROM recommendations
                     WHERE user_id = $1 AND status = 'active') as recommendations_count,
-                0 as travel_buddies_count
+                (SELECT COUNT(*)
+                    FROM travel_buddy_connections tbc
+                    WHERE (tbc.requester_id = $1 OR tbc.requested_id = $1)
+                    AND tbc.status = 'accepted') as travel_buddies_count
             FROM (SELECT $1::integer as user_id) u`,
             [user.id]
         );
 
-        const stats = statsResult.rows[0] || {
-            cities_count: 0,
-            recommendations_count: 0,
-            travel_buddies_count: 0
+        const stats = {
+            cities_count: allCities.length, // Use the combined count
+            recommendations_count: statsResult.rows[0]?.recommendations_count || 0,
+            travel_buddies_count: statsResult.rows[0]?.travel_buddies_count || 0
         };
 
         // Get user badges - simplified for now
@@ -225,9 +246,11 @@ export const getProfile = async (req: Request, res: Response) => {
             hometown: user.hometown,
             profilePhotoUrl: profilePhotoUrl,
             coverPhotoUrl: coverPhotoUrl,
-            citiesVisited: citiesVisited,
+            citiesVisited: allCities, // Use combined cities list
             instagramUrl: user.instagram_url,
             facebookUrl: user.facebook_url,
+            twitterUrl: user.twitter_url,
+            linkedinUrl: user.linkedin_url,
             whatsappContact: user.whatsapp_contact,
             websiteUrl: user.website_url,
             email: user.email,
@@ -252,6 +275,8 @@ export const getProfile = async (req: Request, res: Response) => {
                 phone: user.phone,
                 instagramUrl: user.instagram_url,
                 facebookUrl: user.facebook_url,
+                twitterUrl: user.twitter_url,
+                linkedinUrl: user.linkedin_url,
                 whatsappContact: user.whatsapp_contact,
                 profileVisibility: user.profile_visibility,
                 locationSharing: user.location_sharing,
@@ -263,6 +288,8 @@ export const getProfile = async (req: Request, res: Response) => {
                 socialLinks: {
                     instagram: user.instagram_url,
                     facebook: user.facebook_url,
+                    twitter: user.twitter_url,
+                    linkedin: user.linkedin_url,
                     whatsapp: user.whatsapp_contact
                 }
             }),
@@ -363,6 +390,7 @@ export const updateProfile = async (req: Request, res: Response) => {
             phone,
             instagramUrl,
             facebookUrl,
+            twitterUrl,
             linkedinUrl,
             whatsappContact,
             websiteUrl,
@@ -404,6 +432,8 @@ export const updateProfile = async (req: Request, res: Response) => {
         const socialUrlErrors = validateSocialUrls({
             instagramUrl,
             facebookUrl,
+            twitterUrl,
+            linkedinUrl,
             websiteUrl
         });
 
@@ -463,14 +493,15 @@ export const updateProfile = async (req: Request, res: Response) => {
             // Create new profile
             await query(
                 `INSERT INTO user_profiles (
-                    user_id, instagram_url, facebook_url, linkedin_url, whatsapp_contact, website_url,
+                    user_id, instagram_url, facebook_url, twitter_url, linkedin_url, whatsapp_contact, website_url,
                     profile_visibility, location_sharing, social_links_visible, 
                     travel_buddy_requests_enabled, cities_visited
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
                 [
                     userId,
                     instagramUrl || null,
                     facebookUrl || null,
+                    twitterUrl || null,
                     linkedinUrl || null,
                     whatsappContact || null,
                     websiteUrl || null,
@@ -494,6 +525,10 @@ export const updateProfile = async (req: Request, res: Response) => {
             if (facebookUrl !== undefined) {
                 profileUpdateFields.push(`facebook_url = $${paramCount++}`);
                 profileUpdateValues.push(facebookUrl || null);
+            }
+            if (twitterUrl !== undefined) {
+                profileUpdateFields.push(`twitter_url = $${paramCount++}`);
+                profileUpdateValues.push(twitterUrl || null);
             }
             if (linkedinUrl !== undefined) {
                 profileUpdateFields.push(`linkedin_url = $${paramCount++}`);
@@ -541,6 +576,15 @@ export const updateProfile = async (req: Request, res: Response) => {
                 `;
                 await query(profileUpdateQuery, profileUpdateValues);
             }
+        }
+
+        // Check and award achievements if cities_visited was updated
+        if (citiesVisited !== undefined) {
+            // Dynamically import to avoid circular dependency
+            const { checkAndAwardAchievements } = await import('./achievements');
+            checkAndAwardAchievements(userId, 'cities_visited').catch(err => {
+                console.error('[PROFILE] Error checking cities_visited achievements:', err);
+            });
         }
 
         res.json({

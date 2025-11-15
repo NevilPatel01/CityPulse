@@ -12,6 +12,7 @@ export const testDataTracker = {
     userIds: new Set<number>(),
     recommendationIds: new Set<number>(),
     cityIds: new Set<number>(),
+    tripIds: new Set<number>(),
     
     addUser(id: number) {
         this.userIds.add(id);
@@ -25,10 +26,15 @@ export const testDataTracker = {
         this.cityIds.add(id);
     },
     
+    addTrip(id: number) {
+        this.tripIds.add(id);
+    },
+    
     clear() {
         this.userIds.clear();
         this.recommendationIds.clear();
         this.cityIds.clear();
+        this.tripIds.clear();
     }
 };
 
@@ -84,8 +90,8 @@ export const createTestUser = async (overrides: any = {}) => {
 
     const userResult = await query(
         `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone, is_google_user, google_id, role, account_status, email_verified)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-         RETURNING id, username, email, full_name, bio, current_location, hometown, phone, is_google_user, google_id, role, account_status, email_verified, created_at`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id, username, email, full_name, bio, current_location, hometown, phone, is_google_user, google_id, role, account_status, email_verified, created_at`,
         [
             userData.username,
             userData.email,
@@ -109,7 +115,7 @@ export const createTestUser = async (overrides: any = {}) => {
     // Create user profile
     await query(
         `INSERT INTO user_profiles (user_id, profile_visibility, location_sharing, social_links_visible, travel_buddy_requests_enabled)
-         VALUES ($1, $2, $3, $4, $5)`,
+            VALUES ($1, $2, $3, $4, $5)`,
         [user.id, 'public', true, true, true]
     );
 
@@ -319,6 +325,22 @@ export const deleteTestUsers = async (userIds: number[]) => {
  */
 export const cleanupAllTestData = async () => {
     try {
+        // Delete trip companions first
+        if (testDataTracker.tripIds.size > 0) {
+            await query(
+                `DELETE FROM trip_companions WHERE trip_id = ANY($1)`,
+                [Array.from(testDataTracker.tripIds)]
+            );
+        }
+
+        // Delete trips
+        if (testDataTracker.tripIds.size > 0) {
+            await query(
+                `DELETE FROM trips WHERE id = ANY($1)`,
+                [Array.from(testDataTracker.tripIds)]
+            );
+        }
+
         // Delete recommendations first (if not cascade)
         if (testDataTracker.recommendationIds.size > 0) {
             await query(

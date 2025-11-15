@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../lib/database';
+import { createNotification } from '../utils/notifications';
 
 /**
  * Trip Controllers
@@ -446,12 +447,34 @@ export const inviteCompanion = async (req: Request, res: Response) => {
             });
         }
 
+        // Get trip details for notification
+        const tripInfo = await pool.query(
+            'SELECT title FROM trips WHERE id = $1',
+            [id]
+        );
+
         const result = await pool.query(
             `INSERT INTO trip_companions (trip_id, user_id, role, status)
-             VALUES ($1, $2, 'participant', 'pending')
+             VALUES ($1, $2, 'participant', 'invited')
              RETURNING *`,
             [id, companionId]
         );
+
+        // Create notification for invited user
+        const client = await pool.connect();
+        try {
+            await createNotification(client, {
+                userId: companionId,
+                type: 'trip_invite',
+                title: 'Trip Invitation',
+                message: `You've been invited to join the trip: ${tripInfo.rows[0].title}`,
+                relatedId: parseInt(id),
+                relatedUserId: userId,
+                actionUrl: `/trips/${id}`
+            });
+        } finally {
+            client.release();
+        }
 
         res.status(201).json({
             success: true,
@@ -484,7 +507,7 @@ export const respondToInvitation = async (req: Request, res: Response) => {
         const result = await pool.query(
             `UPDATE trip_companions
              SET status = $1, responded_at = NOW()
-             WHERE trip_id = $2 AND user_id = $3 AND status = 'pending'
+             WHERE trip_id = $2 AND user_id = $3 AND status = 'invited'
              RETURNING *`,
             [status, id, userId]
         );
@@ -494,6 +517,34 @@ export const respondToInvitation = async (req: Request, res: Response) => {
                 success: false,
                 message: 'Invitation not found or already responded'
             });
+        }
+
+        // If accepted, notify trip owner
+        if (status === 'accepted') {
+            const tripInfo = await pool.query(
+                'SELECT user_id, title FROM trips WHERE id = $1',
+                [id]
+            );
+            
+            const userInfo = await pool.query(
+                'SELECT full_name FROM users WHERE id = $1',
+                [userId]
+            );
+
+            const client = await pool.connect();
+            try {
+                await createNotification(client, {
+                    userId: tripInfo.rows[0].user_id,
+                    type: 'trip_accepted',
+                    title: 'Trip Invitation Accepted',
+                    message: `${userInfo.rows[0].full_name} accepted your invitation to join: ${tripInfo.rows[0].title}`,
+                    relatedId: parseInt(id),
+                    relatedUserId: userId,
+                    actionUrl: `/trips/${id}`
+                });
+            } finally {
+                client.release();
+            }
         }
 
         res.json({
@@ -543,6 +594,29 @@ export const removeCompanion = async (req: Request, res: Response) => {
             'DELETE FROM trip_companions WHERE trip_id = $1 AND user_id = $2',
             [id, companionId]
         );
+
+        // If organizer removed someone else (not self-removal), notify the removed user
+        if (isOwner && !isSelf) {
+            const tripInfo = await pool.query(
+                'SELECT title FROM trips WHERE id = $1',
+                [id]
+            );
+
+            const client = await pool.connect();
+            try {
+                await createNotification(client, {
+                    userId: parseInt(companionId),
+                    type: 'trip_removed',
+                    title: 'Removed from Trip',
+                    message: `You have been removed from the trip: ${tripInfo.rows[0].title}`,
+                    relatedId: parseInt(id),
+                    relatedUserId: userId,
+                    actionUrl: '/trips'
+                });
+            } finally {
+                client.release();
+            }
+        }
 
         res.json({
             success: true,

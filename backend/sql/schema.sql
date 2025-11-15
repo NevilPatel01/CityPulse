@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     cover_photo_url VARCHAR(255),
     instagram_url VARCHAR(255),
     facebook_url VARCHAR(255),
+    twitter_url VARCHAR(255),
     linkedin_url VARCHAR(255),
     whatsapp_contact VARCHAR(50),
     website_url VARCHAR(255),
@@ -369,7 +370,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     read_at TIMESTAMP WITH TIME ZONE,
-    CHECK (notification_type IN ('buddy_request', 'buddy_accepted', 'buddy_declined', 'recommendation_like', 'recommendation_comment', 'recommendation_rating', 'trip_invite', 'achievement_unlocked', 'system'))
+    CHECK (notification_type IN ('buddy_request', 'buddy_accepted', 'buddy_declined', 'recommendation_like', 'recommendation_comment', 'recommendation_rating', 'trip_invite', 'trip_accepted', 'trip_removed', 'achievement_unlocked', 'system'))
 );
 
 -- =====================================================
@@ -659,7 +660,7 @@ CREATE TABLE IF NOT EXISTS trip_companions (
     trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(20) DEFAULT 'participant' CHECK (role IN ('organizer', 'participant')),
-    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    status VARCHAR(20) DEFAULT 'invited' CHECK (status IN ('invited', 'accepted', 'declined', 'removed')),
     invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     responded_at TIMESTAMP WITH TIME ZONE,
     UNIQUE(trip_id, user_id)

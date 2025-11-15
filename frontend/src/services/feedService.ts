@@ -13,13 +13,25 @@ export interface FeedPost {
     username: string;
     full_name: string;
     profile_picture_url?: string;
-    category_name: string;
-    city_name: string;
-    country: string;
-    source: 'buddy' | 'trending' | 'interest';
-    photos: string[];
+    category_name?: string;
+    city_name?: string;
+    country?: string;
+    source?: 'buddy' | 'trending' | 'interest';
+    photos?: string[];
     is_liked: boolean;
     is_bookmarked: boolean;
+    content_type: 'recommendation' | 'trip';
+    // Trip-specific fields
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+    privacy?: string;
+    cover_photo_url?: string;
+    creator_username?: string;
+    creator_name?: string;
+    creator_photo?: string;
+    companions_count?: number;
+    cities?: Array<{ id: number; name: string; country: string }>;
 }
 
 export interface FeedResponse {
@@ -32,10 +44,13 @@ export interface FeedResponse {
         hasMore: boolean;
     };
     debug?: {
-        buddyCount: number;
-        trendingCount: number;
-        interestCount: number;
-        locationFilter: boolean;
+        recommendationsCount?: number;
+        tripsCount?: number;
+        totalCount?: number;
+        buddyCount?: number;
+        trendingCount?: number;
+        interestCount?: number;
+        locationFilter?: boolean;
     };
 }
 
