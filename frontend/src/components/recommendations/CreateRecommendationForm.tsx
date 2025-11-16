@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Button, Textarea, Select, StarRating, FileUpload } from '../ui';
 import { useSafeToast } from '../../hooks/useSafeToast';
 import { apiRequest } from '../../config/api';
+import { RecommendationPreview } from './RecommendationPreview';
 
 interface CreateRecommendationFormProps {
-  onSuccess?: () => void;
+  onSuccess?: (id: number) => void;
   onCancel?: () => void;
   isEditing?: boolean;
   recommendationId?: string;
@@ -71,13 +72,6 @@ const TRAVEL_CATEGORIES = [
   { id: 8, name: 'Nature' }
 ];
 
-interface City {
-  id: number;
-  name: string;
-  country: string;
-  state_province?: string;
-}
-
 interface CollapsibleSectionProps {
   title: string;
   isOpen: boolean;
@@ -122,7 +116,6 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
 export function CreateRecommendationForm({
   onSuccess,
-  onCancel,
   isEditing = false,
   recommendationId,
   initialData,
@@ -153,13 +146,9 @@ export function CreateRecommendationForm({
     longitude: initialData?.longitude || '',
   });  const [customCategory, setCustomCategory] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [customCity, setCustomCity] = useState('');
-  const [showCustomCity, setShowCustomCity] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [cities, setCities] = useState<City[]>([]);
-  const [loadingCities, setLoadingCities] = useState(true);
 
   // Section states
   const [openSections, setOpenSections] = useState({
@@ -178,27 +167,7 @@ export function CreateRecommendationForm({
   }>>(initialData?.photos || []);
   const [photosToDelete, setPhotosToDelete] = useState<number[]>([]);
 
-  // Load cities on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load cities
-        console.log('[FRONTEND] Loading cities...');
-        const citiesData = await apiRequest('/api/recommendations/cities') as { success: boolean; data: City[] };
-        console.log('[FRONTEND] Cities response:', citiesData);
-        if (citiesData.success) {
-          console.log('[FRONTEND] Setting cities:', citiesData.data);
-          setCities(citiesData.data);
-        }
-        setLoadingCities(false);
-      } catch (error) {
-        console.error('[FRONTEND] Error loading cities:', error);
-        setLoadingCities(false);
-      }
-    };
 
-    loadData();
-  }, []);
 
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({
@@ -234,9 +203,9 @@ export function CreateRecommendationForm({
       newErrors.category_id = 'Invalid category selection';
     }
 
-    // City validation - either select from dropdown or custom
-    if (!formData.city_id && !customCity.trim()) {
-      newErrors.city_id = 'City is required';
+    // City validation
+    if (!formData.city_id.trim()) {
+      newErrors.city_id = 'City is required (format: City, Country)';
     }
 
     // Address validation - now required
@@ -323,6 +292,10 @@ export function CreateRecommendationForm({
     setSelectedFiles(files);
   };
 
+  const handleRemovePhoto = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -341,8 +314,7 @@ export function CreateRecommendationForm({
         description: formData.description.trim(),
         category_id: formData.category_id ? parseInt(formData.category_id, 10) : null,
         custom_category: customCategory.trim() || undefined,
-        city_name: formData.city_id.trim() || undefined,
-        custom_city: customCity.trim() || undefined,
+        custom_city: formData.city_id.trim() || undefined,
         address: formData.address.trim() || undefined,
         price_range_min: formData.price_range_min ? parseFloat(formData.price_range_min) : undefined,
         price_range_max: formData.price_range_max ? parseFloat(formData.price_range_max) : undefined,
@@ -363,10 +335,34 @@ export function CreateRecommendationForm({
       const data = await apiRequest(endpoint, {
         method,
         body: JSON.stringify(requestData),
-      }) as { success: boolean; data?: { id: string }; message?: string; errors?: Array<{ field: string; message: string }> };
+      }) as { success: boolean; data?: { id: number }; message?: string; errors?: Array<{ field: string; message: string }> };
 
       console.log(`[FRONTEND] ${isEditing ? 'Update' : 'Create'} recommendation response:`, data);
       if (data.success) {
+        const targetId = isEditing 
+          ? (recommendationId ? parseInt(recommendationId) : 0) 
+          : (data.data?.id || 0);
+
+        // Upload photos if any are selected
+        if (selectedFiles.length > 0 && targetId) {
+          try {
+            const formData = new FormData();
+            selectedFiles.forEach((file) => {
+              formData.append('photos', file);
+            });
+
+            await apiRequest(`/api/recommendations/${targetId}/photos`, {
+              method: 'POST',
+              body: formData,
+              isFormData: true
+            });
+            console.log('[FRONTEND] Photos uploaded successfully');
+          } catch (photoError) {
+            console.error('[FRONTEND] Failed to upload photos:', photoError);
+            showSuccess(`Recommendation ${isEditing ? 'updated' : 'created'} but failed to upload some photos`);
+          }
+        }
+
         // Delete photos marked for deletion
         if (isEditing && photosToDelete.length > 0) {
           for (const photoId of photosToDelete) {
@@ -385,12 +381,11 @@ export function CreateRecommendationForm({
           : 'Recommendation created successfully!';
         showSuccess(successMessage);
         
-        if (onSuccess) {
-          // If onSuccess is provided, call it (used for modal in Dashboard/Profile)
-          onSuccess();
-        } else {
+        if (onSuccess && targetId) {
+          // Call onSuccess with the recommendation ID
+          onSuccess(targetId);
+        } else if (targetId) {
           // If no onSuccess callback, navigate to the recommendation detail page
-          const targetId = isEditing ? recommendationId : data.data?.id;
           navigate(`/recommendations/${targetId}`);
         }
       } else {
@@ -418,47 +413,59 @@ export function CreateRecommendationForm({
     }
   };
 
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      navigate(-1);
+  // Get category name for preview
+  const getCategoryName = () => {
+    if (showCustomCategory && customCategory) return customCategory;
+    if (formData.category_id) {
+      const category = TRAVEL_CATEGORIES.find(c => c.id === parseInt(formData.category_id));
+      return category?.name || '';
     }
+    return '';
   };
 
   return (
-    <div className='max-w-4xl mx-auto p-6'>
-      <div className='bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass border border-subtle'>
-        <div className='p-6 border-b border-subtle'>
-          <div className='flex items-center justify-between'>
-            <div>
-              <h1 className='text-2xl font-bold text-primary'>
-                {isEditing ? 'Edit Recommendation' : 'Create Recommendation'}
-              </h1>
-              <p className='text-muted mt-1'>
-                {isEditing 
-                  ? 'Update your recommendation details' 
-                  : 'Share your favorite places with the community'}
-              </p>
-            </div>
-            <Button
-              variant='outline'
-              onClick={handleCancel}
-              disabled={isLoading}
-              className='text-muted hover:text-primary border-subtle hover:border-pulse'
-            >
-              Cancel
-            </Button>
-          </div>
+    <div className='w-full max-w-[1600px] mx-auto'>
+      {/* Header with Action Buttons */}
+      <div className='flex items-center justify-between mb-8'>
+        <div>
+          <h1 className='text-3xl font-bold text-primary'>
+            {isEditing ? 'Edit Recommendation' : 'Create Recommendation'}
+          </h1>
+          <p className='text-muted mt-2'>
+            {isEditing 
+              ? 'Update your recommendation details' 
+              : 'Share your favorite places with the community'}
+          </p>
         </div>
+        
+        {/* Action Buttons */}
+        <div className='flex gap-3'>
+          <Button
+            type='button'
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className='bg-pulse hover:bg-pulse/90 text-white px-8 py-3 font-medium shadow-lg text-base'
+          >
+            {isLoading 
+              ? (isEditing ? 'Updating...' : 'Publishing...') 
+              : (isEditing ? 'Update' : 'Publish')}
+          </Button>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className='p-6 space-y-6'>
-          {/* General error message */}
-          {errors.general && (
-            <div className='p-4 bg-error/10 border border-error/20 rounded-lg text-error text-sm'>
-              {errors.general}
-            </div>
-          )}
+      {/* Split Layout: Form + Preview */}
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+        {/* Left Side: Form */}
+        <div className='lg:col-span-2'>
+          <div className='bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass border border-subtle'>
+
+            <form onSubmit={handleSubmit} className='p-6 space-y-6'>
+              {/* General error message */}
+              {errors.general && (
+                <div className='p-4 bg-error/10 border border-error/20 rounded-lg text-error text-sm'>
+                  {errors.general}
+                </div>
+              )}
 
           {/* Basic Information Section */}
           <CollapsibleSection
@@ -519,47 +526,18 @@ export function CreateRecommendationForm({
               />
             )}
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <Select
-                label='City'
-                value={showCustomCity ? 'custom' : formData.city_id}
-                onChange={(e) => {
-                  if (e.target.value === 'custom') {
-                    setShowCustomCity(true);
-                    setFormData(prev => ({ ...prev, city_id: '' }));
-                  } else {
-                    setShowCustomCity(false);
-                    setCustomCity('');
-                    handleInputChange('city_id')(e);
-                  }
-                }}
-                error={errors.city_id}
-                disabled={isLoading || loadingCities}
-                required
-                className='bg-surface-glass border-subtle text-primary'
-              >
-                <option value=''>Select city</option>
-                {cities.map((city) => (
-                  <option key={city.id} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-                <option value='custom'>Add Other City</option>
-              </Select>
-
-            </div>
-            
-            {showCustomCity && (
-              <Textarea
-                label='Custom City'
-                placeholder='Enter city name, country (e.g., "Tokyo, Japan")'
-                value={customCity}
-                onChange={(e) => setCustomCity(e.target.value)}
-                disabled={isLoading}
-                rows={2}
-                className='bg-surface-glass border-subtle text-primary'
-              />
-            )}
+            <Textarea
+              label='City, Country'
+              placeholder='e.g., Tokyo, Japan or Paris, France'
+              value={formData.city_id}
+              onChange={handleInputChange('city_id')}
+              error={errors.city_id}
+              disabled={isLoading}
+              required
+              rows={2}
+              className='bg-surface-glass border-subtle text-primary'
+              helperText='Enter city name followed by country (e.g., "Paris, France")'
+            />
 
             <Input
               type='text'
@@ -706,14 +684,31 @@ export function CreateRecommendationForm({
             
             {selectedFiles.length > 0 && (
               <div className="mt-4">
-                <p className="text-sm text-muted mb-2">Selected files:</p>
-                <ul className="space-y-1">
+                <p className="text-sm text-muted mb-3">Selected Photos:</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {selectedFiles.map((file, index) => (
-                    <li key={index} className="text-sm text-primary">
-                      {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                    </li>
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border-2 border-subtle"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(index)}
+                          className="p-2 bg-error text-white rounded-full hover:bg-error/80 transition-colors"
+                          title="Remove photo"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted mt-1 truncate">{file.name}</p>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
           </CollapsibleSection>
@@ -785,28 +780,27 @@ export function CreateRecommendationForm({
             </div>
           </CollapsibleSection>
 
-          {/* Submit Button */}
-          <div className='flex justify-end space-x-4 pt-6 border-t border-subtle'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={handleCancel}
-              disabled={isLoading}
-              className='text-muted hover:text-primary border-subtle hover:border-pulse'
-            >
-              Cancel
-            </Button>
-            <Button
-              type='submit'
-              disabled={isLoading}
-              className='bg-pulse hover:bg-pulse/80 text-white'
-            >
-              {isLoading 
-                ? (isEditing ? 'Updating...' : 'Creating...') 
-                : (isEditing ? 'Update Recommendation' : 'Create Recommendation')}
-            </Button>
+            </form>
           </div>
-        </form>
+        </div>
+
+        {/* Right Side: Live Preview */}
+        <div className='lg:col-span-1'>
+          <RecommendationPreview
+            place_name={formData.place_name}
+            category_name={getCategoryName()}
+            city_name={formData.city_id}
+            description={formData.description}
+            price_range_min={formData.price_range_min}
+            price_range_max={formData.price_range_max}
+            user_rating={formData.user_rating}
+            best_time_to_visit={formData.best_time_to_visit}
+            duration_suggestion={formData.duration_suggestion}
+            difficulty_level={formData.difficulty_level}
+            photos={selectedFiles}
+            existingPhotos={existingPhotos}
+          />
+        </div>
       </div>
     </div>
   );

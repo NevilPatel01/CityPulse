@@ -85,8 +85,9 @@ const TripDetailPage = () => {
     
     try {
       setIsUpdating(true);
-      const updated = await tripService.updateTrip(Number(id), data);
-      setTrip(updated);
+      await tripService.updateTrip(Number(id), data);
+      // Reload the complete trip data with companions, cities, etc.
+      await loadTrip();
       setShowEditForm(false);
       showSuccess('Trip updated successfully!');
     } catch (error) {

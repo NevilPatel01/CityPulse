@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 import { ReportModal } from '../modals/ReportModal';
+import { apiConfig } from '../../config/api';
 
 interface FeedPostCardProps {
     post: FeedPost;
@@ -148,12 +149,16 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
                 </div>
 
                 {/* Image */}
-                {post.photos && post.photos.length > 0 && (
+                {post.photos && post.photos.length > 0 && post.photos[0] && (
                     <div className="relative w-full aspect-[4/3]">
                         <img 
-                            src={post.photos[0]} 
+                            src={post.photos[0].startsWith('http') ? post.photos[0] : `${apiConfig.baseUrl}${post.photos[0]}`}
                             alt={post.title}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                                console.error('Failed to load image:', post.photos?.[0]);
+                                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"600\" viewBox=\"0 0 800 600\"%3E%3Crect width=\"800\" height=\"600\" fill=\"%23333\"/%3E%3Ctext x=\"400\" y=\"300\" text-anchor=\"middle\" fill=\"%23999\" font-size=\"24\" font-family=\"Arial\"%3EImage not available%3C/text%3E%3C/svg%3E';
+                            }}
                         />
                         {post.photos.length > 1 && (
                             <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white">

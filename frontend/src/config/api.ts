@@ -173,28 +173,35 @@ export const apiEndpoints = {
  */
 export const apiRequest = async <T = unknown>(
     url: string,
-    options: RequestInit = {}
+    options: RequestInit & { isFormData?: boolean } = {}
 ): Promise<T> => {
     const { retries, timeout } = apiConfig;
+    const { isFormData, ...fetchOptions } = options;
 
     // Build full URL if it's a relative path
     const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
     
     console.log('[API] Making request to:', fullUrl);
-    console.log('[API] Request options:', options);
+    console.log('[API] Request options:', fetchOptions);
 
     // Get auth token from sessionStorage
     const authToken = sessionStorage.getItem('authToken');
     console.log('[API] Auth token:', authToken ? 'Present' : 'Not found');
     
+    const headers: Record<string, string> = {
+        ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        ...(fetchOptions.headers as Record<string, string> || {}),
+    };
+
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
     const defaultOptions: RequestInit = {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(authToken && { Authorization: `Bearer ${authToken}` }),
-            ...options.headers,
-        },
+        headers,
         credentials: 'include', // Include cookies for auth
-        ...options,
+        ...fetchOptions,
     };
 
     // Add timeout to the request

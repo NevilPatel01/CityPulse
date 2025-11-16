@@ -1,3 +1,4 @@
+import { apiConfig } from '../../config/api';
 
 interface AvatarProps {
   src?: string | null;
@@ -32,11 +33,14 @@ export const Avatar = ({ src, alt, name, size = 'md', className = '' }: AvatarPr
   const initials = getInitials(name || alt);
   const sizeClass = sizeClasses[size];
 
+  // Handle relative URLs by prepending base URL
+  const imageUrl = src && !src.startsWith('http') ? `${apiConfig.baseUrl}${src}` : src;
+
   return (
     <div className={`${sizeClass} rounded-full overflow-hidden flex-shrink-0 ${className}`}>
-      {src ? (
+      {imageUrl ? (
         <img
-          src={src}
+          src={imageUrl}
           alt={alt || name || 'User avatar'}
           className="w-full h-full object-cover"
           onError={(e) => {

@@ -12,18 +12,16 @@ import { getUserStats, getActiveBuddies } from '../services/feedService';
 import type { UserStats, ActiveBuddy } from '../services/feedService';
 import type { Trip } from '../types/trip';
 import { Loader2, MapPin } from 'lucide-react';
-import { Modal } from '../components/ui/Modal';
-import { CreateRecommendationForm } from '../components/recommendations/CreateRecommendationForm';
 
 // Dashboard Components
-const QuickActionsCard = ({ onAddRecommendation }: { onAddRecommendation: () => void }) => {
+const QuickActionsCard = () => {
     const navigate = useNavigate();
     
     return (
         <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
             <h3 className="font-semibold text-primary">Quick Actions</h3>
             <button 
-                onClick={onAddRecommendation}
+                onClick={() => navigate('/recommendations/create')}
                 className="w-full bg-pulse text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-pulse/90 transition-colors"
             >
                 Add Recommendation
@@ -272,7 +270,6 @@ export default function Dashboard() {
     const [buddies, setBuddies] = useState<ActiveBuddy[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
-    const [showRecommendationModal, setShowRecommendationModal] = useState(false);
 
     // Separate posts by content type and filter/sort
     const recommendations = posts
@@ -323,11 +320,7 @@ export default function Dashboard() {
         }
     }, [isAuthenticated, authLoading]);
 
-    // Handle recommendation creation success
-    const handleRecommendationSuccess = () => {
-        setShowRecommendationModal(false);
-        refresh(); // Refresh the feed
-    };
+
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -359,7 +352,7 @@ export default function Dashboard() {
             <div className="lg:hidden">
                 <main id="main-content" role="main" className="pb-20 pt-16">
                     <div className="space-y-6 p-4">
-                        <QuickActionsCard onAddRecommendation={() => setShowRecommendationModal(true)} />
+                        <QuickActionsCard />
                         <InterestsCard 
                             selectedInterest={selectedInterest}
                             onSelectInterest={setSelectedInterest}
@@ -435,7 +428,7 @@ export default function Dashboard() {
                     <div className="grid grid-cols-[280px_1fr_320px] gap-6 container mx-auto px-4 py-6">
                         {/* Left Sidebar */}
                         <div className="space-y-6 sticky top-20 h-fit">
-                            <QuickActionsCard onAddRecommendation={() => setShowRecommendationModal(true)} />
+                            <QuickActionsCard />
                             <YourStatsCard stats={stats} />
                             <InterestsCard 
                                 selectedInterest={selectedInterest}
@@ -528,18 +521,6 @@ export default function Dashboard() {
                 </main>
             </div>
 
-            {/* Recommendation Creation Modal */}
-            <Modal
-                isOpen={showRecommendationModal}
-                onClose={() => setShowRecommendationModal(false)}
-                title="Create Recommendation"
-                size="xl"
-            >
-                <CreateRecommendationForm
-                    onSuccess={handleRecommendationSuccess}
-                    onCancel={() => setShowRecommendationModal(false)}
-                />
-            </Modal>
         </div>
     );
 }

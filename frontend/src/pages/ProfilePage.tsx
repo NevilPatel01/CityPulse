@@ -5,14 +5,11 @@ import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useProfile } from '../hooks/useProfile';
-import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { profileService } from '../services/profileService';
 import { apiRequest } from '../config/api';
 import { RecommendationsList } from '../components/recommendations/RecommendationsList';
 import { AchievementProgress } from '../components/achievements/AchievementProgress';
 import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeline';
-import { Modal } from '../components/ui/Modal';
-import { CreateRecommendationForm } from '../components/recommendations/CreateRecommendationForm';
 import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
 import type { UserAchievement } from '../types/achievement';
 
@@ -38,8 +35,6 @@ export default function ProfilePage() {
     }
     return 0;
   });
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
   const [localImages, setLocalImages] = useState<{
     profile?: string;
     cover?: string;
@@ -132,46 +127,10 @@ export default function ProfilePage() {
     }
   };
 
-  // Handle recommendation creation success
-  const handleRecommendationSuccess = () => {
-    setShowRecommendationModal(false);
-    refetch(); // Refresh profile data
-  };
+
 
   const handleEditProfile = () => {
-    setShowEditModal(true);
-  };
-
-  const handleSaveProfile = async (updatedProfile: {
-    fullName: string;
-    username: string;
-    bio?: string;
-    currentLocation?: string;
-    hometown?: string;
-    citiesVisited?: string[];
-    socialLinks?: {
-      twitter?: string;
-      instagram?: string;
-      facebook?: string;
-      linkedin?: string;
-      whatsapp?: string;
-      website?: string;
-    };
-  }) => {
-    try {
-      console.log('Profile updated:', updatedProfile);
-      
-      // Check if username changed and redirect if needed
-      if (updatedProfile.username && updatedProfile.username !== username) {
-        // Redirect to new username URL
-        navigate(`/profile/${updatedProfile.username}`);
-      } else {
-        // Refresh profile data to reflect changes
-        await refetch();
-      }
-    } catch (error) {
-      console.error('Error refreshing profile:', error);
-    }
+    navigate('/profile/edit');
   };
 
   const handleImageUpload = async (file: File, type: 'profile' | 'cover') => {
@@ -555,7 +514,7 @@ export default function ProfilePage() {
                         <h3 className="text-lg font-semibold text-primary">My Recommendations</h3>
                         {isOwnProfile && recommendationCount > 0 && (
                           <button
-                            onClick={() => setShowRecommendationModal(true)}
+                            onClick={() => navigate('/recommendations/create')}
                             className="bg-pulse hover:bg-pulse/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 hover-lift"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -577,7 +536,7 @@ export default function ProfilePage() {
                             <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
                             <p className="text-muted mb-4">Share your favorite places with the community</p>
                             <button
-                              onClick={() => setShowRecommendationModal(true)}
+                              onClick={() => navigate('/recommendations/create')}
                               className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -631,46 +590,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-
-      {/* Edit Profile Modal */}
-      {showEditModal && (
-        <EditProfileModal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          profile={{
-            fullName: profile.fullName,
-            username: profile.username,
-            bio: profile.bio,
-            currentLocation: profile.currentLocation,
-            hometown: profile.hometown,
-            citiesVisited: profile.citiesVisited || [],
-            socialLinks: {
-              twitter: profile.twitterUrl || '',
-              instagram: profile.instagramUrl || '',
-              facebook: profile.facebookUrl || '',
-              linkedin: profile.linkedinUrl || '',
-              whatsapp: profile.whatsappContact || '',
-              website: profile.websiteUrl || '',
-            },
-          }}
-          onSave={handleSaveProfile}
-        />
-      )}
-
-      {/* Recommendation Creation Modal */}
-      {isOwnProfile && (
-        <Modal
-          isOpen={showRecommendationModal}
-          onClose={() => setShowRecommendationModal(false)}
-          title="Create Recommendation"
-          size="xl"
-        >
-          <CreateRecommendationForm
-            onSuccess={handleRecommendationSuccess}
-            onCancel={() => setShowRecommendationModal(false)}
-          />
-        </Modal>
-      )}
 
       {/* Achievement Unlock Modal */}
       {newlyUnlockedAchievements.length > 0 && (

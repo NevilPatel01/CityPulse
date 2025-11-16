@@ -110,17 +110,15 @@ export function EditRecommendationPage() {
     <div className="min-h-screen bg-base">
       <Header />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 group"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            Back to Recommendation
-          </button>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-muted hover:text-primary transition-colors mb-6 group"
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          Back to Recommendation
+        </button>
 
         {/* Edit Form */}
         <CreateRecommendationForm
@@ -142,7 +140,7 @@ export function EditRecommendationPage() {
             longitude: recommendation.longitude?.toString() || '',
             photos: recommendation.photos || [],
           }}
-          onSuccess={() => {
+          onSuccess={(id) => {
             const username = recommendation.username || user?.username || '';
             navigate(`/${username}/recommendation/${id}`);
           }}

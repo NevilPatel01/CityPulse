@@ -16,6 +16,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard.tsx';
 import ProfilePage from './pages/ProfilePage';
+import { EditProfilePage } from './pages/EditProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import SearchPage from './pages/SearchPage';
 import { CreateRecommendationPage } from './pages/CreateRecommendationPage';
@@ -91,6 +92,11 @@ function App() {
           <Route path="/profile/:username" element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile/edit" element={
+            <ProtectedRoute>
+              <EditProfilePage />
             </ProtectedRoute>
           } />
           <Route path="/settings" element={
