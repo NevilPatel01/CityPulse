@@ -89,23 +89,50 @@
 - [x] Security testing for user connections with Unit Test and E2E test
 
 #### Week 9
-- [ ] Trip Planning System (Trips, Trip_Cities, Trip_Companions tables)
-- [ ] Collaborative trip creation and management
-- [ ] Trip itinerary planning (Trip_Itinerary table)
-- [ ] Travel companion finder functionality
+- [x] Trip Planning System (Trips, Trip_Cities, Trip_Companions tables)
+- [x] Collaborative trip creation and management
+- [x] Trip itinerary planning (Trip_Itinerary table)
+- [x] Travel companion finder functionality
 - [ ] Trip sharing and privacy controls
-- [ ] Integration with recommendation system
-- [ ] Frontend trip planning interface
+- [x] Integration with recommendation system
+- [x] Frontend trip planning interface
 
 #### Week 10
-- [ ] Submit progress report + demo video
-- [ ] Achievement System (Achievements, User_Achievements tables)
-- [ ] Badge creation and tracking
-- [ ] Travel history tracking (User_City_Visits table)
-- [ ] User engagement metrics
-- [ ] Achievement notification system
-- [ ] Frontend achievement display components
+- [x] Submit progress report + demo video
+- [x] Achievement System (Achievements, User_Achievements tables)
+- [x] Badge creation and tracking
+- [x] Travel history tracking (User_City_Visits table)
+- [x] User engagement metrics
+- [x] Achievement notification system
+- [x] Frontend achievement display components
 
+#### Week 11 (Nov 17)
+- [ ] Milestone 4: Moderation System (Moderator_Actions, Content_Reports tables)
+- [ ] Content reporting functionality
+- [ ] Moderator dashboard for content review
+- [ ] User warning system (User_Warnings table)
+- [ ] Content removal and user management
+- [ ] Moderation queue and workflow
+- [ ] Admin analytics and reporting
+- [ ] Security audit and penetration testing
+
+#### Week 12 (Nov 17)
+- [ ] Final polish: responsive layout, accessibility checks (Lighthouse/Axe)
+- [ ] Recommendation algorithm optimization
+- [ ] Search history and saved searches (Search_History, Saved_Searches tables)
+- [ ] User favorites system (User_Favourites table)
+- [ ] GitHub Actions: final test automation 
+- [ ] critical bug fixes 
+- [ ] Test E2E and Unit Test of all the features
+- [ ] Run final CI/CD, test coverage reports, accessibility scan
+- [ ] Accessibility compliance testing (WAVE, axe DevTools)
+- [ ] Production deployment finalization
+- [ ] Final deployment and tag release version
+
+#### Week 13 (Dec 1)
+- [ ] Write final report (include test, deployment, screenshots)
+- [ ] Record and submit final demo video
+- [ ] Showcase all major features + CI/CD, testing, accessibility
 
 NOTE: I will add as I go. 
 
@@ -150,4 +177,5 @@ NOTE: I will add as I go.
 *CityPulse - Connecting Travelers, Sharing Experiences, Building Communities* 🌍✈️
 
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/cqMWIy-z)
+
 [![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=18927558&assignment_repo_type=AssignmentRepo)

@@ -39,7 +39,7 @@ export const getUserTrips = async (req: Request, res: Response) => {
                 FROM trips t2
                 LEFT JOIN trip_companions tc ON t2.id = tc.trip_id
                 WHERE t2.user_id = $1 
-                   OR (tc.user_id = $1 AND tc.status = 'accepted')
+                    OR (tc.user_id = $1 AND tc.status = 'accepted')
             )
         `;
 
@@ -115,8 +115,8 @@ export const getTripById = async (req: Request, res: Response) => {
         if (trip.privacy === 'buddies_only') {
             const buddyCheck = await pool.query(
                 `SELECT 1 FROM travel_buddy_connections 
-                 WHERE ((user_id = $1 AND buddy_id = $2) OR (user_id = $2 AND buddy_id = $1))
-                 AND status = 'accepted'`,
+                    WHERE ((user_id = $1 AND buddy_id = $2) OR (user_id = $2 AND buddy_id = $1))
+                    AND status = 'accepted'`,
                 [userId, trip.user_id]
             );
 
@@ -244,11 +244,11 @@ export const createTrip = async (req: Request, res: Response) => {
             // Create trip
             const tripResult = await client.query(
                 `INSERT INTO trips (user_id, title, description, start_date, end_date, status, privacy, 
-                                   cover_photo_url, is_collaborative, total_budget, currency)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    cover_photo_url, is_collaborative, total_budget, currency)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                  RETURNING *`,
                 [userId, title, description, start_date, end_date, status, privacy, 
-                 cover_photo_url, is_collaborative, total_budget, currency]
+                    cover_photo_url, is_collaborative, total_budget, currency]
             );
 
             const trip = tripResult.rows[0];
@@ -256,7 +256,7 @@ export const createTrip = async (req: Request, res: Response) => {
             // Add trip creator as organizer in companions
             await client.query(
                 `INSERT INTO trip_companions (trip_id, user_id, role, status, responded_at)
-                 VALUES ($1, $2, 'organizer', 'accepted', NOW())`,
+                    VALUES ($1, $2, 'organizer', 'accepted', NOW())`,
                 [trip.id, userId]
             );
 
@@ -266,7 +266,7 @@ export const createTrip = async (req: Request, res: Response) => {
                     const city = cities[i];
                     await client.query(
                         `INSERT INTO trip_cities (trip_id, city_id, arrival_date, departure_date, visit_order, notes)
-                         VALUES ($1, $2, $3, $4, $5, $6)`,
+                            VALUES ($1, $2, $3, $4, $5, $6)`,
                         [trip.id, city.city_id, city.arrival_date, city.departure_date, i + 1, city.notes]
                     );
                 }
@@ -340,8 +340,8 @@ export const updateTrip = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `UPDATE trips 
-             SET ${setClause}, updated_at = NOW()
-             WHERE id = $1
+                SET ${setClause}, updated_at = NOW()
+                WHERE id = $1
              RETURNING *`,
             [id, ...values]
         );
@@ -406,14 +406,15 @@ export const inviteCompanion = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
         const { id } = req.params;
-        const { user_id: companionId } = req.body;
+        const { companionId, user_id } = req.body;
+        const targetCompanionId = companionId || user_id;
 
         // Check if user owns the trip or is an organizer
         const tripCheck = await pool.query(
-            `SELECT t.user_id, tc.role
-             FROM trips t
-             LEFT JOIN trip_companions tc ON t.id = tc.trip_id AND tc.user_id = $1
-             WHERE t.id = $2`,
+            `SELECT t.user_id, t.privacy, tc.role
+                FROM trips t
+                LEFT JOIN trip_companions tc ON t.id = tc.trip_id AND tc.user_id = $1
+                WHERE t.id = $2`,
             [userId, id]
         );
 
@@ -426,6 +427,7 @@ export const inviteCompanion = async (req: Request, res: Response) => {
 
         const isOwner = tripCheck.rows[0].user_id === userId;
         const isOrganizer = tripCheck.rows[0].role === 'organizer';
+        const tripPrivacy = tripCheck.rows[0].privacy;
 
         if (!isOwner && !isOrganizer) {
             return res.status(403).json({
@@ -434,10 +436,48 @@ export const inviteCompanion = async (req: Request, res: Response) => {
             });
         }
 
+        // Check if trip is private - cannot invite to private trips
+        if (tripPrivacy === 'private') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot invite companions to private trips'
+            });
+        }
+
+        // Check if companion exists
+        const userCheck = await pool.query(
+            'SELECT id FROM users WHERE id = $1',
+            [targetCompanionId]
+        );
+
+        if (userCheck.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // For buddies_only trips, check if companion is a buddy
+        if (tripPrivacy === 'buddies_only') {
+            const buddyCheck = await pool.query(
+                `SELECT 1 FROM travel_buddy_connections 
+                 WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))
+                 AND status = 'accepted'`,
+                [userId, targetCompanionId]
+            );
+
+            if (buddyCheck.rows.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Can only invite travel buddies to buddies-only trips'
+                });
+            }
+        }
+
         // Check if companion is already invited
         const existingInvite = await pool.query(
             'SELECT * FROM trip_companions WHERE trip_id = $1 AND user_id = $2',
-            [id, companionId]
+            [id, targetCompanionId]
         );
 
         if (existingInvite.rows.length > 0) {
@@ -457,14 +497,14 @@ export const inviteCompanion = async (req: Request, res: Response) => {
             `INSERT INTO trip_companions (trip_id, user_id, role, status)
              VALUES ($1, $2, 'participant', 'invited')
              RETURNING *`,
-            [id, companionId]
+            [id, targetCompanionId]
         );
 
         // Create notification for invited user
         const client = await pool.connect();
         try {
             await createNotification(client, {
-                userId: companionId,
+                userId: targetCompanionId,
                 type: 'trip_invite',
                 title: 'Trip Invitation',
                 message: `You've been invited to join the trip: ${tripInfo.rows[0].title}`,
@@ -506,8 +546,8 @@ export const respondToInvitation = async (req: Request, res: Response) => {
 
         const result = await pool.query(
             `UPDATE trip_companions
-             SET status = $1, responded_at = NOW()
-             WHERE trip_id = $2 AND user_id = $3 AND status = 'invited'
+                SET status = $1, responded_at = NOW()
+                WHERE trip_id = $2 AND user_id = $3 AND status = 'invited'
              RETURNING *`,
             [status, id, userId]
         );

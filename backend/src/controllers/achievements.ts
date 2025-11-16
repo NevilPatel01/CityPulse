@@ -184,7 +184,7 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
 
             case 'travel_buddies_connected':
                 const buddyResult = await query(
-                    'SELECT COUNT(*) as count FROM buddies WHERE (user_id = $1 OR buddy_id = $1) AND status = $2',
+                    'SELECT COUNT(*) as count FROM travel_buddy_connections WHERE (requester_id = $1 OR requested_id = $1) AND status = $2',
                     [userId, 'accepted']
                 );
                 currentValue = parseInt(buddyResult.rows[0].count);

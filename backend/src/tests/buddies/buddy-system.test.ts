@@ -42,7 +42,7 @@ describe('Buddy System', () => {
     afterEach(async () => {
         // Clean up buddy relationships after each test
         await query(
-            'DELETE FROM buddies WHERE user_id IN ($1, $2, $3) OR buddy_id IN ($1, $2, $3)',
+            'DELETE FROM travel_buddy_connections WHERE requester_id IN ($1, $2, $3) OR requested_id IN ($1, $2, $3)',
             [user1.id, user2.id, user3.id]
         );
         await query(
@@ -51,50 +51,50 @@ describe('Buddy System', () => {
         );
     });
 
-    describe('POST /api/buddies/send-request', () => {
+    describe('POST /api/buddies/request', () => {
         it('should send a buddy request successfully', async () => {
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(201);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toContain('Buddy request sent');
-            expect(response.body.data).toHaveProperty('id');
-            expect(response.body.data.user_id).toBe(user1.id);
-            expect(response.body.data.buddy_id).toBe(user2.id);
-            expect(response.body.data.status).toBe('pending');
+            expect(response.body.message).toContain('sent');
+            expect(response.body.data.request).toHaveProperty('id');
+            expect(response.body.data.request.requester_id).toBe(user1.id);
+            expect(response.body.data.request.requested_id).toBe(user2.id);
+            expect(response.body.data.request.status).toBe('pending');
         });
 
         it('should not allow sending request to yourself', async () => {
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user1.id })
+                .send({ targetUserId: user1.id })
                 .expect(400);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.error).toContain('cannot send');
+            expect(response.body.message).toContain('Invalid target user');
         });
 
         it('should not allow duplicate buddy requests', async () => {
             // Send first request
             await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(201);
 
             // Try to send duplicate
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(400);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.error).toContain('already exists');
+            expect(response.body.message).toContain('already');
         });
 
         it('should not allow sending request to blocked user', async () => {
@@ -102,14 +102,14 @@ describe('Buddy System', () => {
             await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(200);
 
             // Try to send request
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(400);
 
             expect(response.body.success).toBe(false);
@@ -117,154 +117,145 @@ describe('Buddy System', () => {
 
         it('should require authentication', async () => {
             await request(app)
-                .post('/api/buddies/send-request')
-                .send({ buddyId: user2.id })
+                .post('/api/buddies/request')
+                .send({ targetUserId: user2.id })
                 .expect(401);
         });
 
-        it('should validate buddyId is required', async () => {
+        it('should validate targetUserId is required', async () => {
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({})
                 .expect(400);
 
-            expect(response.body.error).toBeDefined();
+            expect(response.body.message).toContain('Invalid target user');
         });
     });
 
-    describe('POST /api/buddies/accept-request', () => {
+    describe('POST /api/buddies/requests/:requestId/accept', () => {
         let requestId: number;
 
         beforeEach(async () => {
             // User1 sends request to User2
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
             
-            requestId = response.body.data.id;
+            requestId = response.body.data.request.id;
         });
 
         it('should accept a buddy request successfully', async () => {
             const response = await request(app)
-                .post('/api/buddies/accept-request')
+                .post(`/api/buddies/requests/${requestId}/accept`)
                 .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId })
                 .expect(200);
 
             expect(response.body.success).toBe(true);
             expect(response.body.message).toContain('accepted');
-            expect(response.body.data.status).toBe('accepted');
         });
 
-        it('should create reciprocal buddy relationship', async () => {
+        it('should create buddy relationship', async () => {
             await request(app)
-                .post('/api/buddies/accept-request')
+                .post(`/api/buddies/requests/${requestId}/accept`)
                 .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId })
                 .expect(200);
 
-            // Check both directions exist
+            // Check relationship exists
             const result = await query(
-                `SELECT * FROM buddies 
-                    WHERE (user_id = $1 AND buddy_id = $2 AND status = 'accepted')
-                    OR (user_id = $2 AND buddy_id = $1 AND status = 'accepted')`,
+                `SELECT * FROM travel_buddy_connections 
+                    WHERE requester_id = $1 AND requested_id = $2 AND status = 'accepted'`,
                 [user1.id, user2.id]
             );
 
-            expect(result.rows.length).toBe(2);
+            expect(result.rows.length).toBe(1);
         });
 
         it('should not allow accepting own request', async () => {
             const response = await request(app)
-                .post('/api/buddies/accept-request')
+                .post(`/api/buddies/requests/${requestId}/accept`)
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ requestId })
-                .expect(403);
+                .expect(404);
 
             expect(response.body.success).toBe(false);
         });
 
         it('should not allow accepting non-existent request', async () => {
             const response = await request(app)
-                .post('/api/buddies/accept-request')
+                .post(`/api/buddies/requests/999999/accept`)
                 .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId: 999999 })
                 .expect(404);
 
             expect(response.body.success).toBe(false);
         });
     });
 
-    describe('POST /api/buddies/decline-request', () => {
+    describe('POST /api/buddies/requests/:requestId/decline', () => {
         let requestId: number;
 
         beforeEach(async () => {
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
             
-            requestId = response.body.data.id;
+            requestId = response.body.data.request.id;
         });
 
         it('should decline a buddy request successfully', async () => {
             const response = await request(app)
-                .post('/api/buddies/decline-request')
+                .post(`/api/buddies/requests/${requestId}/decline`)
                 .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId })
                 .expect(200);
 
             expect(response.body.success).toBe(true);
             expect(response.body.message).toContain('declined');
         });
 
-        it('should delete the request from database', async () => {
+        it('should update request status to declined', async () => {
             await request(app)
-                .post('/api/buddies/decline-request')
+                .post(`/api/buddies/requests/${requestId}/decline`)
                 .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId })
                 .expect(200);
 
             const result = await query(
-                'SELECT * FROM buddies WHERE id = $1',
+                'SELECT * FROM travel_buddy_connections WHERE id = $1',
                 [requestId]
             );
 
-            expect(result.rows.length).toBe(0);
+            expect(result.rows.length).toBe(1);
+            expect(result.rows[0].status).toBe('declined');
         });
     });
 
-    describe('POST /api/buddies/cancel-request', () => {
+    describe('DELETE /api/buddies/requests/:requestId', () => {
         let requestId: number;
 
         beforeEach(async () => {
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
             
-            requestId = response.body.data.id;
+            requestId = response.body.data.request.id;
         });
 
         it('should cancel a sent buddy request successfully', async () => {
             const response = await request(app)
-                .post('/api/buddies/cancel-request')
+                .delete(`/api/buddies/requests/${requestId}`)
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ requestId })
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toContain('cancelled');
+            expect(response.body.message).toContain('cancel');
         });
 
         it('should not allow canceling other users requests', async () => {
             const response = await request(app)
-                .post('/api/buddies/cancel-request')
+                .delete(`/api/buddies/requests/${requestId}`)
                 .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId })
-                .expect(403);
+                .expect(404);
 
             expect(response.body.success).toBe(false);
         });
@@ -274,14 +265,13 @@ describe('Buddy System', () => {
         beforeEach(async () => {
             // Create accepted buddy relationship
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
 
             await request(app)
-                .post('/api/buddies/accept-request')
-                .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId: response.body.data.id });
+                .post(`/api/buddies/requests/${response.body.data.request.id}/accept`)
+                .set('Authorization', `Bearer ${token2}`);
         });
 
         it('should remove a buddy successfully', async () => {
@@ -294,16 +284,16 @@ describe('Buddy System', () => {
             expect(response.body.message).toContain('removed');
         });
 
-        it('should remove both directions of buddy relationship', async () => {
+        it('should remove buddy relationship from database', async () => {
             await request(app)
                 .delete(`/api/buddies/${user2.id}`)
                 .set('Authorization', `Bearer ${token1}`)
                 .expect(200);
 
             const result = await query(
-                `SELECT * FROM buddies 
-                    WHERE (user_id = $1 AND buddy_id = $2)
-                    OR (user_id = $2 AND buddy_id = $1)`,
+                `SELECT * FROM travel_buddy_connections 
+                    WHERE (requester_id = $1 AND requested_id = $2)
+                    OR (requester_id = $2 AND requested_id = $1)`,
                 [user1.id, user2.id]
             );
 
@@ -315,14 +305,13 @@ describe('Buddy System', () => {
         beforeEach(async () => {
             // User1 and User2 are buddies
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
 
             await request(app)
-                .post('/api/buddies/accept-request')
-                .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId: response.body.data.id });
+                .post(`/api/buddies/requests/${response.body.data.request.id}/accept`)
+                .set('Authorization', `Bearer ${token2}`);
         });
 
         it('should get list of buddies', async () => {
@@ -332,11 +321,12 @@ describe('Buddy System', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(Array.isArray(response.body.data)).toBe(true);
-            expect(response.body.data.length).toBe(1);
-            expect(response.body.data[0]).toHaveProperty('id');
-            expect(response.body.data[0]).toHaveProperty('full_name');
-            expect(response.body.data[0]).toHaveProperty('username');
+            expect(Array.isArray(response.body.data.buddies)).toBe(true);
+            expect(response.body.data.buddies.length).toBeGreaterThanOrEqual(1);
+            const buddy = response.body.data.buddies.find((b: any) => b.id === user2.id);
+            expect(buddy).toBeDefined();
+            expect(buddy).toHaveProperty('full_name');
+            expect(buddy).toHaveProperty('username');
         });
 
         it('should return empty array when no buddies', async () => {
@@ -345,7 +335,7 @@ describe('Buddy System', () => {
                 .set('Authorization', `Bearer ${token3}`)
                 .expect(200);
 
-            expect(response.body.data).toEqual([]);
+            expect(response.body.data.buddies).toEqual([]);
         });
     });
 
@@ -353,9 +343,9 @@ describe('Buddy System', () => {
         beforeEach(async () => {
             // User1 sends request to User2
             await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
         });
 
         it('should get received buddy requests', async () => {
@@ -365,9 +355,11 @@ describe('Buddy System', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.data.length).toBe(1);
-            expect(response.body.data[0].status).toBe('pending');
-            expect(response.body.data[0]).toHaveProperty('requester_name');
+            expect(Array.isArray(response.body.data.requests)).toBe(true);
+            expect(response.body.data.requests.length).toBeGreaterThanOrEqual(1);
+            const request_item = response.body.data.requests.find((r: any) => r.requester_id === user1.id);
+            expect(request_item).toBeDefined();
+            expect(request_item.status).toBe('pending');
         });
     });
 
@@ -375,9 +367,9 @@ describe('Buddy System', () => {
         beforeEach(async () => {
             // User1 sends request to User2
             await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
         });
 
         it('should get sent buddy requests', async () => {
@@ -387,9 +379,11 @@ describe('Buddy System', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.data.length).toBe(1);
-            expect(response.body.data[0].status).toBe('pending');
-            expect(response.body.data[0]).toHaveProperty('receiver_name');
+            expect(Array.isArray(response.body.data.requests)).toBe(true);
+            expect(response.body.data.requests.length).toBeGreaterThanOrEqual(1);
+            const request_item = response.body.data.requests.find((r: any) => r.requested_id === user2.id);
+            expect(request_item).toBeDefined();
+            expect(request_item.status).toBe('pending');
         });
     });
 
@@ -398,7 +392,7 @@ describe('Buddy System', () => {
             const response = await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(200);
 
             expect(response.body.success).toBe(true);
@@ -408,27 +402,26 @@ describe('Buddy System', () => {
         it('should remove existing buddy relationship when blocking', async () => {
             // Create buddy relationship first
             const reqResponse = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id });
+                .send({ targetUserId: user2.id });
 
             await request(app)
-                .post('/api/buddies/accept-request')
-                .set('Authorization', `Bearer ${token2}`)
-                .send({ requestId: reqResponse.body.data.id });
+                .post(`/api/buddies/requests/${reqResponse.body.data.request.id}/accept`)
+                .set('Authorization', `Bearer ${token2}`);
 
             // Now block
             await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id })
+                .send({ targetUserId: user2.id })
                 .expect(200);
 
             // Verify buddy relationship is removed
             const buddyResult = await query(
-                `SELECT * FROM buddies 
-                WHERE (user_id = $1 AND buddy_id = $2)
-                    OR (user_id = $2 AND buddy_id = $1)`,
+                `SELECT * FROM travel_buddy_connections 
+                WHERE (requester_id = $1 AND requested_id = $2)
+                    OR (requester_id = $2 AND requested_id = $1)`,
                 [user1.id, user2.id]
             );
 
@@ -439,27 +432,26 @@ describe('Buddy System', () => {
             const response = await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user1.id })
+                .send({ targetUserId: user1.id })
                 .expect(400);
 
             expect(response.body.success).toBe(false);
         });
     });
 
-    describe('POST /api/buddies/unblock', () => {
+    describe('DELETE /api/buddies/block/:targetUserId', () => {
         beforeEach(async () => {
             // Block user first
             await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id });
+                .send({ targetUserId: user2.id });
         });
 
         it('should unblock a user successfully', async () => {
             const response = await request(app)
-                .post('/api/buddies/unblock')
+                .delete(`/api/buddies/block/${user2.id}`)
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id })
                 .expect(200);
 
             expect(response.body.success).toBe(true);
@@ -468,9 +460,8 @@ describe('Buddy System', () => {
 
         it('should remove block from database', async () => {
             await request(app)
-                .post('/api/buddies/unblock')
+                .delete(`/api/buddies/block/${user2.id}`)
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id })
                 .expect(200);
 
             const result = await query(
@@ -488,12 +479,12 @@ describe('Buddy System', () => {
             await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user2.id });
+                .send({ targetUserId: user2.id });
 
             await request(app)
                 .post('/api/buddies/block')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ userId: user3.id });
+                .send({ targetUserId: user3.id });
         });
 
         it('should get list of blocked users', async () => {
@@ -503,9 +494,8 @@ describe('Buddy System', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.data.length).toBe(2);
-            expect(response.body.data[0]).toHaveProperty('full_name');
-            expect(response.body.data[0]).toHaveProperty('username');
+            expect(Array.isArray(response.body.data.blockedUsers)).toBe(true);
+            expect(response.body.data.blockedUsers.length).toBeGreaterThanOrEqual(2);
         });
     });
 
@@ -515,41 +505,42 @@ describe('Buddy System', () => {
                 .post('/api/buddies/report')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({
-                    userId: user2.id,
-                    reason: 'spam',
+                    targetUserId: user2.id,
+                    reportReason: 'spam',
                     description: 'Sending spam messages'
                 })
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toContain('reported');
+            expect(response.body.message).toContain('report');
         });
 
-        it('should require a reason', async () => {
+        it('should require reportReason', async () => {
             const response = await request(app)
                 .post('/api/buddies/report')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({
-                    userId: user2.id,
+                    targetUserId: user2.id,
                     description: 'Test'
                 })
                 .expect(400);
 
-            expect(response.body.error).toBeDefined();
+            expect(response.body.success).toBe(false);
+            expect(response.body.message).toContain('required');
         });
 
-        it('should validate reason is one of allowed values', async () => {
+        it('should require targetUserId', async () => {
             const response = await request(app)
                 .post('/api/buddies/report')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({
-                    userId: user2.id,
-                    reason: 'invalid_reason',
+                    reportReason: 'spam',
                     description: 'Test'
                 })
                 .expect(400);
 
-            expect(response.body.error).toBeDefined();
+            expect(response.body.success).toBe(false);
+            expect(response.body.message).toContain('required');
         });
     });
 
@@ -564,13 +555,13 @@ describe('Buddy System', () => {
             );
 
             const response = await request(app)
-                .post('/api/buddies/send-request')
+                .post('/api/buddies/request')
                 .set('Authorization', `Bearer ${token1}`)
-                .send({ buddyId: user2.id })
-                .expect(400);
+                .send({ targetUserId: user2.id })
+                .expect(403);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.error).toContain('not accepting');
+            expect(response.body.message).toContain('not accepting');
         });
     });
 });

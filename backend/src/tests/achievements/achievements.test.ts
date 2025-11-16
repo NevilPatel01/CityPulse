@@ -34,18 +34,19 @@ describe('Achievement System', () => {
 
         // Create test city
         const cityResult = await query(
-            `INSERT INTO cities (name, country, country_code, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            ['Achievement City', 'Test Country', 'TC', 40.7128, -74.0060]
+            `INSERT INTO cities (name, country, latitude, longitude)
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            ['Achievement City', 'Test Country', 40.7128, -74.0060]
         );
         testCity = cityResult.rows[0];
         testDataTracker.addCity(testCity.id);
 
-        // Create test category
+        // Create test category with unique name
+        const uniqueCategoryName = `Test Category ${Date.now()}`;
         const categoryResult = await query(
             `INSERT INTO recommendation_categories (name, description)
              VALUES ($1, $2) RETURNING *`,
-            ['Test Category', 'A test category']
+            [uniqueCategoryName, 'A test category']
         );
         testCategory = categoryResult.rows[0];
     });
@@ -78,8 +79,8 @@ describe('Achievement System', () => {
             expect(achievement).toHaveProperty('id');
             expect(achievement).toHaveProperty('name');
             expect(achievement).toHaveProperty('description');
-            expect(achievement).toHaveProperty('badge_icon');
-            expect(achievement).toHaveProperty('requirement_count');
+            expect(achievement).toHaveProperty('badge_icon_url');
+            expect(achievement).toHaveProperty('target_value');
         });
 
         it('should require authentication', async () => {
@@ -131,9 +132,15 @@ describe('Achievement System', () => {
                     description: 'Test description',
                     category_id: testCategory.id,
                     user_rating: 5,
+                    recommendation_type: 'attraction',
+                    place_name: 'Test Place',
                     cities: [{ city_id: testCity.id }]
-                })
-                .expect(201);
+                });
+
+            if (recResponse.status !== 201) {
+                console.log('Recommendation creation failed:', recResponse.status, recResponse.body);
+            }
+            expect(recResponse.status).toBe(201);
 
             const recommendationId = recResponse.body.data.id;
             testDataTracker.addRecommendation(recommendationId);
@@ -158,9 +165,9 @@ describe('Achievement System', () => {
             const cities = [];
             for (let i = 1; i <= 5; i++) {
                 const cityResult = await query(
-                    `INSERT INTO cities (name, country, country_code, latitude, longitude)
-                     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-                    [`City ${i}`, 'Test Country', 'TC', 40 + i, -74 + i]
+                    `INSERT INTO cities (name, country, latitude, longitude)
+                     VALUES ($1, $2, $3, $4) RETURNING *`,
+                    [`City ${i}`, 'Test Country', 40.7128 + i, -74.0060 + i]
                 );
                 cities.push(cityResult.rows[0]);
                 testDataTracker.addCity(cityResult.rows[0].id);
@@ -176,6 +183,8 @@ describe('Achievement System', () => {
                         description: 'Test description',
                         category_id: testCategory.id,
                         user_rating: 5,
+                        recommendation_type: 'attraction',
+                        place_name: `Test Place in ${city.name}`,
                         cities: [{ city_id: city.id }]
                     })
                     .expect(201);
@@ -208,6 +217,8 @@ describe('Achievement System', () => {
                     description: 'This will get many likes',
                     category_id: testCategory.id,
                     user_rating: 5,
+                    recommendation_type: 'attraction',
+                    place_name: 'Popular Place',
                     cities: [{ city_id: testCity.id }]
                 })
                 .expect(201);
@@ -261,9 +272,9 @@ describe('Achievement System', () => {
             // Create 3 recommendations (Explorer needs 5 cities)
             for (let i = 1; i <= 3; i++) {
                 const cityResult = await query(
-                    `INSERT INTO cities (name, country, country_code, latitude, longitude)
-                     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-                    [`Progress City ${i}`, 'Test Country', 'TC', 40 + i, -74 + i]
+                    `INSERT INTO cities (name, country, latitude, longitude)
+                     VALUES ($1, $2, $3, $4) RETURNING *`,
+                    [`Progress City ${i}`, 'Test Country', 40.7128 + i, -74.0060 + i]
                 );
                 testDataTracker.addCity(cityResult.rows[0].id);
 
@@ -275,6 +286,8 @@ describe('Achievement System', () => {
                         description: 'Test',
                         category_id: testCategory.id,
                         user_rating: 5,
+                        recommendation_type: 'attraction',
+                        place_name: `Progress Place ${i}`,
                         cities: [{ city_id: cityResult.rows[0].id }]
                     })
                     .expect(201);
@@ -319,6 +332,8 @@ describe('Achievement System', () => {
                     description: 'Test',
                     category_id: testCategory.id,
                     user_rating: 5,
+                    recommendation_type: 'attraction',
+                    place_name: 'Security Test Place',
                     cities: [{ city_id: testCity.id }]
                 })
                 .expect(201);
@@ -348,7 +363,7 @@ describe('Achievement System', () => {
 
             // Verify achievements table still exists
             const achievementCheck = await query('SELECT COUNT(*) FROM achievements');
-            expect(achievementCheck.rows[0].count).toBeGreaterThan(0);
+            expect(parseInt(achievementCheck.rows[0].count)).toBeGreaterThan(0);
         });
     });
 
@@ -360,8 +375,8 @@ describe('Achievement System', () => {
                 .expect(200);
 
             const achievement = response.body.data.achievements[0];
-            expect(achievement).toHaveProperty('badge_icon');
-            expect(typeof achievement.badge_icon).toBe('string');
+            expect(achievement).toHaveProperty('badge_icon_url');
+            expect(typeof achievement.badge_icon_url).toBe('string');
         });
 
         it('should return achievement tiers (Bronze, Silver, Gold)', async () => {

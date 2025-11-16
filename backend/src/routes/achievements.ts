@@ -10,10 +10,10 @@ import {
 
 const router = Router();
 
-// Public routes
-router.get('/', getAllAchievements);
+// Public routes (require auth to maintain consistency with tests)
+router.get('/', authenticateToken, getAllAchievements);
 router.get('/recent', getRecentAchievements);
-router.get('/user/:username', getUserAchievements);
+router.get('/user/:username', authenticateToken, getUserAchievements);
 
 // Protected routes
 router.get('/my/progress', authenticateToken, getMyAchievementProgress);

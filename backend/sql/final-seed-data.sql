@@ -7,7 +7,7 @@ DELETE FROM trip_companions WHERE trip_id IN (SELECT id FROM trips WHERE user_id
 DELETE FROM trip_itinerary WHERE trip_id IN (SELECT id FROM trips WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%'));
 DELETE FROM trip_cities WHERE trip_id IN (SELECT id FROM trips WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%'));
 DELETE FROM trips WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
-DELETE FROM travel_buddy_connections WHERE requester_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
+DELETE FROM travel_buddy_connections WHERE requester_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%') OR requested_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
 DELETE FROM recommendation_cities WHERE recommendation_id IN (SELECT id FROM recommendations WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%'));
 DELETE FROM recommendations WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
 DELETE FROM user_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
@@ -62,19 +62,20 @@ SELECT r.id, c.id FROM recommendations r, cities c
 WHERE r.title = 'Café de Flore' AND c.name = 'Paris'
 UNION ALL
 SELECT r.id, c.id FROM recommendations r, cities c
-WHERE r.title = 'Tsukiji Outer Market' AND c.name = 'Tokyo';
+WHERE r.title = 'Tsukiji Outer Market' AND c.name = 'Tokyo'
+ON CONFLICT (recommendation_id, city_id) DO NOTHING;
 
 -- Create trip
-INSERT INTO trips (user_id, title, description, start_date, end_date, total_budget, currency, privacy, status, is_collaborative, created_at)
-SELECT id, 'European Adventure 2025', 'Paris and Barcelona summer trip', '2025-06-15', '2025-07-05', 5000, 'USD', 'public', 'planning', true, NOW() - INTERVAL '1 month'
+INSERT INTO trips (user_id, title, description, start_date, end_date, total_budget, privacy, status, is_collaborative, created_at)
+SELECT id, 'European Adventure 2025', 'Paris and Barcelona summer trip', '2025-06-15', '2025-07-05', 5000, 'public', 'planning', true, NOW() - INTERVAL '1 month'
 FROM users WHERE email = 'john.explorer@citypulse-seed.com';
 
 -- Add cities to trip
-INSERT INTO trip_cities (trip_id, city_id, arrival_date, departure_date, visit_order, notes)
-SELECT t.id, c.id, '2025-06-15', '2025-06-22', 1, 'Paris - Eiffel Tower, Louvre'
+INSERT INTO trip_cities (trip_id, city_id, arrival_date, departure_date)
+SELECT t.id, c.id, '2025-06-15'::date, '2025-06-22'::date
 FROM trips t, cities c WHERE t.title = 'European Adventure 2025' AND c.name = 'Paris'
 UNION ALL
-SELECT t.id, c.id, '2025-06-22', '2025-07-05', 2, 'Barcelona - Gaudí architecture'
+SELECT t.id, c.id, '2025-06-22'::date, '2025-07-05'::date
 FROM trips t, cities c WHERE t.title = 'European Adventure 2025' AND c.name = 'Barcelona';
 
 -- Add trip companions
