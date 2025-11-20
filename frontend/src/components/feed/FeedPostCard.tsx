@@ -143,8 +143,8 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
                         'bg-accent-amber/20 text-accent-amber'
                     }`}>
                         {post.source === 'buddy' ? '👥 Buddy' : 
-                         post.source === 'trending' ? '🔥 Trending' : 
-                         '⭐ For You'}
+                            post.source === 'trending' ? '🔥 Trending' : 
+                            '⭐ For You'}
                     </span>
                 </div>
 
@@ -157,7 +157,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
                             className="w-full h-full object-cover"
                             onError={(e) => {
                                 console.error('Failed to load image:', post.photos?.[0]);
-                                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"600\" viewBox=\"0 0 800 600\"%3E%3Crect width=\"800\" height=\"600\" fill=\"%23333\"/%3E%3Ctext x=\"400\" y=\"300\" text-anchor=\"middle\" fill=\"%23999\" font-size=\"24\" font-family=\"Arial\"%3EImage not available%3C/text%3E%3C/svg%3E';
+                                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"%3E%3Crect width="800" height="600" fill="%23333"/%3E%3Ctext x="400" y="300" text-anchor="middle" fill="%23999" font-size="24" font-family="Arial"%3EImage not available%3C/text%3E%3C/svg%3E';
                             }}
                         />
                         {post.photos.length > 1 && (
