@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAuth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { requireModerator } from '../middleware/moderator';
 import {
   getDashboardStats,
@@ -18,7 +18,7 @@ import {
 const router = express.Router();
 
 // All routes require authentication and moderator role
-router.use(requireAuth, requireModerator);
+router.use(authenticateToken, requireModerator);
 
 // Dashboard
 router.get('/dashboard/stats', getDashboardStats);

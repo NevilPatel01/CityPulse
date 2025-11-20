@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthRequest } from './auth';
 
 /**
  * Middleware to check if user has moderator role
@@ -10,16 +9,14 @@ export const requireModerator = (
   res: Response,
   next: NextFunction
 ) => {
-  const authReq = req as AuthRequest;
-
-  if (!authReq.user) {
+  if (!req.user) {
     return res.status(401).json({
       success: false,
       error: 'Authentication required'
     });
   }
 
-  if (authReq.user.role !== 'moderator') {
+  if (req.user.role !== 'moderator') {
     return res.status(403).json({
       success: false,
       error: 'Moderator access required'
