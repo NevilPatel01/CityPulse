@@ -108,9 +108,14 @@ const TripDetailPage = () => {
     try {
       setIsUpdating(true);
       await tripService.updateTrip(Number(id), data);
+      // Close the edit form first
+      setShowEditForm(false);
+      // Force reload by setting loading state
+      setLoading(true);
       // Reload the complete trip data with companions, cities, etc.
       await loadTrip();
-      setShowEditForm(false);
+      // Reset to overview tab to show updated data
+      setActiveTab('overview');
       showSuccess('Trip updated successfully!');
     } catch (error) {
       showError('Failed to update trip');

@@ -97,12 +97,29 @@ const ItineraryItemModal: React.FC<ItineraryItemModalProps> = ({
     }
 
     try {
-      await onSubmit({
-        ...formData,
+      // Combine description and address into notes if address is provided
+      let notesText = formData.description.trim();
+      if (formData.location_address.trim()) {
+        notesText = notesText 
+          ? `${notesText}\n\nAddress: ${formData.location_address.trim()}`
+          : `Address: ${formData.location_address.trim()}`;
+      }
+      
+      const submitData: Partial<TripItineraryItem> = {
         trip_id: tripId,
-        duration_minutes: formData.duration_minutes || undefined,
-        estimated_cost: formData.estimated_cost || undefined,
-      });
+        title: formData.title.trim(),
+        description: notesText || undefined,
+        day_number: Number(formData.day_number),
+        activity_date: formData.activity_date || undefined,
+        time_slot: formData.time_slot || undefined,
+        activity_type: formData.activity_type,
+        duration_minutes: formData.duration_minutes ? Number(formData.duration_minutes) : undefined,
+        estimated_cost: formData.estimated_cost ? Number(formData.estimated_cost) : undefined,
+        location_name: formData.location_name.trim() || undefined,
+        status: formData.status,
+      };
+      
+      await onSubmit(submitData);
     } catch (error) {
       console.error('Error submitting itinerary item:', error);
     }
