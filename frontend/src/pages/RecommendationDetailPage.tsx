@@ -682,7 +682,7 @@ export function RecommendationDetailPage() {
                         <Link to={`/profile/${rating.username}`}>
                           {rating.profile_picture_url ? (
                             <img
-                              src={rating.profile_picture_url}
+                              src={rating.profile_picture_url.startsWith('http') ? rating.profile_picture_url : `${apiConfig.baseUrl}${rating.profile_picture_url}`}
                               alt={rating.full_name}
                               className="w-10 h-10 rounded-full object-cover"
                             />
@@ -814,7 +814,7 @@ export function RecommendationDetailPage() {
               >
                 {recommendation.profile_picture_url ? (
                   <img
-                    src={recommendation.profile_picture_url}
+                    src={recommendation.profile_picture_url.startsWith('http') ? recommendation.profile_picture_url : `${apiConfig.baseUrl}${recommendation.profile_picture_url}`}
                     alt={recommendation.full_name}
                     className="w-12 h-12 rounded-full object-cover"
                   />

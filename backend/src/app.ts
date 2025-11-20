@@ -15,6 +15,7 @@ import feedRoutes from './routes/feed';
 import citiesRoutes from './routes/cities';
 import tripsRoutes from './routes/trips';
 import achievementRoutes from './routes/achievements';
+import moderationRoutes from './routes/moderation';
 import { healthCheck, schemaCheck } from './controllers/health';
 
 export const createApp = (): express.Express => {
@@ -172,6 +173,10 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up achievement routes...');
     // Achievement routes - handles badges and gamification
     app.use('/api/achievements', achievementRoutes);
+
+    console.log('[APP] Setting up moderation routes...');
+    // Moderation routes - handles content moderation and user management (moderator only)
+    app.use('/api/moderator', moderationRoutes);
 
     console.log('[APP] Setting up static file serving for uploads...');
     // Serve uploaded images statically with proper CORS headers

@@ -13,23 +13,23 @@ export const testDataTracker = {
     recommendationIds: new Set<number>(),
     cityIds: new Set<number>(),
     tripIds: new Set<number>(),
-    
+
     addUser(id: number) {
         this.userIds.add(id);
     },
-    
+
     addRecommendation(id: number) {
         this.recommendationIds.add(id);
     },
-    
+
     addCity(id: number) {
         this.cityIds.add(id);
     },
-    
+
     addTrip(id: number) {
         this.tripIds.add(id);
     },
-    
+
     clear() {
         this.userIds.clear();
         this.recommendationIds.clear();
@@ -71,7 +71,7 @@ export const createTestUser = async (overrides: any = {}) => {
         : 'TestPass123!'; // Default to valid password if provided one doesn't meet requirements
 
     const hashedPassword = await hashPassword(validPassword);
-    
+
     const userData = {
         username: overrides.username || alphanumericId,
         email: overrides.email || `test_${testId}@example.com`,
@@ -130,7 +130,7 @@ export const createTestUser = async (overrides: any = {}) => {
  */
 export const createGoogleTestUser = async (overrides: any = {}) => {
     const testId = generateAlphanumericTestId();
-    
+
     return createTestUser({
         username: overrides.username || testId,
         email: overrides.email || `google${testId}@gmail.com`,
@@ -148,9 +148,9 @@ export const createGoogleTestUser = async (overrides: any = {}) => {
 export const generateTestToken = (userId: number, expiresIn: string | number = '1h'): string => {
     const secret = process.env.JWT_SECRET || 'test-secret';
     return jwt.sign(
-        { userId, role: 'user', email: `user${userId}@test.com`, username: `user${userId}` }, 
-        secret, 
-        { 
+        { userId, role: 'user', email: `user${userId}@test.com`, username: `user${userId}` },
+        secret,
+        {
             expiresIn,
             issuer: 'citypulse-api',
             audience: 'citypulse-client'
@@ -164,9 +164,9 @@ export const generateTestToken = (userId: number, expiresIn: string | number = '
 export const generateTestRefreshToken = (userId: number): string => {
     const secret = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret';
     return jwt.sign(
-        { userId, role: 'user', email: `user${userId}@test.com`, username: `user${userId}` }, 
-        secret, 
-        { 
+        { userId, role: 'user', email: `user${userId}@test.com`, username: `user${userId}` },
+        secret,
+        {
             expiresIn: '7d',
             issuer: 'citypulse-api',
             audience: 'citypulse-client'
@@ -179,7 +179,7 @@ export const generateTestRefreshToken = (userId: number): string => {
  */
 export const createTestCity = async (overrides: any = {}) => {
     const testId = generateTestId();
-    
+
     const cityData = {
         name: overrides.name || `TestCity_${testId}`,
         country: overrides.country || 'Test Country',
@@ -192,8 +192,8 @@ export const createTestCity = async (overrides: any = {}) => {
 
     const result = await query(
         `INSERT INTO cities (name, country, state_province, latitude, longitude, timezone, description)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, name, country, state_province, latitude, longitude, timezone, description, created_at`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, name, country, state_province, latitude, longitude, timezone, description, created_at`,
         [
             cityData.name,
             cityData.country,
@@ -207,7 +207,7 @@ export const createTestCity = async (overrides: any = {}) => {
 
     const city = result.rows[0];
     testDataTracker.addCity(city.id);
-    
+
     return city;
 };
 
@@ -217,12 +217,12 @@ export const createTestCity = async (overrides: any = {}) => {
 export const ensureRecommendationCategory = async (categoryName: string = 'Food') => {
     const result = await query(
         `INSERT INTO recommendation_categories (name, description)
-         VALUES ($1, $2)
-         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-         RETURNING id`,
+            VALUES ($1, $2)
+            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+            RETURNING id`,
         [categoryName, `Test ${categoryName} category`]
     );
-    
+
     return result.rows[0].id;
 };
 
@@ -232,7 +232,7 @@ export const ensureRecommendationCategory = async (categoryName: string = 'Food'
 export const createTestRecommendation = async (userId: number, overrides: any = {}) => {
     const testId = generateTestId();
     const categoryId = await ensureRecommendationCategory(overrides.category || 'Food');
-    
+
     const recData = {
         title: overrides.title || `Test Recommendation ${testId}`,
         description: overrides.description || 'Test recommendation description',
@@ -249,8 +249,8 @@ export const createTestRecommendation = async (userId: number, overrides: any = 
 
     const result = await query(
         `INSERT INTO recommendations (user_id, title, description, category_id, price_range_min, price_range_max, difficulty_level, address, latitude, longitude, user_rating, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-         RETURNING id, user_id, title, description, category_id, status, created_at`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id, user_id, title, description, category_id, status, created_at`,
         [
             userId,
             recData.title,
@@ -269,7 +269,7 @@ export const createTestRecommendation = async (userId: number, overrides: any = 
 
     const recommendation = result.rows[0];
     testDataTracker.addRecommendation(recommendation.id);
-    
+
     return recommendation;
 };
 
@@ -283,7 +283,7 @@ export const createPasswordResetToken = async (userId: number, email: string) =>
 
     await query(
         `INSERT INTO password_reset_tokens (user_id, email, security_code, reset_token, expires_at)
-         VALUES ($1, $2, $3, $4, $5)`,
+            VALUES ($1, $2, $3, $4, $5)`,
         [userId, email, securityCode, resetToken, expiresAt]
     );
 
@@ -308,7 +308,7 @@ export const deleteTestUser = async (userId: number) => {
  */
 export const deleteTestUsers = async (userIds: number[]) => {
     if (userIds.length === 0) return;
-    
+
     try {
         await query(
             `DELETE FROM users WHERE id = ANY($1)`,
@@ -382,9 +382,9 @@ export const cleanupTestDataByPattern = async (emailPattern: string = '%test_%')
             `SELECT id FROM users WHERE email LIKE $1`,
             [emailPattern]
         );
-        
+
         const userIds = result.rows.map(row => row.id);
-        
+
         if (userIds.length > 0) {
             // Delete users (cascade handles related data)
             await query(

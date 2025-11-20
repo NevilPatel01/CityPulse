@@ -179,6 +179,25 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className = '' }) =>
               )}
             </Link>
 
+            {/* Moderator Dashboard Link - Only visible to moderators */}
+            {user.role === 'moderator' && (
+              <Link
+                to="/moderator/dashboard"
+                className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                  isActivePath('/moderator/dashboard') 
+                    ? 'bg-purple-100 text-purple-800 border-l-4 border-purple-600' 
+                    : 'text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="mr-3 text-base">🛡️</span>
+                Moderator Dashboard
+                {isActivePath('/moderator/dashboard') && (
+                  <span className="ml-auto text-purple-600" aria-hidden="true">●</span>
+                )}
+              </Link>
+            )}
+
             <div className="border-t border-subtle my-1"></div>
             
             <button

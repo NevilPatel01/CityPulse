@@ -27,7 +27,7 @@ export const toggleBookmark = async (req: Request, res: Response) => {
 
         // Check if bookmark exists
         const existingBookmark = await client.query(
-            'SELECT id FROM recommendation_bookmarks WHERE user_id = $1 AND recommendation_id = $2',
+            'SELECT id FROM recommendation_saves WHERE user_id = $1 AND recommendation_id = $2',
             [userId, recommendationId]
         );
 
@@ -36,14 +36,14 @@ export const toggleBookmark = async (req: Request, res: Response) => {
         if (existingBookmark.rows.length > 0) {
             // Remove bookmark
             await client.query(
-                'DELETE FROM recommendation_bookmarks WHERE user_id = $1 AND recommendation_id = $2',
+                'DELETE FROM recommendation_saves WHERE user_id = $1 AND recommendation_id = $2',
                 [userId, recommendationId]
             );
             isBookmarked = false;
         } else {
             // Add bookmark
             await client.query(
-                'INSERT INTO recommendation_bookmarks (user_id, recommendation_id) VALUES ($1, $2)',
+                'INSERT INTO recommendation_saves (user_id, recommendation_id) VALUES ($1, $2)',
                 [userId, recommendationId]
             );
             isBookmarked = true;
@@ -94,11 +94,13 @@ export const getBookmarkedRecommendations = async (req: Request, res: Response) 
                 r.description,
                 r.user_rating,
                 r.likes_count,
-                r.shares_count,
+                (SELECT COUNT(*)::integer FROM recommendation_saves WHERE recommendation_id = r.id) as shares_count,
                 r.views_count,
                 r.created_at,
+                r.user_id,
                 u.username,
                 u.full_name,
+                up.profile_photo_url as profile_picture_url,
                 rc.name as category_name,
                 c.name as city_name,
                 c.country,
@@ -108,10 +110,17 @@ export const getBookmarkedRecommendations = async (req: Request, res: Response) 
                      FROM recommendation_photos rp 
                      WHERE rp.recommendation_id = r.id), 
                     ARRAY[]::varchar[]
-                ) as photos
-            FROM recommendation_bookmarks b
+                ) as photos,
+                EXISTS(
+                    SELECT 1 FROM recommendation_likes rl 
+                    WHERE rl.recommendation_id = r.id AND rl.user_id = $1
+                ) as is_liked,
+                true as is_bookmarked,
+                'recommendation' as content_type
+            FROM recommendation_saves b
             JOIN recommendations r ON b.recommendation_id = r.id
             JOIN users u ON r.user_id = u.id
+            JOIN user_profiles up ON u.id = up.user_id
             LEFT JOIN recommendation_categories rc ON r.category_id = rc.id
             LEFT JOIN recommendation_cities rec_city ON r.id = rec_city.recommendation_id
             LEFT JOIN cities c ON rec_city.city_id = c.id
@@ -123,18 +132,19 @@ export const getBookmarkedRecommendations = async (req: Request, res: Response) 
 
         // Get total count
         const countResult = await pool.query(
-            'SELECT COUNT(*) as total FROM recommendation_bookmarks WHERE user_id = $1',
+            'SELECT COUNT(*) as total FROM recommendation_saves WHERE user_id = $1',
             [userId]
         );
 
         res.status(200).json({
             success: true,
-            data: result.rows,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total: parseInt(countResult.rows[0].total),
-                totalPages: Math.ceil(countResult.rows[0].total / Number(limit))
+            data: {
+                posts: result.rows,
+                pagination: {
+                    currentPage: Number(page),
+                    totalPages: Math.ceil(countResult.rows[0].total / Number(limit)),
+                    totalItems: parseInt(countResult.rows[0].total)
+                }
             }
         });
 
@@ -164,7 +174,7 @@ export const checkBookmarkStatus = async (req: Request, res: Response) => {
         }
 
         const result = await pool.query(
-            'SELECT id FROM recommendation_bookmarks WHERE user_id = $1 AND recommendation_id = $2',
+            'SELECT id FROM recommendation_saves WHERE user_id = $1 AND recommendation_id = $2',
             [userId, recommendationId]
         );
 

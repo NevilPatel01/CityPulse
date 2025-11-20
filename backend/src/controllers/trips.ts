@@ -301,20 +301,28 @@ export const updateTrip = async (req: Request, res: Response) => {
         const { id } = req.params;
         const updates = req.body;
 
-        // Check if user owns the trip
-        const ownerCheck = await pool.query(
-            'SELECT user_id FROM trips WHERE id = $1',
-            [id]
+        // Check if user has permission (owner or accepted companion for collaborative trips)
+        const permissionCheck = await pool.query(
+            `SELECT t.user_id, t.is_collaborative,
+                    EXISTS(SELECT 1 FROM trip_companions tc 
+                           WHERE tc.trip_id = t.id AND tc.user_id = $1 AND tc.status = 'accepted') as is_companion
+             FROM trips t
+             WHERE t.id = $2`,
+            [userId, id]
         );
 
-        if (ownerCheck.rows.length === 0) {
+        if (permissionCheck.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Trip not found'
             });
         }
 
-        if (ownerCheck.rows[0].user_id !== userId) {
+        const trip = permissionCheck.rows[0];
+        const isOwner = trip.user_id === userId;
+        const isCollaborativeCompanion = trip.is_collaborative && trip.is_companion;
+
+        if (!isOwner && !isCollaborativeCompanion) {
             return res.status(403).json({
                 success: false,
                 message: 'You do not have permission to update this trip'

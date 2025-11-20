@@ -223,7 +223,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                             <div className="w-8 h-8 bg-surface-glass rounded-full flex items-center justify-center">
                                 {item.author.profilePicture ? (
                                     <img 
-                                        src={item.author.profilePicture} 
+                                        src={item.author.profilePicture.startsWith('http') ? item.author.profilePicture : `${apiConfig.baseUrl}${item.author.profilePicture}`} 
                                         alt={item.author.name}
                                         className="w-full h-full rounded-full object-cover"
                                     />
@@ -393,7 +393,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                                 <div className="w-8 h-8 bg-surface-glass rounded-full flex items-center justify-center">
                                     {item.author.profilePicture ? (
                                         <img 
-                                            src={item.author.profilePicture} 
+                                            src={item.author.profilePicture.startsWith('http') ? item.author.profilePicture : `${apiConfig.baseUrl}${item.author.profilePicture}`} 
                                             alt={item.author.name}
                                             className="w-full h-full rounded-full object-cover"
                                         />

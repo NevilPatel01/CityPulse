@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import SearchFilters from './SearchFilters';
 import SearchResults from './SearchResults';
-import FilterDrawer from './FilterDrawer';
 import { searchApi, type FilterOptions, type SearchResult } from '../../services/searchService';
 
 export interface SearchFilters {
@@ -45,7 +44,6 @@ const AdvancedSearch: React.FC = () => {
         total: number;
     } | null>(null);
     const [loading, setLoading] = useState(false);
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
     const performSearch = useCallback(async () => {
@@ -152,11 +150,41 @@ const AdvancedSearch: React.FC = () => {
     return (
         <div className="min-h-screen bg-base">
             <div className="max-w-7xl mx-auto px-4 py-6">
-                <div className="flex gap-6">
-                    {/* Desktop Sidebar Filters */}
-                    {!isMobile && filterOptions && (
-                        <aside className="w-80 flex-shrink-0">
-                            <div className="sticky top-24">
+                {/* Search Bar */}
+                <div className="mb-6">
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            value={filters.q}
+                            onChange={(e) => updateFilters({ q: e.target.value })}
+                            placeholder="Search places, friends, or experiences..."
+                            className="w-full pl-12 pr-4 py-4 bg-surface-glass border border-subtle rounded-xl text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-transparent transition-all"
+                            autoFocus
+                        />
+                        {filters.q && (
+                            <button
+                                onClick={() => updateFilters({ q: '' })}
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted hover:text-primary transition-colors"
+                            >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Filters and Results Layout */}
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Filters - Always visible, stacked on mobile */}
+                    {filterOptions && (
+                        <aside className={`${isMobile ? 'w-full' : 'w-80 flex-shrink-0'}`}>
+                            <div className={isMobile ? '' : 'sticky top-24'}>
                                 <SearchFilters
                                     filters={filters}
                                     filterOptions={filterOptions}
@@ -177,22 +205,6 @@ const AdvancedSearch: React.FC = () => {
                     </main>
                 </div>
             </div>
-
-            {/* Mobile Filter Drawer */}
-            {isMobile && filterOptions && (
-                <FilterDrawer
-                    isOpen={isFilterDrawerOpen}
-                    onClose={() => setIsFilterDrawerOpen(false)}
-                    filters={filters}
-                    filterOptions={filterOptions}
-                    onFilterChange={updateFilters}
-                    onReset={resetFilters}
-                    onApply={() => {
-                        setIsFilterDrawerOpen(false);
-                        performSearch();
-                    }}
-                />
-            )}
         </div>
     );
 };

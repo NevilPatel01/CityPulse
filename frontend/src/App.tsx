@@ -28,6 +28,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CompanionFinderPage from './pages/CompanionFinderPage';
+import ModeratorDashboard from './pages/ModeratorDashboard';
 
 function App() {
   useEffect(() => {
@@ -165,6 +166,13 @@ function App() {
           <Route path="/buddies" element={
             <ProtectedRoute>
               <BuddiesPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Moderator routes */}
+          <Route path="/moderator/dashboard" element={
+            <ProtectedRoute>
+              <ModeratorDashboard />
             </ProtectedRoute>
           } />
           

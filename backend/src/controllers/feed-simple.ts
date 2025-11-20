@@ -26,7 +26,7 @@ export const getFeed = async (req: Request, res: Response) => {
                 r.description,
                 r.user_rating,
                 r.likes_count,
-                (SELECT COUNT(*)::integer FROM user_favorites WHERE recommendation_id = r.id) as shares_count,
+                (SELECT COUNT(*)::integer FROM recommendation_saves WHERE recommendation_id = r.id) as shares_count,
                 r.views_count,
                 r.created_at,
                 u.id as user_id,
@@ -48,7 +48,7 @@ export const getFeed = async (req: Request, res: Response) => {
                     WHERE rl.recommendation_id = r.id AND rl.user_id = $1
                 ) as is_liked,
                 EXISTS(
-                    SELECT 1 FROM user_favorites rs 
+                    SELECT 1 FROM recommendation_saves rs 
                     WHERE rs.recommendation_id = r.id AND rs.user_id = $1
                 ) as is_bookmarked
             FROM recommendations r

@@ -11,6 +11,7 @@ export interface User {
     fullName: string;
     profilePicture?: string;
     createdAt?: string;
+    role?: string;
 }
 
 // Auth context interface

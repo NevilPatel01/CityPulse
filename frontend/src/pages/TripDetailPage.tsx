@@ -41,6 +41,25 @@ const TripDetailPage = () => {
   const [editingItineraryItem, setEditingItineraryItem] = useState<TripItineraryItem | undefined>();
   const [isSubmittingItinerary, setIsSubmittingItinerary] = useState(false);
 
+  // Check if current user can edit the trip
+  const canEditTrip = () => {
+    if (!trip || !user) return false;
+    
+    const currentUserId = Number(user.id);
+    
+    // User is the creator
+    if (trip.user_id === currentUserId) return true;
+    
+    // User is an accepted companion and trip is collaborative
+    if (trip.is_collaborative && trip.companions) {
+      return trip.companions.some(
+        companion => companion.user_id === currentUserId && companion.status === 'accepted'
+      );
+    }
+    
+    return false;
+  };
+
   const loadTrip = useCallback(async () => {
     if (!id) return;
     
@@ -81,7 +100,10 @@ const TripDetailPage = () => {
   }, [activeTab, id, loadComments]);
 
   const handleUpdateTrip = async (data: CreateTripData) => {
-    if (!id) return;
+    if (!id || !canEditTrip()) {
+      showError('You do not have permission to edit this trip');
+      return;
+    }
     
     try {
       setIsUpdating(true);
@@ -190,6 +212,7 @@ const TripDetailPage = () => {
     }
   };
 
+  // Check if user is the trip organizer/creator
   const isOrganizer = user && trip && trip.user_id === Number(user.id);
 
   const getPrivacyIcon = (privacy: string) => {
@@ -268,10 +291,12 @@ const TripDetailPage = () => {
                 <span>Back</span>
               </button>
               
-              <button onClick={() => setShowEditForm(true)} className="edit-button">
-                <Edit className="icon" />
-                <span>Edit Trip</span>
-              </button>
+              {canEditTrip() && (
+                <button onClick={() => setShowEditForm(true)} className="edit-button">
+                  <Edit className="icon" />
+                  <span>Edit Trip</span>
+                </button>
+              )}
             </div>
             
             <div className="trip-title-section">
@@ -390,27 +415,31 @@ const TripDetailPage = () => {
 
           {activeTab === 'itinerary' && (
             <div className="itinerary-tab">
-              <div className="tab-header-actions">
-                <button onClick={handleAddItineraryItem} className="btn-primary">
-                  <Plus className="btn-icon" />
-                  Add Activity
-                </button>
-              </div>
+              {canEditTrip() && (
+                <div className="tab-header-actions">
+                  <button onClick={handleAddItineraryItem} className="btn-primary">
+                    <Plus className="btn-icon" />
+                    Add Activity
+                  </button>
+                </div>
+              )}
               
               {trip.itinerary_items && trip.itinerary_items.length > 0 ? (
                 <ItineraryView 
                   items={trip.itinerary_items} 
-                  onEdit={handleEditItineraryItem}
-                  onDelete={handleDeleteItineraryItem}
+                  onEdit={canEditTrip() ? handleEditItineraryItem : undefined}
+                  onDelete={canEditTrip() ? handleDeleteItineraryItem : undefined}
                 />
               ) : (
                 <div className="empty-state">
                   <Calendar className="empty-icon" />
                   <p>No itinerary items yet</p>
-                  <button onClick={handleAddItineraryItem} className="btn-primary">
-                    <Plus className="btn-icon" />
-                    Add First Activity
-                  </button>
+                  {canEditTrip() && (
+                    <button onClick={handleAddItineraryItem} className="btn-primary">
+                      <Plus className="btn-icon" />
+                      Add First Activity
+                    </button>
+                  )}
                 </div>
               )}
             </div>

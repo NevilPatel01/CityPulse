@@ -7,11 +7,14 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useProfile } from '../hooks/useProfile';
 import { profileService } from '../services/profileService';
 import { apiRequest } from '../config/api';
+import { getBookmarkedPosts } from '../services/feedService';
 import { RecommendationsList } from '../components/recommendations/RecommendationsList';
 import { AchievementProgress } from '../components/achievements/AchievementProgress';
 import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeline';
 import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
+import { FeedPostCard } from '../components/feed/FeedPostCard';
 import type { UserAchievement } from '../types/achievement';
+import type { FeedPost } from '../services/feedService';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -42,8 +45,22 @@ export default function ProfilePage() {
   const [recommendationCount, setRecommendationCount] = useState<number>(0);
   const [newlyUnlockedAchievements, setNewlyUnlockedAchievements] = useState<UserAchievement[]>([]);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
+  
+  // Saved recommendations state
+  const [savedRecommendations, setSavedRecommendations] = useState<FeedPost[]>([]);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [savedPage, setSavedPage] = useState(1);
+  const [hasMoreSaved, setHasMoreSaved] = useState(true);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
+
+  // Reset activeTab if it's out of bounds (e.g., when switching from own profile to other's)
+  useEffect(() => {
+    const maxTab = isOwnProfile ? 3 : 2;
+    if (activeTab > maxTab) {
+      setActiveTab(0);
+    }
+  }, [isOwnProfile, activeTab]);
 
   // Fetch recommendation count
   useEffect(() => {
@@ -67,6 +84,43 @@ export default function ProfilePage() {
       fetchRecommendationCount();
     }
   }, [profile?.id]);
+
+  // Fetch saved recommendations when Saved tab is active
+  useEffect(() => {
+    const fetchSavedRecommendations = async () => {
+      if (!isOwnProfile || activeTab !== 3) return;
+      
+      try {
+        setLoadingSaved(true);
+        const response = await getBookmarkedPosts(savedPage, 12) as {
+          success: boolean;
+          data: {
+            posts: FeedPost[];
+            pagination: {
+              currentPage: number;
+              totalPages: number;
+              totalItems: number;
+            };
+          };
+        };
+        
+        if (response.success) {
+          if (savedPage === 1) {
+            setSavedRecommendations(response.data.posts);
+          } else {
+            setSavedRecommendations(prev => [...prev, ...response.data.posts]);
+          }
+          setHasMoreSaved(response.data.pagination.currentPage < response.data.pagination.totalPages);
+        }
+      } catch (error) {
+        console.error('Error fetching saved recommendations:', error);
+      } finally {
+        setLoadingSaved(false);
+      }
+    };
+
+    fetchSavedRecommendations();
+  }, [isOwnProfile, activeTab, savedPage]);
 
   // Check for newly unlocked achievements
   useEffect(() => {
@@ -214,11 +268,15 @@ export default function ProfilePage() {
     );
   }
 
-  const tabs = [
+  const tabs = isOwnProfile ? [
     'My Recommendations',
     'Travel History', 
     'Achievements',
     'Saved'
+  ] : [
+    'My Recommendations',
+    'Travel History', 
+    'Achievements'
   ];
 
   return (
@@ -580,8 +638,69 @@ export default function ProfilePage() {
                   )}
                   {activeTab === 3 && (
                     <div>
-                      <h3 className="text-lg font-semibold text-primary mb-4">Saved</h3>
-                      <p className="text-muted">Your saved items will appear here...</p>
+                      <h3 className="text-lg font-semibold text-primary mb-4">Saved Recommendations</h3>
+                      
+                      {loadingSaved && savedRecommendations.length === 0 ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pulse"></div>
+                          <span className="ml-3 text-muted">Loading saved recommendations...</span>
+                        </div>
+                      ) : savedRecommendations.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="text-muted mb-4">
+                            <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-medium text-primary mb-2">No saved recommendations yet</h4>
+                          <p className="text-muted mb-4">Bookmark recommendations to save them</p>
+                          <button
+                            onClick={() => navigate('/feed')}
+                            className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Explore Recommendations
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {savedRecommendations.map((post) => (
+                              <FeedPostCard 
+                                key={post.id} 
+                                post={post}
+                                onUpdate={(postId, updates) => {
+                                  // Update the post in the list if bookmarked status changes
+                                  if (updates.is_bookmarked === false) {
+                                    // Remove from saved list if unbookmarked
+                                    setSavedRecommendations(prev => prev.filter(p => p.id !== postId));
+                                  } else {
+                                    // Update the post data
+                                    setSavedRecommendations(prev => prev.map(p => 
+                                      p.id === postId ? { ...p, ...updates } : p
+                                    ));
+                                  }
+                                }}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Load More Button */}
+                          {hasMoreSaved && (
+                            <div className="flex justify-center mt-8">
+                              <button
+                                onClick={() => setSavedPage(prev => prev + 1)}
+                                disabled={loadingSaved}
+                                className="bg-surface-glass backdrop-blur-glass border border-subtle hover:border-pulse text-primary px-6 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {loadingSaved ? 'Loading...' : 'Load More'}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
