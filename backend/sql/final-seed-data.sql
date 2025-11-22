@@ -7,7 +7,7 @@ DELETE FROM trip_companions WHERE trip_id IN (SELECT id FROM trips WHERE user_id
 DELETE FROM trip_itinerary WHERE trip_id IN (SELECT id FROM trips WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%'));
 DELETE FROM trip_cities WHERE trip_id IN (SELECT id FROM trips WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%'));
 DELETE FROM trips WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
-DELETE FROM travel_buddy_connections WHERE requester_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%') OR requested_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
+DELETE FROM travel_buddy_xconnections WHERE requester_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%') OR requested_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
 DELETE FROM recommendation_cities WHERE recommendation_id IN (SELECT id FROM recommendations WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%'));
 DELETE FROM recommendations WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
 DELETE FROM user_profiles WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%citypulse-seed%');
@@ -17,17 +17,17 @@ DELETE FROM users WHERE email LIKE '%citypulse-seed%';
 INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, email_verified, created_at)
 VALUES 
     ('john_explorer', 'john.explorer@citypulse-seed.com', 
-     '$2b$10$EeoPWRIWWW7GkJOzbea.ne62VgvQqIAGDMaGNu3JHAL0Zti9UC3yW', 
-     'John Explorer', 'Passionate traveler and coffee enthusiast ☕', 
-     'San Francisco, CA', 'New York, NY', true, NOW() - INTERVAL '6 months'),
+        '$2b$10$EeoPWRIWWW7GkJOzbea.ne62VgvQqIAGDMaGNu3JHAL0Zti9UC3yW', 
+        'John Explorer', 'Passionate traveler and coffee enthusiast ☕', 
+        'San Francisco, CA', 'New York, NY', true, NOW() - INTERVAL '6 months'),
     ('sarah_wanderer', 'sarah.wanderer@citypulse-seed.com', 
-     '$2b$10$EeoPWRIWWW7GkJOzbea.ne62VgvQqIAGDMaGNu3JHAL0Zti9UC3yW', 
-     'Sarah Wanderer', 'Digital nomad and food blogger 🍜', 
-     'Barcelona, Spain', 'London, UK', true, NOW() - INTERVAL '5 months'),
+        '$2b$10$EeoPWRIWWW7GkJOzbea.ne62VgvQqIAGDMaGNu3JHAL0Zti9UC3yW', 
+        'Sarah Wanderer', 'Digital nomad and food blogger 🍜', 
+        'Barcelona, Spain', 'London, UK', true, NOW() - INTERVAL '5 months'),
     ('mike_adventurer', 'mike.adventurer@citypulse-seed.com', 
-     '$2b$10$EeoPWRIWWW7GkJOzbea.ne62VgvQqIAGDMaGNu3JHAL0Zti9UC3yW', 
-     'Mike Adventurer', 'Hiking enthusiast 🏔️', 
-     'Denver, CO', 'Seattle, WA', true, NOW() - INTERVAL '4 months');
+        '$2b$10$EeoPWRIWWW7GkJOzbea.ne62VgvQqIAGDMaGNu3JHAL0Zti9UC3yW', 
+        'Mike Adventurer', 'Hiking enthusiast 🏔️', 
+        'Denver, CO', 'Seattle, WA', true, NOW() - INTERVAL '4 months');
 
 -- Create profiles
 INSERT INTO user_profiles (user_id, travel_buddy_requests_enabled, profile_visibility)

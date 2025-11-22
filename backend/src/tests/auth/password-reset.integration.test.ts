@@ -1,24 +1,37 @@
-import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import request from 'supertest';
 import { createApp } from '../../app';
 import { cleanupDatabase } from '../setup';
+import { generateTestId, generateAlphanumericTestId, deleteTestUser, cleanupAllTestData } from '../helpers/test-helpers';
 
 const app = createApp();
 
 describe('Password Reset Integration Tests', () => {
+    const createdUserIds: number[] = [];
+
     beforeEach(async () => {
-        await cleanupDatabase();
+        // Clean up before each test
+    });
+
+    afterEach(async () => {
+        // Clean up users created in this test
+        for (const userId of createdUserIds) {
+            await deleteTestUser(userId);
+        }
+        createdUserIds.length = 0;
     });
 
     afterAll(async () => {
-        // Cleanup after all tests
+        await cleanupAllTestData();
     });
 
     // Helper function to create a user for testing password reset
     const createTestUser = async () => {
+        const testId = generateAlphanumericTestId();
+        const emailId = generateTestId();
         const userRegistration = {
-            username: 'resetuser',
-            email: 'resetuser@example.com',
+            username: testId,
+            email: `resetuser_${emailId}@example.com`,
             password: 'OldPassword123!',
             fullName: 'Reset Test User'
         };
@@ -27,8 +40,12 @@ describe('Password Reset Integration Tests', () => {
             .post('/api/auth/register')
             .send(userRegistration);
 
+        if (response.body.data?.user?.id) {
+            createdUserIds.push(response.body.data.user.id);
+        }
+
         return {
-            user: response.body.data.user,
+            user: response.body.data?.user,
             email: userRegistration.email,
             password: userRegistration.password
         };
@@ -87,11 +104,11 @@ describe('Password Reset Integration Tests', () => {
         it('should reject invalid email format', async () => {
             const response = await request(app)
                 .post('/api/auth/reset-password/request')
-                .send({ email: 'invalid-email-format' })
+                .send({ email: 'invalid-email' })
                 .expect(400);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.message).toContain('validation');
+            expect(response.body.message).toBe('Validation failed');
         });
 
         it('should reject empty email', async () => {
@@ -148,12 +165,12 @@ describe('Password Reset Integration Tests', () => {
             const resetToken = resetResponse.body.resetToken;
 
             // Note: In a real test, you'd need to intercept the email or have a way to get the security code
-            // For this test, we'll test the structure and error cases
+            // For this test, we'll test the structure and error cases with a valid format but wrong code
             const response = await request(app)
                 .post('/api/auth/reset-password/verify')
                 .send({
                     resetToken,
-                    securityCode: 'invalid_code' // This will fail, but tests the endpoint
+                    securityCode: '999999' // Valid format but wrong code
                 })
                 .expect(400);
 
@@ -255,7 +272,7 @@ describe('Password Reset Integration Tests', () => {
                 .expect(400);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.message).toContain('validation');
+            expect(response.body.message).toBe('Validation failed');
         });
 
         it('should reject missing new password', async () => {
@@ -340,13 +357,13 @@ describe('Password Reset Integration Tests', () => {
 
             const resetToken = resetResponse.body.resetToken;
 
-            // Try to verify with wrong code multiple times (this would normally clean up expired tokens)
+            // Try to verify with wrong code multiple times (use valid 6-digit format)
             for (let i = 0; i < 3; i++) {
                 await request(app)
                     .post('/api/auth/reset-password/verify')
                     .send({
                         resetToken,
-                        securityCode: 'wrong_code'
+                        securityCode: '111111' // Valid format but wrong code
                     })
                     .expect(400);
             }
@@ -356,7 +373,7 @@ describe('Password Reset Integration Tests', () => {
                 .post('/api/auth/reset-password/verify')
                 .send({
                     resetToken,
-                    securityCode: 'still_wrong'
+                    securityCode: '222222' // Valid format but wrong code
                 })
                 .expect(400);
 

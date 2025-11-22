@@ -21,10 +21,15 @@ describe('Health Check Integration Tests', () => {
                 .expect(200);
 
             expect(response.body).toEqual({
-                status: 'OK',
-                message: 'CityPulse API is running',
-                timestamp: expect.any(String),
-                environment: expect.any(String)
+                success: true,
+                message: 'Server is healthy',
+                data: {
+                    timestamp: expect.any(String),
+                    database: {
+                        connected: true,
+                        currentTime: expect.any(String)
+                    }
+                }
             });
         });
 
@@ -33,7 +38,7 @@ describe('Health Check Integration Tests', () => {
                 .get('/api/health')
                 .expect(200);
 
-            const timestamp = response.body.timestamp;
+            const timestamp = response.body.data.timestamp;
             expect(timestamp).toBeDefined();
             
             // Verify it's a valid ISO date string
@@ -46,17 +51,17 @@ describe('Health Check Integration Tests', () => {
             expect(timeDiff).toBeLessThan(5000); // Less than 5 seconds
         });
 
-        it('should return correct environment', async () => {
+        it('should return database connection status', async () => {
             const response = await request(app)
                 .get('/api/health')
                 .expect(200);
 
-            const environment = response.body.environment;
-            expect(environment).toBeDefined();
-            expect(['development', 'test', 'production']).toContain(environment);
+            expect(response.body.data.database).toBeDefined();
+            expect(response.body.data.database.connected).toBe(true);
+            expect(response.body.data.database.currentTime).toBeDefined();
         });
 
-        it('should return OK status consistently', async () => {
+        it('should return healthy status consistently', async () => {
             // Make multiple requests to ensure consistency
             const requests = Array(5).fill(null).map(() => 
                 request(app).get('/api/health')
@@ -66,8 +71,8 @@ describe('Health Check Integration Tests', () => {
 
             responses.forEach(response => {
                 expect(response.status).toBe(200);
-                expect(response.body.status).toBe('OK');
-                expect(response.body.message).toBe('CityPulse API is running');
+                expect(response.body.success).toBe(true);
+                expect(response.body.message).toBe('Server is healthy');
             });
         });
 
@@ -96,7 +101,7 @@ describe('Health Check Integration Tests', () => {
             // All requests should succeed
             responses.forEach(response => {
                 expect(response.status).toBe(200);
-                expect(response.body.status).toBe('OK');
+                expect(response.body.success).toBe(true);
             });
         });
 
@@ -106,7 +111,7 @@ describe('Health Check Integration Tests', () => {
                 .get('/api/health')
                 .expect(200);
 
-            expect(response.body.status).toBe('OK');
+            expect(response.body.success).toBe(true);
         });
 
         it('should have proper content type', async () => {
@@ -133,7 +138,7 @@ describe('Health Check Integration Tests', () => {
                 .get('/api/health')
                 .expect(200);
 
-            expect(getResponse.body.status).toBe('OK');
+            expect(getResponse.body.success).toBe(true);
 
             // Other methods should not be allowed
             await request(app)
@@ -155,7 +160,7 @@ describe('Health Check Integration Tests', () => {
                 .get('/api/health?test=true&other=value')
                 .expect(200);
 
-            expect(response.body.status).toBe('OK');
+            expect(response.body.success).toBe(true);
         });
 
         it('should handle case-sensitive paths', async () => {
@@ -192,12 +197,12 @@ describe('Health Check Integration Tests', () => {
                 .expect(200);
 
             // Both requests should succeed, indicating consistent uptime
-            expect(response1.body.status).toBe('OK');
-            expect(response2.body.status).toBe('OK');
+            expect(response1.body.success).toBe(true);
+            expect(response2.body.success).toBe(true);
             
             // Timestamps should be different (later response should have later timestamp)
-            const time1 = new Date(response1.body.timestamp);
-            const time2 = new Date(response2.body.timestamp);
+            const time1 = new Date(response1.body.data.timestamp);
+            const time2 = new Date(response2.body.data.timestamp);
             expect(time2.getTime()).toBeGreaterThanOrEqual(time1.getTime());
         });
 
@@ -207,12 +212,13 @@ describe('Health Check Integration Tests', () => {
                 .expect(200);
 
             // Structure should be compatible with common monitoring tools
-            expect(response.body).toHaveProperty('status');
-            expect(response.body).toHaveProperty('timestamp');
+            expect(response.body).toHaveProperty('success');
+            expect(response.body).toHaveProperty('data');
+            expect(response.body.data).toHaveProperty('timestamp');
             
-            // Status should be a simple string that monitoring tools can check
-            expect(typeof response.body.status).toBe('string');
-            expect(response.body.status).toBe('OK');
+            // Success should be a boolean that monitoring tools can check
+            expect(typeof response.body.success).toBe('boolean');
+            expect(response.body.success).toBe(true);
         });
 
         it('should maintain consistent response format', async () => {
@@ -223,13 +229,13 @@ describe('Health Check Integration Tests', () => {
                 request(app).get('/api/health')
             ]);
 
-            const expectedKeys = ['status', 'message', 'timestamp', 'environment'];
+            const expectedKeys = ['success', 'message', 'data'];
             
             responses.forEach(response => {
                 expect(response.status).toBe(200);
                 expect(Object.keys(response.body).sort()).toEqual(expectedKeys.sort());
-                expect(response.body.status).toBe('OK');
-                expect(response.body.message).toBe('CityPulse API is running');
+                expect(response.body.success).toBe(true);
+                expect(response.body.message).toBe('Server is healthy');
             });
         });
     });
@@ -242,8 +248,8 @@ describe('Health Check Integration Tests', () => {
                 .set('Invalid-Header', 'invalid-value')
                 .expect(200);
 
-            // Should still return OK despite invalid headers
-            expect(response.body.status).toBe('OK');
+            // Should still return success despite invalid headers
+            expect(response.body.success).toBe(true);
         });
 
         it('should handle requests with unusual user agents', async () => {
@@ -252,7 +258,7 @@ describe('Health Check Integration Tests', () => {
                 .set('User-Agent', 'HealthCheckBot/1.0')
                 .expect(200);
 
-            expect(response.body.status).toBe('OK');
+            expect(response.body.success).toBe(true);
         });
     });
 });

@@ -3,24 +3,27 @@ import { createApp } from '../../app';
 import { query } from '../../lib/database';
 import { generateTestToken } from '../setup';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { generateTestId, generateAlphanumericTestId } from '../helpers/test-helpers';
 
 describe('Profile API Tests', () => {
   const app = createApp();
   let testUser: any;
   let authToken: string;
   let testProfile: any;
+  const testId = generateTestId();
+  const alphaTestId = generateAlphanumericTestId();
 
   beforeAll(async () => {
-    // Create test user
+    // Create test user with unique identifiers
     const userResult = await query(
       `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, username, email, full_name, bio, current_location, hometown, phone, created_at`,
       [
-        'testuser',
-        'test@example.com',
+        `testuser_${alphaTestId}`,
+        `test_${testId}@example.com`,
         '$2b$10$testhash',
-        'Test User',
+        `Test User ${testId}`,
         'Test bio for profile',
         'Test City',
         'Test Hometown',
@@ -38,8 +41,8 @@ describe('Profile API Tests', () => {
         testUser.id,
         'https://example.com/profile.jpg',
         'https://example.com/cover.jpg',
-        'https://instagram.com/testuser',
-        'https://facebook.com/testuser',
+        `https://instagram.com/testuser_${alphaTestId}`,
+        `https://facebook.com/testuser_${alphaTestId}`,
         '+1234567890',
         'public',
         true,
@@ -195,8 +198,8 @@ describe('Profile API Tests', () => {
 
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('Invalid social media URLs');
-      expect(response.body.errors).toContain('Instagram URL must be a valid Instagram profile URL');
-      expect(response.body.errors).toContain('Facebook URL must be a valid Facebook profile URL');
+      expect(response.body.errors).toContain('Instagram URL must be a valid Instagram profile URL (instagram.com)');
+      expect(response.body.errors).toContain('Facebook URL must be a valid Facebook profile URL (facebook.com)');
     });
 
     it('should validate bio length', async () => {

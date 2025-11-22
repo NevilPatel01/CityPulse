@@ -37,7 +37,10 @@ describe('Token Refresh Integration Tests', () => {
 
     describe('POST /api/auth/refresh', () => {
         it('should successfully refresh access token with valid refresh token', async () => {
-            const { refreshToken } = await createUserAndGetTokens();
+            const { accessToken: originalAccessToken, refreshToken } = await createUserAndGetTokens();
+
+            // Small delay to ensure different timestamp
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             const response = await request(app)
                 .post('/api/auth/refresh')
@@ -51,7 +54,7 @@ describe('Token Refresh Integration Tests', () => {
             expect(response.body.data.refreshToken).toBeDefined();
             
             // New tokens should be different from original
-            expect(response.body.data.accessToken).not.toBe(response.body.data.accessToken);
+            expect(response.body.data.accessToken).not.toBe(originalAccessToken);
             expect(response.body.data.refreshToken).not.toBe(refreshToken);
 
             // Check that new cookies are set
@@ -148,6 +151,9 @@ describe('Token Refresh Integration Tests', () => {
         it('should generate new refresh token on refresh', async () => {
             const { refreshToken: originalRefreshToken } = await createUserAndGetTokens();
 
+            // Small delay to ensure different timestamp
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             const response = await request(app)
                 .post('/api/auth/refresh')
                 .set('Cookie', `refreshToken=${originalRefreshToken}`)
@@ -173,7 +179,8 @@ describe('Token Refresh Integration Tests', () => {
                 .set('Cookie', `accessToken=${newAccessToken}`)
                 .expect(200);
 
-            expect(profileResponse.body.data.user.id).toBe(user.id);
+            // Convert both to numbers for comparison to handle type consistency
+            expect(Number(profileResponse.body.data.user.id)).toBe(Number(user.id));
             expect(profileResponse.body.data.user.email).toBe(user.email);
             expect(profileResponse.body.data.user.username).toBe(user.username);
         });

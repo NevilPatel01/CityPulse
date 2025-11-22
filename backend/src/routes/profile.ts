@@ -19,7 +19,7 @@ import {
     validateProfile,
     validateParams
 } from '../validators/profile';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, optionalAuth } from '../middleware/auth';
 import { upload } from '../utils/imageUpload';
 
 const router = Router();
@@ -100,6 +100,7 @@ router.delete(
 router.get(
     '/:username',
     profileLimiter,
+    optionalAuth,
     validateParams(usernameParamSchema),
     getProfile
 );

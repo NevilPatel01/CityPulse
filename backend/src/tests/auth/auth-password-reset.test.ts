@@ -123,9 +123,13 @@ describe('Password Reset Flow', () => {
 
             resetToken = resetResponse.body.resetToken;
 
-            // Get security code from database
-            const tokenData = await createPasswordResetToken(testUser.id, testUser.email);
-            securityCode = tokenData.securityCode;
+            // Get security code from database for the reset token that was just created
+            const { query } = await import('../../lib/database');
+            const tokenResult = await query(
+                'SELECT security_code FROM password_reset_tokens WHERE reset_token = $1',
+                [resetToken]
+            );
+            securityCode = tokenResult.rows[0].security_code;
         });
 
         it('should verify valid reset token and security code', async () => {
@@ -138,7 +142,7 @@ describe('Password Reset Flow', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toBe('Security code verified successfully');
+            expect(response.body.message).toBe('Security code verified successfully. You can now reset your password.');
         });
 
         it('should reject invalid security code', async () => {
@@ -151,7 +155,7 @@ describe('Password Reset Flow', () => {
                 .expect(400);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.message).toContain('Invalid or expired');
+            expect(response.body.message).toBe('Invalid security code. Please check your email and try again.');
         });
 
         it('should reject invalid reset token', async () => {
@@ -238,7 +242,7 @@ describe('Password Reset Flow', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toBe('Password reset successfully');
+            expect(response.body.message).toBe('Password reset successful. You can now sign in with your new password.');
 
             // Verify can login with new password
             const loginResponse = await request(app)
@@ -341,7 +345,7 @@ describe('Password Reset Flow', () => {
                 .expect(400);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.message).toContain('Invalid or expired');
+            expect(response.body.message).toBe('This reset token has already been used.');
         });
     });
 
@@ -362,9 +366,13 @@ describe('Password Reset Flow', () => {
             expect(requestResponse.body.success).toBe(true);
             const resetToken = requestResponse.body.resetToken;
 
-            // Get security code
-            const tokenData = await createPasswordResetToken(testUser.id, testUser.email);
-            const securityCode = tokenData.securityCode;
+            // Get security code from database for the token that was just created
+            const { query: dbQuery } = await import('../../lib/database');
+            const tokenResult = await dbQuery(
+                'SELECT security_code FROM password_reset_tokens WHERE reset_token = $1',
+                [resetToken]
+            );
+            const securityCode = tokenResult.rows[0].security_code;
 
             // Step 2: Verify security code
             const verifyResponse = await request(app)

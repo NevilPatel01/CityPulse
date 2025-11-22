@@ -772,7 +772,7 @@ export const getUserStats = async (req: Request, res: Response) => {
             });
         }
 
-        const userId = req.user.userId;
+        const userId = Number(req.user.userId);
 
         console.log(`[PROFILE] Getting stats for user: ${userId}`);
 
@@ -781,28 +781,23 @@ export const getUserStats = async (req: Request, res: Response) => {
                 COALESCE(cities_visited.count, 0) as cities_count,
                 COALESCE(recommendations.count, 0) as recommendations_count,
                 COALESCE(travel_buddies.count, 0) as travel_buddies_count,
-                COALESCE(user_points.points, 0) as points
-            FROM (SELECT $1 as user_id) u
-            LEFT JOIN (
-                SELECT COUNT(DISTINCT city) as count 
-                FROM user_trips 
-                WHERE user_id = $1 AND status = 'completed'
-            ) cities_visited ON true
-            LEFT JOIN (
+                0 as points
+            FROM (
+                SELECT COUNT(DISTINCT tc.city_id) as count 
+                FROM trips t
+                JOIN trip_cities tc ON t.id = tc.trip_id
+                WHERE t.user_id = $1 AND t.status = 'completed'
+            ) cities_visited,
+            (
                 SELECT COUNT(*) as count 
                 FROM recommendations 
                 WHERE user_id = $1 AND status = 'published'
-            ) recommendations ON true
-            LEFT JOIN (
+            ) recommendations,
+            (
                 SELECT COUNT(*) as count 
-                FROM travel_buddies 
-                WHERE (user_id = $1 OR buddy_user_id = $1) AND status = 'accepted'
-            ) travel_buddies ON true
-            LEFT JOIN (
-                SELECT COALESCE(SUM(points), 0) as points 
-                FROM user_activities 
-                WHERE user_id = $1
-            ) user_points ON true`,
+                FROM travel_buddy_connections 
+                WHERE (requester_id = $1 OR requested_id = $1) AND status = 'accepted'
+            ) travel_buddies`,
             [userId]
         );
 
@@ -842,7 +837,7 @@ export const getUserBadges = async (req: Request, res: Response) => {
             });
         }
 
-        const userId = req.user.userId;
+        const userId = Number(req.user.userId);
 
         console.log(`[PROFILE] Getting badges for user: ${userId}`);
 
@@ -866,33 +861,23 @@ export const getUserBadges = async (req: Request, res: Response) => {
                     WHEN travel_buddies.count >= 5 THEN 'buddy_maker'
                     ELSE NULL
                 END as social_badge,
-                CASE 
-                    WHEN user_points.points >= 10000 THEN 'elite'
-                    WHEN user_points.points >= 5000 THEN 'veteran'
-                    WHEN user_points.points >= 1000 THEN 'enthusiast'
-                    ELSE NULL
-                END as points_badge
-            FROM (SELECT $1 as user_id) u
-            LEFT JOIN (
-                SELECT COUNT(DISTINCT city) as count 
-                FROM user_trips 
-                WHERE user_id = $1 AND status = 'completed'
-            ) cities_visited ON true
-            LEFT JOIN (
+                NULL as points_badge
+            FROM (
+                SELECT COUNT(DISTINCT tc.city_id) as count 
+                FROM trips t
+                JOIN trip_cities tc ON t.id = tc.trip_id
+                WHERE t.user_id = $1 AND t.status = 'completed'
+            ) cities_visited,
+            (
                 SELECT COUNT(*) as count 
                 FROM recommendations 
                 WHERE user_id = $1 AND status = 'published'
-            ) recommendations ON true
-            LEFT JOIN (
+            ) recommendations,
+            (
                 SELECT COUNT(*) as count 
-                FROM travel_buddies 
-                WHERE (user_id = $1 OR buddy_user_id = $1) AND status = 'accepted'
-            ) travel_buddies ON true
-            LEFT JOIN (
-                SELECT COALESCE(SUM(points), 0) as points 
-                FROM user_activities 
-                WHERE user_id = $1
-            ) user_points ON true`,
+                FROM travel_buddy_connections 
+                WHERE (requester_id = $1 OR requested_id = $1) AND status = 'accepted'
+            ) travel_buddies`,
             [userId]
         );
 
