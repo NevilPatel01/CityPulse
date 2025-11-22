@@ -4,6 +4,7 @@ export interface SearchFiltersType {
     q?: string;
     location?: string[];
     categories?: string[];
+    tags?: string[];
     priceMin?: number;
     priceMax?: number;
     minRating?: number;
@@ -70,6 +71,10 @@ export interface FilterOptions {
         country: string;
         recommendationsCount: number;
         userVisited?: boolean;
+    }>;
+    tags: Array<{
+        id: number;
+        name: string;
     }>;
     difficulties: string[];
     priceRange: {

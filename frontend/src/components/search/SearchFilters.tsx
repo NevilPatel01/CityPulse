@@ -18,6 +18,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
     const [expandedSections, setExpandedSections] = useState({
         location: true,
         categories: true,
+        tags: true,
         price: true,
         rating: true,
         difficulty: true,
@@ -45,6 +46,14 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         onFilterChange({ location: newLocations });
     };
 
+    const handleTagToggle = (tagId: number) => {
+        const tagIdStr = tagId.toString();
+        const newTags = filters.tags.includes(tagIdStr)
+            ? filters.tags.filter(id => id !== tagIdStr)
+            : [...filters.tags, tagIdStr];
+        onFilterChange({ tags: newTags });
+    };
+
     // Price range validation - min cannot exceed max
     const handlePriceMinChange = (value: number) => {
         if (value <= filters.priceMax) {
@@ -62,15 +71,9 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         }
     };
 
-    const showDifficultyFilter = filters.categories.some(catId => {
-        const category = filterOptions.categories.find(c => c.id.toString() === catId);
-        return category && ['hiking', 'sports', 'adventure', 'outdoor'].some(keyword => 
-            category.name.toLowerCase().includes(keyword)
-        );
-    });
-
     const hasActiveFilters = filters.categories.length > 0 || 
                             filters.location.length > 0 ||
+                            filters.tags.length > 0 ||
                             filters.priceMin > 0 ||
                             filters.priceMax < 50000 ||
                             filters.minRating > 0 ||
@@ -221,6 +224,34 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                     </div>
                 </FilterSection>
 
+                {/* Tags Filter */}
+                <FilterSection
+                    title="Tags"
+                    isExpanded={expandedSections.tags}
+                    onToggle={() => toggleSection('tags')}
+                    count={filters.tags.length}
+                >
+                    <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-hide">
+                        {filterOptions.tags.map(tag => (
+                            <label
+                                key={tag.id}
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-glass cursor-pointer transition-colors"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={filters.tags.includes(tag.id.toString())}
+                                    onChange={() => handleTagToggle(tag.id)}
+                                    className="w-4 h-4 rounded border-subtle text-pulse focus:ring-pulse focus:ring-offset-0"
+                                />
+                                <span className="text-sm text-primary">{tag.name}</span>
+                            </label>
+                        ))}
+                        {filterOptions.tags.length === 0 && (
+                            <p className="text-sm text-muted text-center py-4">No tags available</p>
+                        )}
+                    </div>
+                </FilterSection>
+
                 {/* Price Range Filter */}
                 <FilterSection
                     title="Price Range"
@@ -298,32 +329,30 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                     </div>
                 </FilterSection>
 
-                {/* Difficulty Filter (Conditional) */}
-                {showDifficultyFilter && (
-                    <FilterSection
-                        title="Difficulty"
-                        isExpanded={expandedSections.difficulty}
-                        onToggle={() => toggleSection('difficulty')}
-                    >
-                        <div className="space-y-2">
-                            {['any', 'easy', 'moderate', 'hard', 'expert'].map(level => (
-                                <label
-                                    key={level}
-                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-glass cursor-pointer transition-colors"
-                                >
-                                    <input
-                                        type="radio"
-                                        name="difficulty"
-                                        checked={filters.difficulty === level}
-                                        onChange={() => onFilterChange({ difficulty: level })}
-                                        className="w-4 h-4 text-pulse focus:ring-pulse focus:ring-offset-0"
-                                    />
-                                    <span className="text-sm text-primary capitalize">{level === 'any' ? 'Any Difficulty' : level}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </FilterSection>
-                )}
+                {/* Difficulty Filter */}
+                <FilterSection
+                    title="Difficulty"
+                    isExpanded={expandedSections.difficulty}
+                    onToggle={() => toggleSection('difficulty')}
+                >
+                    <div className="space-y-2">
+                        {['any', 'easy', 'moderate', 'hard', 'expert'].map(level => (
+                            <label
+                                key={level}
+                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-glass cursor-pointer transition-colors"
+                            >
+                                <input
+                                    type="radio"
+                                    name="difficulty"
+                                    checked={filters.difficulty === level}
+                                    onChange={() => onFilterChange({ difficulty: level })}
+                                    className="w-4 h-4 text-pulse focus:ring-pulse focus:ring-offset-0"
+                                />
+                                <span className="text-sm text-primary capitalize">{level === 'any' ? 'Any Difficulty' : level}</span>
+                            </label>
+                        ))}
+                    </div>
+                </FilterSection>
 
                 {/* Date Range Filter */}
                 <FilterSection

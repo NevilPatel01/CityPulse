@@ -10,6 +10,7 @@ interface SearchFilters {
     q?: string;
     location?: string | string[];
     categories?: string | string[];
+    tags?: string | string[];
     priceMin?: number;
     priceMax?: number;
     minRating?: number;
@@ -30,6 +31,7 @@ export const advancedSearch = async (req: Request, res: Response) => {
             q: req.query.q as string,
             location: req.query.location as string | string[],
             categories: req.query.categories as string | string[],
+            tags: req.query.tags as string | string[],
             priceMin: req.query.priceMin ? parseFloat(req.query.priceMin as string) : undefined,
             priceMax: req.query.priceMax ? parseFloat(req.query.priceMax as string) : undefined,
             minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
@@ -127,6 +129,18 @@ async function searchRecommendations(filters: SearchFilters) {
         const categories = Array.isArray(filters.categories) ? filters.categories : [filters.categories];
         whereConditions.push(`rc.id = ANY($${paramIndex})`);
         queryParams.push(categories.map(Number));
+        paramIndex++;
+    }
+
+    // Tags filter
+    if (filters.tags) {
+        const tags = Array.isArray(filters.tags) ? filters.tags : [filters.tags];
+        whereConditions.push(`EXISTS (
+            SELECT 1 FROM recommendation_tag_links rtl
+            WHERE rtl.recommendation_id = r.id
+            AND rtl.tag_id = ANY($${paramIndex})
+        )`);
+        queryParams.push(tags.map(Number));
         paramIndex++;
     }
 
@@ -448,6 +462,16 @@ export const getSearchFilters = async (req: Request, res: Response) => {
             ORDER BY ${userId ? 'user_visited DESC,' : ''} rec_count DESC, c.name ASC
         `, userId ? [userId] : []);
 
+        // Get all tags
+        const tagsResult = await query(`
+            SELECT DISTINCT rt.id, rt.name
+            FROM recommendation_tags rt
+            JOIN recommendation_tag_links rtl ON rt.id = rtl.tag_id
+            JOIN recommendations r ON rtl.recommendation_id = r.id
+            WHERE r.status = 'active'
+            ORDER BY rt.name ASC
+        `);
+
         // Get difficulty levels
         const difficultyResult = await query(`
             SELECT DISTINCT difficulty_level
@@ -480,6 +504,10 @@ export const getSearchFilters = async (req: Request, res: Response) => {
                     country: row.country,
                     recommendationsCount: parseInt(row.rec_count),
                     userVisited: row.user_visited === 1 || row.user_visited === '1'
+                })),
+                tags: tagsResult.rows.map(row => ({
+                    id: row.id,
+                    name: row.name
                 })),
                 difficulties: difficultyResult.rows.map(row => row.difficulty_level),
                 priceRange: {
