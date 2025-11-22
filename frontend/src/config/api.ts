@@ -111,21 +111,21 @@ export const apiEndpoints = {
         detail: buildApiUrl('api/trips/:id'),
         update: buildApiUrl('api/trips/:id'),
         delete: buildApiUrl('api/trips/:id'),
-        
+
         // Companion management
         companions: {
             invite: buildApiUrl('api/trips/:id/companions'),
             respond: buildApiUrl('api/trips/:id/companions/respond'),
             remove: buildApiUrl('api/trips/:id/companions/:companionId'),
         },
-        
+
         // City management
         cities: {
             add: buildApiUrl('api/trips/:id/cities'),
             update: buildApiUrl('api/trips/:id/cities/:cityId'),
             remove: buildApiUrl('api/trips/:id/cities/:cityId'),
         },
-        
+
         // Itinerary management
         itinerary: {
             list: buildApiUrl('api/trips/:id/itinerary'),
@@ -133,21 +133,21 @@ export const apiEndpoints = {
             update: buildApiUrl('api/trips/:id/itinerary/:itemId'),
             delete: buildApiUrl('api/trips/:id/itinerary/:itemId'),
         },
-        
+
         // Recommendations
         recommendations: {
             add: buildApiUrl('api/trips/:id/recommendations'),
             update: buildApiUrl('api/trips/:id/recommendations/:recId'),
             remove: buildApiUrl('api/trips/:id/recommendations/:recId'),
         },
-        
+
         // Comments
         comments: {
             list: buildApiUrl('api/trips/:id/comments'),
             add: buildApiUrl('api/trips/:id/comments'),
             delete: buildApiUrl('api/trips/:id/comments/:commentId'),
         },
-        
+
         // Companion finder
         finder: {
             companions: buildApiUrl('api/trips/find/companions'),
@@ -180,14 +180,14 @@ export const apiRequest = async <T = unknown>(
 
     // Build full URL if it's a relative path
     const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
-    
+
     console.log('[API] Making request to:', fullUrl);
     console.log('[API] Request options:', fetchOptions);
 
     // Get auth token from sessionStorage
     const authToken = sessionStorage.getItem('authToken');
     console.log('[API] Auth token:', authToken ? 'Present' : 'Not found');
-    
+
     const headers: Record<string, string> = {
         ...(authToken && { Authorization: `Bearer ${authToken}` }),
         ...(fetchOptions.headers as Record<string, string> || {}),
@@ -197,7 +197,7 @@ export const apiRequest = async <T = unknown>(
     if (!isFormData) {
         headers['Content-Type'] = 'application/json';
     }
-    
+
     const defaultOptions: RequestInit = {
         headers,
         credentials: 'include', // Include cookies for auth
@@ -224,16 +224,20 @@ export const apiRequest = async <T = unknown>(
                 const errorData = await response.json().catch(() => ({
                     message: `HTTP ${response.status}: ${response.statusText}`
                 }));
-                
+
                 // Handle validation errors with detailed messages
                 if (errorData.errors && Array.isArray(errorData.errors)) {
-                    const errorMessages = errorData.errors.map((err: ValidationError) => 
+                    const errorMessages = errorData.errors.map((err: ValidationError) =>
                         `${err.field}: ${err.message}`
                     ).join(', ');
-                    throw new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`);
+                    const error = new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`);
+                    (error as any).status = response.status;
+                    throw error;
                 }
-                
-                throw new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
+
+                const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
+                (error as any).status = response.status;
+                throw error;
             }
 
             // Try to parse JSON, fallback to text if it fails invalid JSON
@@ -253,8 +257,9 @@ export const apiRequest = async <T = unknown>(
                     throw new Error('Request timeout - Email operations may take longer. Please wait for the email and try again.');
                 }
 
-                // Don't retry on client errors 
-                if (error.message.includes('40')) {
+                // Don't retry on client errors (4xx)
+                const status = (error as any).status;
+                if (status && status >= 400 && status < 500) {
                     throw error;
                 }
             }
@@ -307,15 +312,19 @@ export const apiRequestWithExtendedTimeout = async <T = unknown>(
                 const errorData = await response.json().catch(() => ({
                     message: `HTTP ${response.status}: ${response.statusText}`
                 }));
-                
+
                 if (errorData.errors && Array.isArray(errorData.errors)) {
-                    const errorMessages = errorData.errors.map((err: ValidationError) => 
+                    const errorMessages = errorData.errors.map((err: ValidationError) =>
                         `${err.field}: ${err.message}`
                     ).join(', ');
-                    throw new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`);
+                    const error = new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`);
+                    (error as any).status = response.status;
+                    throw error;
                 }
-                
-                throw new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
+
+                const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
+                (error as any).status = response.status;
+                throw error;
             }
 
             try {
@@ -333,7 +342,9 @@ export const apiRequestWithExtendedTimeout = async <T = unknown>(
                     throw new Error('Email sending is taking longer than expected. Please check your email and try again.');
                 }
 
-                if (error.message.includes('40')) {
+                // Don't retry on client errors (4xx)
+                const status = (error as any).status;
+                if (status && status >= 400 && status < 500) {
                     throw error;
                 }
             }

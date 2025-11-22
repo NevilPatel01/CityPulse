@@ -124,13 +124,13 @@ const SignupPage = () => {
       return updated;
     });
     
-    // Clear field error when user starts typing/changing
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }));
-    }
+    // Clear field error and general error when user starts typing/changing
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      delete newErrors.general; // Clear general error to re-enable button
+      return newErrors;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
