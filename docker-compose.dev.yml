@@ -65,6 +65,7 @@ services:
       EMAIL_PORT: ${EMAIL_PORT}
       EMAIL_USER: ${EMAIL_USER}
       EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_SENDGRID_API_KEY: ${EMAIL_SENDGRID_API_KEY}
       FRONTEND_URL: http://localhost:3001
     ports:
       - "5001:5000"

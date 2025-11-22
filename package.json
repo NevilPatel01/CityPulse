@@ -32,5 +32,8 @@
     ],
     "author": "CityPulse Team",
     "license": "MIT",
-    "packageManager": "pnpm@10.10.0"
+    "packageManager": "pnpm@10.10.0",
+    "dependencies": {
+        "@sendgrid/mail": "^8.1.6"
+    }
 }
