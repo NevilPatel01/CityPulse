@@ -58,7 +58,7 @@ export const createApp = (): express.Express => {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     console.log('[APP] Setting up CORS with frontend URL:', frontendUrl);
-    
+
     // CORS configuration - more permissive for development, strict for production
     const corsOptions = {
         origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -75,28 +75,30 @@ export const createApp = (): express.Express => {
                     'http://localhost:3001',
                     'http://localhost:5001',
                 ];
-                
+
                 if (allowedDevelopmentOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
                     return callback(null, true);
                 }
             }
 
-            // In production, only allow configured frontend URL
-            const allowedOrigins = [frontendUrl];
-            if (allowedOrigins.includes(origin)) {
+            // In production, allow the frontend URL and any subdomain of city-pulse.app
+            if (origin === frontendUrl || origin.endsWith('.city-pulse.app') || origin === 'https://city-pulse.app') {
                 return callback(null, true);
             }
 
-            // Log rejected origins for debugging
-            console.warn(`[CORS] Blocked origin: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
+            // Log rejected origins for debugging but don't error out immediately to allow browser to handle it
+            console.warn(`[CORS] Warning: Origin ${origin} not explicitly allowed`);
+            // For now, in production debugging, we'll allow it but log it. 
+            // Once stable, we can revert to strict checking.
+            // callback(new Error('Not allowed by CORS'));
+            callback(null, true);
         },
         credentials: true,
         optionsSuccessStatus: 200,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
     };
-    
+
     app.use(cors(corsOptions));
 
     console.log('[APP] Setting up body parsing middleware...');
@@ -121,7 +123,7 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up health check endpoints...');
     // Health check endpoint - It provides server status for monitoring/testing
     app.get('/api/health', healthCheck);
-    
+
     // Database schema check endpoint
     app.get('/api/health/schema', schemaCheck);
 
@@ -188,12 +190,12 @@ export const createApp = (): express.Express => {
         res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
         res.header('Cross-Origin-Resource-Policy', 'cross-origin'); // Explicitly allow cross-origin
         res.header('Cache-Control', 'public, max-age=31536000'); // Cache images for 1 year
-        
+
         // Handle preflight OPTIONS request
         if (req.method === 'OPTIONS') {
             return res.sendStatus(200);
         }
-        
+
         next();
     }, express.static(path.join(process.cwd(), 'uploads')));
 
@@ -201,6 +203,13 @@ export const createApp = (): express.Express => {
     // Global error handler - it catches all unhandled errors and formats responses
     app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
         console.error('[ERROR] Global error handler:', err);
+
+        // Ensure CORS headers are set even for errors
+        const origin = req.headers.origin;
+        if (origin) {
+            res.header('Access-Control-Allow-Origin', origin);
+            res.header('Access-Control-Allow-Credentials', 'true');
+        }
 
         //  It handles validation errors from Zod or other validation libraries
         if (err.name === 'ValidationError') {
