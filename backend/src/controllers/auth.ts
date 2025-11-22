@@ -13,6 +13,7 @@ import {
 import {
     sendPasswordResetEmail,
     sendPasswordResetSuccessEmail,
+    sendVerificationEmail,
     generateSecurityCode,
     generateResetToken
 } from '../services/emailService';
@@ -97,27 +98,29 @@ export const register = async (req: Request, res: Response) => {
             // Continue with registration even if profile creation fails
         }
 
-        // Generate tokens
-        const tokenPayload: TokenPayload = {
-            userId: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role
-        };
+        // Generate verification token
+        const verificationToken = generateResetToken();
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-        const accessToken = generateAccessToken(tokenPayload);
-        const refreshToken = generateRefreshToken(tokenPayload);
+        // Store verification token
+        await query(
+            `INSERT INTO email_verification_tokens (user_id, token, expires_at)
+             VALUES ($1, $2, $3)`,
+            [user.id, verificationToken, expiresAt]
+        );
 
-        // Set cookies
-        setTokenCookies(res, accessToken, refreshToken);
+        // Send verification email
+        await sendVerificationEmail(user.email, verificationToken, user.username);
 
         res.status(201).json({
             success: true,
-            message: 'User registered successfully',
+            message: 'Registration successful. Please check your email to verify your account.',
             data: {
-                user,
-                accessToken,
-                refreshToken
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username
+                }
             }
         });
 
@@ -343,7 +346,7 @@ export const getProfile = async (req: Request, res: Response) => {
 
         res.json({
             success: true,
-            data: { 
+            data: {
                 user: {
                     id: user.id.toString(),
                     username: user.username,
@@ -477,7 +480,7 @@ export const googleOAuth = async (req: Request, res: Response) => {
 
             // Get user info from Google
             const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenData.access_token}`);
-            
+
             if (!userInfoResponse.ok) {
                 console.error('❌ Failed to get user info');
                 return res.status(400).json({
@@ -800,7 +803,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
         // Find the reset token
         const tokenResult = await query(
-            `SELECT id, user_id, email, security_code, expires_at, used 
+            `SELECT id, user_id, email, expires_at, used 
                 FROM password_reset_tokens 
                 WHERE reset_token = $1`,
             [resetToken]
@@ -825,69 +828,113 @@ export const resetPassword = async (req: Request, res: Response) => {
 
         // Check if token is expired
         if (new Date() > new Date(resetData.expires_at)) {
-            await query(
-                'DELETE FROM password_reset_tokens WHERE id = $1',
-                [resetData.id]
-            );
             return res.status(400).json({
                 success: false,
                 message: 'Reset token has expired. Please request a new password reset.'
             });
         }
 
-        // Get user details
-        const userResult = await query(
-            'SELECT id, username, full_name FROM users WHERE id = $1',
-            [resetData.user_id]
-        );
-
-        if (userResult.rows.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'User not found.'
-            });
-        }
-
-        const user = userResult.rows[0];
-
-        // Hash the new password
+        // Hash new password
         const passwordHash = await hashPassword(newPassword);
 
-        // Update user's password
+        // Update user password
         await query(
             'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
             [passwordHash, resetData.user_id]
         );
 
-        // Mark the reset token as used
+        // Mark token as used
         await query(
             'UPDATE password_reset_tokens SET used = TRUE, used_at = NOW() WHERE id = $1',
             [resetData.id]
         );
 
-        // Clean up any other unused tokens for this user
-        await query(
-            'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used = FALSE',
+        // Get user details for email
+        const userResult = await query(
+            'SELECT username FROM users WHERE id = $1',
             [resetData.user_id]
         );
+        const user = userResult.rows[0];
 
-        // Send success notification email
+        // Send success email
         try {
-            await sendPasswordResetSuccessEmail(resetData.email, user.username);
+            await sendPasswordResetSuccessEmail(resetData.email, user?.username);
         } catch (emailError) {
             console.error('Failed to send password reset success email:', emailError);
-            // Don't fail the request if success email fails
+            // Don't fail the request if email fails
         }
-
-        console.log('Password reset successful for user:', resetData.user_id);
 
         res.json({
             success: true,
-            message: 'Password reset successful. You can now sign in with your new password.'
+            message: 'Password has been reset successfully. You can now login with your new password.'
         });
 
     } catch (error) {
-        console.error('Password reset error:', error);
+        console.error('Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Verify email address
+export const verifyEmail = async (req: Request, res: Response) => {
+    try {
+        const { token } = req.body;
+
+        console.log('📧 Verifying email with token:', token?.substring(0, 8) + '...');
+
+        // Find the verification token
+        const tokenResult = await query(
+            `SELECT id, user_id, expires_at 
+             FROM email_verification_tokens 
+             WHERE token = $1`,
+            [token]
+        );
+
+        if (tokenResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired verification token.'
+            });
+        }
+
+        const verificationData = tokenResult.rows[0];
+
+        // Check if token is expired
+        if (new Date() > new Date(verificationData.expires_at)) {
+            await query(
+                'DELETE FROM email_verification_tokens WHERE id = $1',
+                [verificationData.id]
+            );
+            return res.status(400).json({
+                success: false,
+                message: 'Verification token has expired. Please register again.'
+            });
+        }
+
+        // Update user as verified
+        await query(
+            'UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id = $1',
+            [verificationData.user_id]
+        );
+
+        // Delete the used token
+        await query(
+            'DELETE FROM email_verification_tokens WHERE id = $1',
+            [verificationData.id]
+        );
+
+        console.log('✅ Email verified for user:', verificationData.user_id);
+
+        res.json({
+            success: true,
+            message: 'Email verified successfully. You can now login.'
+        });
+
+    } catch (error) {
+        console.error('Verify email error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

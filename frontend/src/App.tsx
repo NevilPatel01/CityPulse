@@ -13,6 +13,7 @@ import FeaturesPage from './pages/FeaturesPage.tsx';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import EmailVerificationPage from './pages/auth/EmailVerificationPage';
 import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
 import Dashboard from './pages/Dashboard.tsx';
 import ProfilePage from './pages/ProfilePage';
@@ -78,6 +79,7 @@ function App() {
             </PublicRoute>
           } />
           <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
+          <Route path="/verify-email" element={<EmailVerificationPage />} />
           
           {/* Protected routes - require authentication */}
           <Route path="/dashboard" element={

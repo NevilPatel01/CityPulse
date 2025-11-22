@@ -68,7 +68,7 @@ export const resetPasswordRequestSchema = z.object({
 export const verifyResetCodeSchema = z.object({
     resetToken: z.string()
         .min(1, 'Reset token is required'),
-    
+
     securityCode: z.string()
         .length(6, 'Security code must be exactly 6 digits')
         .regex(/^\d{6}$/, 'Security code must contain only digits')
@@ -106,6 +106,14 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type ResetPasswordRequestInput = z.infer<typeof resetPasswordRequestSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+// Verify email validation schema
+export const verifyEmailSchema = z.object({
+    token: z.string()
+        .min(1, 'Verification token is required')
+});
+
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 
 // Validation middleware
 export const validate = (schema: z.ZodSchema<any>) => {

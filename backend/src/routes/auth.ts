@@ -10,7 +10,8 @@ import {
     googleOAuth,
     requestPasswordReset,
     verifyResetCode,
-    resetPassword
+    resetPassword,
+    verifyEmail
 } from '../controllers/auth';
 import {
     registerSchema,
@@ -19,6 +20,7 @@ import {
     resetPasswordRequestSchema,
     verifyResetCodeSchema,
     resetPasswordSchema,
+    verifyEmailSchema,
     validate
 } from '../validators/auth';
 import { authenticateToken } from '../middleware/auth';
@@ -73,6 +75,9 @@ router.post('/login', authLimiter, validate(loginSchema), login);
 router.post('/google', oAuthLimiter, googleOAuth); // Google OAuth endpoint with more lenient rate limiting
 router.post('/logout', generalLimiter, logout);
 router.post('/refresh', generalLimiter, refreshToken); // TODO: Token refresh endpoint needs to be protected
+
+// Email verification
+router.post('/verify-email', authLimiter, validate(verifyEmailSchema), verifyEmail);
 
 // Password reset routes
 router.post('/reset-password/request', authLimiter, validate(resetPasswordRequestSchema), requestPasswordReset);

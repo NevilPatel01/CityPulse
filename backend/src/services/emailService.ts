@@ -134,6 +134,87 @@ If you didn't request a password reset, please ignore this email. Your account r
     }
 };
 
+// Send email verification link
+export const sendVerificationEmail = async (
+    email: string,
+    token: string,
+    username: string
+): Promise<void> => {
+    // In test mode, skip actual email sending
+    if (process.env.NODE_ENV === 'test') {
+        console.log(`✅ [EMAIL] Test mode - skipping verification email send to: ${email}`);
+        return;
+    }
+
+    const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+
+    const htmlBody = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email - CityPulse</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #4a90e2, #007bff); color: white; padding: 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .content { padding: 40px 30px; }
+        .button { display: inline-block; background: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 50px; font-weight: bold; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌟 CityPulse</h1>
+            <p>Verify Your Email Address</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello ${username}!</h2>
+            
+            <p>Welcome to CityPulse! To complete your registration and activate your account, please verify your email address by clicking the button below:</p>
+            
+            <div style="text-align: center;">
+                <a href="${verificationLink}" class="button">Verify Email Address</a>
+            </div>
+            
+            <p>Or copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #007bff;">${verificationLink}</p>
+            
+            <p>This link will expire in 24 hours.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This email was sent from CityPulse. If you have any questions, please contact our support team.</p>
+            <p style="font-size: 12px; color: #999;">© 2025 CityPulse. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    const textBody = `CityPulse - Verify Your Email
+
+Hello ${username}!
+
+Welcome to CityPulse! To complete your registration and activate your account, please verify your email address by clicking the link below:
+
+${verificationLink}
+
+This link will expire in 24 hours.
+
+© 2025 CityPulse. All rights reserved.`;
+
+    try {
+        await sendEmail(email, '✉️ CityPulse - Verify Your Email', htmlBody, textBody);
+        console.log(`✅ [EMAIL] Verification email sent to: ${email}`);
+    } catch (error) {
+        console.error('❌ [EMAIL] Failed to send verification email:', error);
+        // Don't throw error to avoid blocking registration, but log it
+    }
+};
+
 // Send password reset success notification
 export const sendPasswordResetSuccessEmail = async (
     email: string,
