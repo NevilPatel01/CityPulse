@@ -35,7 +35,7 @@ const EmailVerificationPage = () => {
           setStatus('error');
           setMessage(data.message || 'Verification failed.');
         }
-      } catch (error) {
+      } catch {
         setStatus('error');
         setMessage('An error occurred during verification.');
       }
