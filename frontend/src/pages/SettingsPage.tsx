@@ -56,9 +56,34 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    // TODO: Implement account deletion
-    console.log('Delete account clicked');
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone. Your account will be permanently deleted within 30 days.')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiRequest<{ success: boolean; message: string }>(
+        buildApiUrl('api/profile/request-deletion'),
+        { method: 'POST' }
+      );
+
+      if (response.success) {
+        showSuccess(response.message || 'Deletion request submitted successfully');
+        // Log out user after deletion request
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else {
+        showError(response.message || 'Failed to submit deletion request');
+      }
+    } catch (error) {
+      console.error('Delete account error:', error);
+      showError('Failed to submit deletion request. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Load privacy settings

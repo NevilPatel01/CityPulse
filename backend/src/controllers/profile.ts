@@ -1225,3 +1225,37 @@ export const updateEmailPreferences = async (req: Request, res: Response) => {
         });
     }
 };
+
+// Request account data deletion
+export const requestDataDeletion = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        // Get user email for notification
+        const userResult = await query('SELECT email, username FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+
+        // Mark user for deletion
+        await query('UPDATE users SET account_status = $1 WHERE id = $2', ['pending_deletion', userId]);
+
+        console.log(`[DATA DELETION] User ${user.username} (${userId}) requested account deletion`);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Your data deletion request has been received. Your account will be deleted within 30 days.'
+        });
+    } catch (error) {
+        console.error('[DATA DELETION REQUEST]', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to process deletion request'
+        });
+    }
+};

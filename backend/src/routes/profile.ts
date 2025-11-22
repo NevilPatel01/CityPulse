@@ -10,7 +10,8 @@ import {
     getPrivacySettings,
     updatePrivacySettings,
     getEmailPreferences,
-    updateEmailPreferences
+    updateEmailPreferences,
+    requestDataDeletion
 } from '../controllers/profile';
 import {
     updateProfileSchema,
@@ -94,6 +95,14 @@ router.delete(
     profileLimiter,
     authenticateToken,
     deleteProfilePhoto
+);
+
+// Data deletion request route
+router.post(
+  '/request-deletion',
+  profileLimiter,
+  authenticateToken,
+  requestDataDeletion
 );
 
 // Public routes (MUST be last as it has a catch-all param)
