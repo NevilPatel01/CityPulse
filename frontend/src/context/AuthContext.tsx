@@ -19,7 +19,7 @@ export interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
     register: (userData: RegisterData) => Promise<void>;
     logout: () => void;
     updateUser: (userData: Partial<User>) => void;
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const { showSuccess, showError } = useSafeToast();
 
     // Check if user is authenticated
-    const isAuthenticated = !!user && !!sessionStorage.getItem('authToken');
+    const isAuthenticated = !!user && !!(sessionStorage.getItem('authToken') || localStorage.getItem('authToken'));
 
     // Check authentication status on app start
     useEffect(() => {
@@ -74,7 +74,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     // Check authentication status
     const checkAuthStatus = async () => {
         try {
-            const token = sessionStorage.getItem('authToken');
+            // Check both localStorage (remember me) and sessionStorage
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
             
             if (!token) {
                 setIsLoading(false);
@@ -99,6 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         } catch (error) {
             // Token is invalid or expired
             console.error('❌ [AUTH] Auth check failed:', error);
+            localStorage.removeItem('authToken');
             sessionStorage.removeItem('authToken');
             setUser(null);
         } finally {
@@ -108,7 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
 
     // Login function
-    const login = async (email: string, password: string) => {
+    const login = async (email: string, password: string, rememberMe: boolean = false) => {
         try {
             const data = await apiRequest<AuthResponse>(apiEndpoints.auth.login, {
                 method: 'POST',
@@ -120,8 +122,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('[AUTH] Login successful for:', data.data.user.email);
             
-            // Store token and user data in sessionStorage
-            sessionStorage.setItem('authToken', data.data.accessToken);
+            // Store token based on rememberMe preference
+            if (rememberMe) {
+                // Store in localStorage for persistent login
+                localStorage.setItem('authToken', data.data.accessToken);
+                console.log('[AUTH] Token stored in localStorage (Remember Me enabled)');
+            } else {
+                // Store in sessionStorage for session-only login
+                sessionStorage.setItem('authToken', data.data.accessToken);
+                console.log('[AUTH] Token stored in sessionStorage (session only)');
+            }
+            
             setUser(data.data.user);
             
             // Show success toast
@@ -180,6 +191,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         console.log(' [AUTH] User logging out:', user?.email);
         const userName = user?.fullName || 'User';
         
+        // Clear token from both storages
+        localStorage.removeItem('authToken');
         sessionStorage.removeItem('authToken');
         setUser(null);
         

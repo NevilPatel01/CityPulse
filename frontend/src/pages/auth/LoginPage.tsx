@@ -24,6 +24,7 @@ const LoginPage = () => {
     email: '',
     password: '',
   });
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -110,7 +111,7 @@ const LoginPage = () => {
     setErrors({});
 
     try {
-      await login(formData.email, formData.password);
+      await login(formData.email, formData.password, rememberMe);
       
       // Announce successful login
       const announcement = document.createElement('div');
@@ -217,8 +218,22 @@ const LoginPage = () => {
           />
         </fieldset>
 
-        {/* Forgot password link */}
-        <div className="text-right">
+        {/* Remember Me and Forgot Password */}
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-subtle bg-gray-700 text-pulse focus:ring-2 focus:ring-pulse focus:ring-offset-2 focus:ring-offset-base transition-colors cursor-pointer"
+              disabled={isLoading}
+              aria-label="Remember me on this device"
+            />
+            <span className="text-sm text-muted group-hover:text-primary transition-colors duration-200">
+              Remember me
+            </span>
+          </label>
+          
           <Link
             to="/reset-password"
             className="text-sm text-pulse hover:underline hover:text-pulse/80 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 focus:ring-offset-base rounded"
