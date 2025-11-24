@@ -11,7 +11,8 @@ import {
     requestPasswordReset,
     verifyResetCode,
     resetPassword,
-    verifyEmail
+    verifyEmail,
+    resendVerificationEmail
 } from '../controllers/auth';
 import {
     registerSchema,
@@ -78,6 +79,7 @@ router.post('/refresh', generalLimiter, refreshToken); // TODO: Token refresh en
 
 // Email verification
 router.post('/verify-email', authLimiter, validate(verifyEmailSchema), verifyEmail);
+router.post('/resend-verification', authLimiter, resendVerificationEmail);
 
 // Password reset routes
 router.post('/reset-password/request', authLimiter, validate(resetPasswordRequestSchema), requestPasswordReset);

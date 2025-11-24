@@ -2,27 +2,37 @@ import request from 'supertest';
 import { createApp } from '../../app';
 import { query } from '../../lib/database';
 import { generateTestToken } from '../setup';
-import { describe, beforeAll, afterAll, expect, it } from '@jest/globals';
+import { describe, beforeEach, afterEach, expect, it } from '@jest/globals';
+import { generateTestId, generateAlphanumericTestId } from '../helpers/test-helpers';
+
+const app = createApp();
 
 describe('Profile Integration Tests', () => {
   let testUser: any;
   let authToken: string;
+  let testId: string;
+  let alphaTestId: string;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
+    // Generate unique IDs for this test run
+    testId = generateTestId();
+    alphaTestId = generateAlphanumericTestId();
+
     // Create test user with profile
     const userResult = await query(
-      `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO users (username, email, password_hash, full_name, bio, current_location, hometown, phone, email_verified)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id, username, email, full_name, bio, current_location, hometown, phone, created_at`,
       [
-        'integrationtest',
-        'integration@example.com',
+        `integrationtest_${alphaTestId}`,
+        `integration_${testId}@example.com`,
         '$2b$10$testhash',
         'Integration Test User',
         'Integration test bio',
         'Test City',
         'Test Hometown',
-        '+1234567890'
+        '+1234567890',
+        true
       ]
     );
     testUser = userResult.rows[0];
@@ -69,10 +79,10 @@ describe('Profile Integration Tests', () => {
 
     // Create a mock buddy user for buddy connection
     const buddyUserResult = await query(
-      `INSERT INTO users (username, email, password_hash, full_name)
-        VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (username, email, password_hash, full_name, email_verified)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING id`,
-      ['mockbuddy', 'mockbuddy@example.com', '$2b$10$testhash', 'Mock Buddy User']
+      [`mockbuddy_${alphaTestId}`, `mockbuddy_${testId}@example.com`, '$2b$10$testhash', 'Mock Buddy User', true]
     );
     const buddyUserId = buddyUserResult.rows[0].id;
 
@@ -85,17 +95,19 @@ describe('Profile Integration Tests', () => {
     authToken = generateTestToken(testUser.id);
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     // Clean up test data (cascade will handle most relationships)
-    await query('DELETE FROM travel_buddy_connections WHERE requester_id = $1 OR requested_id = $1', [testUser.id]);
-    await query('DELETE FROM recommendations WHERE user_id = $1', [testUser.id]);
-    await query('DELETE FROM user_profiles WHERE user_id = $1', [testUser.id]);
-    await query('DELETE FROM users WHERE email LIKE \'%mockbuddy%\' OR id = $1', [testUser.id]);
+    if (testUser?.id) {
+      await query('DELETE FROM travel_buddy_connections WHERE requester_id = $1 OR requested_id = $1', [testUser.id]);
+      await query('DELETE FROM recommendations WHERE user_id = $1', [testUser.id]);
+      await query('DELETE FROM user_profiles WHERE user_id = $1', [testUser.id]);
+      await query(`DELETE FROM users WHERE email LIKE '%${testId}%' OR id = $1`, [testUser.id]);
+    }
   });
 
   describe('Complete Profile Flow', () => {
     it('should get profile with accurate statistics', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .expect(200);
 
@@ -109,7 +121,7 @@ describe('Profile Integration Tests', () => {
     });
 
     it('should get user statistics separately', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -124,7 +136,7 @@ describe('Profile Integration Tests', () => {
     });
 
     it('should get user badges based on statistics', async () => {
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/badges')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -151,7 +163,7 @@ describe('Profile Integration Tests', () => {
         hometown: 'Updated Test Hometown'
       };
 
-      const response = await request(createApp)
+      const response = await request(app)
         .put('/api/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send(updateData)
@@ -160,7 +172,7 @@ describe('Profile Integration Tests', () => {
       expect(response.body.success).toBe(true);
 
       // Verify the profile was updated
-      const profileResponse = await request(createApp)
+      const profileResponse = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .expect(200);
 
@@ -185,7 +197,7 @@ describe('Profile Integration Tests', () => {
       );
 
       // Should be accessible to owner
-      const ownerResponse = await request(createApp)
+      const ownerResponse = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -193,7 +205,7 @@ describe('Profile Integration Tests', () => {
       expect(ownerResponse.body.success).toBe(true);
 
       // Should not be accessible to others
-      const publicResponse = await request(createApp)
+      const publicResponse = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .expect(403);
 
@@ -214,7 +226,7 @@ describe('Profile Integration Tests', () => {
         [false, testUser.id]
       );
 
-      const response = await request(createApp)
+      const response = await request(app)
         .get(`/api/profile/${testUser.username}`)
         .expect(200);
 
@@ -233,7 +245,7 @@ describe('Profile Integration Tests', () => {
     it('should handle database errors gracefully', async () => {
       // This test would require mocking database errors
       // For now, I'll test with invalid data
-      const response = await request(createApp)
+      const response = await request(app)
         .put('/api/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -247,7 +259,7 @@ describe('Profile Integration Tests', () => {
     it('should handle rate limiting', async () => {
       // This would require setting up rate limiting in test environment
       // For now, I'll just ensure the endpoints exist
-      const response = await request(createApp)
+      const response = await request(app)
         .get('/api/profile/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);

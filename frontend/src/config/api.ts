@@ -230,13 +230,15 @@ export const apiRequest = async <T = unknown>(
                     const errorMessages = errorData.errors.map((err: ValidationError) =>
                         `${err.field}: ${err.message}`
                     ).join(', ');
-                    const error = new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`);
-                    (error as any).status = response.status;
+                    const error = new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`) as Error & { status: number };
+                    error.status = response.status;
                     throw error;
                 }
 
-                const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
-                (error as any).status = response.status;
+                const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`) as Error & { status: number; code?: string; data?: unknown };
+                error.status = response.status;
+                error.code = errorData.code; // Preserve error code (e.g., EMAIL_NOT_VERIFIED)
+                error.data = errorData.data; // Preserve additional data
                 throw error;
             }
 
@@ -258,7 +260,7 @@ export const apiRequest = async <T = unknown>(
                 }
 
                 // Don't retry on client errors (4xx)
-                const status = (error as any).status;
+                const status = (error as Error & { status?: number }).status;
                 if (status && status >= 400 && status < 500) {
                     throw error;
                 }
@@ -317,13 +319,13 @@ export const apiRequestWithExtendedTimeout = async <T = unknown>(
                     const errorMessages = errorData.errors.map((err: ValidationError) =>
                         `${err.field}: ${err.message}`
                     ).join(', ');
-                    const error = new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`);
-                    (error as any).status = response.status;
+                    const error = new Error(`${errorData.message || 'Validation failed'}: ${errorMessages}`) as Error & { status: number };
+                    error.status = response.status;
                     throw error;
                 }
 
-                const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`);
-                (error as any).status = response.status;
+                const error = new Error(errorData.message || errorData.error || `Request failed with status ${response.status}`) as Error & { status: number };
+                error.status = response.status;
                 throw error;
             }
 
@@ -343,7 +345,7 @@ export const apiRequestWithExtendedTimeout = async <T = unknown>(
                 }
 
                 // Don't retry on client errors (4xx)
-                const status = (error as any).status;
+                const status = (error as Error & { status?: number }).status;
                 if (status && status >= 400 && status < 500) {
                     throw error;
                 }

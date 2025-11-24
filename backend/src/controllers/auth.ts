@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import { query } from '../lib/database';
 import {
     hashPassword,
@@ -170,6 +171,19 @@ export const login = async (req: Request, res: Response) => {
             return res.status(403).json({
                 success: false,
                 message: 'Account is suspended or deactivated'
+            });
+        }
+
+        // Check email verification - CRITICAL SECURITY REQUIREMENT
+        if (!user.email_verified) {
+            return res.status(403).json({
+                success: false,
+                message: 'Please verify your email before logging in. Check your inbox for the verification link.',
+                code: 'EMAIL_NOT_VERIFIED',
+                data: {
+                    email: user.email,
+                    userId: user.id
+                }
             });
         }
 
@@ -935,6 +949,81 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error('Verify email error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+/**
+ * Resend email verification link
+ */
+export const resendVerificationEmail = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        // Find user by email
+        const userResult = await query(
+            'SELECT id, username, email, email_verified FROM users WHERE email = $1',
+            [email]
+        );
+
+        if (userResult.rows.length === 0) {
+            // Don't reveal if email exists for security
+            return res.json({
+                success: true,
+                message: 'If an account exists with this email, a verification link has been sent.'
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        // Check if already verified
+        if (user.email_verified) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is already verified. You can log in now.'
+            });
+        }
+
+        // Delete any existing verification tokens for this user
+        await query(
+            'DELETE FROM email_verification_tokens WHERE user_id = $1',
+            [user.id]
+        );
+
+        // Generate new verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // Store verification token
+        await query(
+            `INSERT INTO email_verification_tokens (user_id, token, expires_at)
+             VALUES ($1, $2, $3)`,
+            [user.id, verificationToken, expiresAt]
+        );
+
+        // Send verification email
+        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+        await sendVerificationEmail(user.email, user.username, verificationUrl);
+
+        console.log('✅ Verification email resent to:', user.email);
+
+        res.json({
+            success: true,
+            message: 'Verification email has been resent. Please check your inbox.'
+        });
+
+    } catch (error) {
+        console.error('Resend verification email error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

@@ -66,7 +66,7 @@ export interface ActiveBuddy {
     id: number;
     username: string;
     full_name: string;
-    profile_picture_url?: string;
+    profile_photo_url?: string;
     current_city_id?: number;
     current_city?: string;
     last_active: string;
@@ -76,15 +76,15 @@ export interface ActiveBuddy {
  * Get personalized feed with algorithm (50% buddies, 30% trending, 20% interests)
  */
 export const getFeed = async (
-    page: number = 1, 
-    limit: number = 10, 
+    page: number = 1,
+    limit: number = 10,
     location?: { latitude: number; longitude: number; radius?: number }
 ): Promise<FeedResponse> => {
     const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString()
     });
-    
+
     if (location) {
         params.append('latitude', location.latitude.toString());
         params.append('longitude', location.longitude.toString());
@@ -167,7 +167,7 @@ export const recordShare = async (recommendationId: number, platform: string) =>
  * Report a recommendation
  */
 export const reportPost = async (
-    recommendationId: number, 
+    recommendationId: number,
     reason: 'spam' | 'inappropriate' | 'misleading' | 'offensive' | 'copyright' | 'other',
     description?: string
 ) => {

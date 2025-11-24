@@ -85,7 +85,7 @@ export const createTestUser = async (overrides: any = {}) => {
         google_id: overrides.googleId || null,
         role: overrides.role || 'user',
         account_status: overrides.accountStatus || 'active',
-        email_verified: overrides.emailVerified || false
+        email_verified: overrides.emailVerified !== undefined ? overrides.emailVerified : true
     };
 
     const userResult = await query(

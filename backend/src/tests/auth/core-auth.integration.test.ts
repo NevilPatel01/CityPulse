@@ -46,11 +46,11 @@ describe('Core Authentication Integration Tests', () => {
                 .expect(201);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toBe('User registered successfully');
+            expect(response.body.message).toContain('registered successfully');
             expect(response.body.data.user).toBeDefined();
             expect(response.body.data.user.email).toBe(userRegistration.email);
             expect(response.body.data.user.username).toBe(userRegistration.username);
-            expect(response.body.data.user.full_name).toBe(userRegistration.fullName);
+            expect(response.body.data.user.fullName).toBe(userRegistration.fullName);
             expect(response.body.data.user.role).toBe('user');
             expect(response.body.data.user.account_status).toBe('active');
             expect(response.body.data.user.email_verified).toBe(false);
@@ -62,7 +62,7 @@ describe('Core Authentication Integration Tests', () => {
             // Check that cookies are set
             const cookies = response.headers['set-cookie'];
             expect(cookies).toBeDefined();
-            
+
             createdUserIds.push(response.body.data.user.id);
         });
 
@@ -86,7 +86,7 @@ describe('Core Authentication Integration Tests', () => {
             expect(response.body.data.user.current_location).toBeNull();
             expect(response.body.data.user.hometown).toBeNull();
             expect(response.body.data.user.phone).toBeNull();
-            
+
             createdUserIds.push(response.body.data.user.id);
         });
 
@@ -112,7 +112,7 @@ describe('Core Authentication Integration Tests', () => {
                 .post('/api/auth/register')
                 .send(user1)
                 .expect(201);
-            
+
             createdUserIds.push(firstResponse.body.data.user.id);
 
             // Try to register second user with same email
@@ -146,7 +146,7 @@ describe('Core Authentication Integration Tests', () => {
                 .post('/api/auth/register')
                 .send(user1)
                 .expect(201);
-            
+
             createdUserIds.push(firstResponse.body.data.user.id);
 
             // Try to register second user with same username
@@ -173,11 +173,11 @@ describe('Core Authentication Integration Tests', () => {
                 password: 'MinimalPass123!',
                 fullName: 'Minimal User'
             };
-            
+
             const registerResponse = await request(app)
                 .post('/api/auth/register')
                 .send(testUser);
-            
+
             createdUserIds.push(registerResponse.body.data.user.id);
         });
 
@@ -263,7 +263,7 @@ describe('Core Authentication Integration Tests', () => {
             // Check that cookies are cleared
             const cookies = response.headers['set-cookie'];
             if (cookies && Array.isArray(cookies)) {
-                expect(cookies.some((cookie: string) => 
+                expect(cookies.some((cookie: string) =>
                     cookie.includes('accessToken=;') || cookie.includes('refreshToken=;')
                 )).toBe(true);
             }
@@ -293,7 +293,7 @@ describe('Core Authentication Integration Tests', () => {
                 password: 'ProfilePassword123!',
                 fullName: 'Profile Test User'
             };
-            
+
             // Create and login a test user
             const registerResponse = await request(app)
                 .post('/api/auth/register')
@@ -352,7 +352,7 @@ describe('Core Authentication Integration Tests', () => {
                 password: 'OldPassword123!',
                 fullName: 'Change Password User'
             };
-            
+
             // Create and login a test user
             const registerResponse = await request(app)
                 .post('/api/auth/register')
@@ -522,12 +522,12 @@ describe('Core Authentication Integration Tests', () => {
                 { username: generateAlphanumericTestId(), email: `concurrent3_${baseId}@example.com`, password: 'Pass123!', fullName: 'User 3' }
             ];
 
-            const registrationPromises = users.map(user => 
+            const registrationPromises = users.map(user =>
                 request(app).post('/api/auth/register').send(user)
             );
 
             const responses = await Promise.all(registrationPromises);
-            
+
             // Track created users for cleanup
             responses.forEach(response => {
                 if (response.body.data?.user?.id) {

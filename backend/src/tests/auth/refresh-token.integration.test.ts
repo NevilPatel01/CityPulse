@@ -1,24 +1,35 @@
-import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import request from 'supertest';
 import { createApp } from '../../app';
 import { cleanupDatabase } from '../setup';
+import { generateTestId, generateAlphanumericTestId } from '../helpers/test-helpers';
+import { query } from '../../lib/database';
 
 const app = createApp();
 
 describe('Token Refresh Integration Tests', () => {
-    beforeEach(async () => {
-        await cleanupDatabase();
+    const createdUserIds: number[] = [];
+
+    afterEach(async () => {
+        // Clean up created users
+        for (const userId of createdUserIds) {
+            await query('DELETE FROM users WHERE id = $1', [userId]);
+        }
+        createdUserIds.length = 0;
     });
 
     afterAll(async () => {
-        // Cleanup after all tests
+        // Final cleanup
     });
 
     // Helper function to create a user and get tokens
     const createUserAndGetTokens = async () => {
+        const testId = generateTestId();
+        const alphaTestId = generateAlphanumericTestId();
+
         const userRegistration = {
-            username: 'refreshtestuser',
-            email: 'refreshtest@example.com',
+            username: `refreshtest_${alphaTestId}`,
+            email: `refreshtest_${testId}@example.com`,
             password: 'SecurePassword123!',
             fullName: 'Refresh Test User'
         };
@@ -27,11 +38,30 @@ describe('Token Refresh Integration Tests', () => {
             .post('/api/auth/register')
             .send(userRegistration);
 
+        // Verify email so user can login
+        if (response.body.data?.user?.id) {
+            await query('UPDATE users SET email_verified = true WHERE id = $1', [response.body.data.user.id]);
+            createdUserIds.push(response.body.data.user.id);
+        }
+
+        // Login to get tokens
+        const loginResponse = await request(app)
+            .post('/api/auth/login')
+            .send({
+                email: userRegistration.email,
+                password: userRegistration.password
+            });
+
+        if (!loginResponse.body.success) {
+            console.error('Login failed:', loginResponse.body);
+            throw new Error(`Login failed: ${loginResponse.body.message}`);
+        }
+
         return {
-            accessToken: response.body.data.accessToken,
-            refreshToken: response.body.data.refreshToken,
-            user: response.body.data.user,
-            cookies: response.headers['set-cookie']
+            accessToken: loginResponse.body.data.accessToken,
+            refreshToken: loginResponse.body.data.refreshToken,
+            user: loginResponse.body.data.user,
+            cookies: loginResponse.headers['set-cookie']
         };
     };
 
@@ -52,7 +82,7 @@ describe('Token Refresh Integration Tests', () => {
             expect(response.body.data).toBeDefined();
             expect(response.body.data.accessToken).toBeDefined();
             expect(response.body.data.refreshToken).toBeDefined();
-            
+
             // New tokens should be different from original
             expect(response.body.data.accessToken).not.toBe(originalAccessToken);
             expect(response.body.data.refreshToken).not.toBe(refreshToken);
@@ -68,8 +98,8 @@ describe('Token Refresh Integration Tests', () => {
 
         it('should refresh token using cookie-based refresh token', async () => {
             const { cookies } = await createUserAndGetTokens();
-            
-            const refreshTokenCookie = Array.isArray(cookies) 
+
+            const refreshTokenCookie = Array.isArray(cookies)
                 ? cookies.find((cookie: string) => cookie.startsWith('refreshToken='))
                 : cookies;
 
@@ -106,7 +136,7 @@ describe('Token Refresh Integration Tests', () => {
             // Should clear cookies on invalid token
             const cookies = response.headers['set-cookie'];
             if (cookies && Array.isArray(cookies)) {
-                expect(cookies.some((cookie: string) => 
+                expect(cookies.some((cookie: string) =>
                     cookie.includes('accessToken=;') || cookie.includes('refreshToken=;')
                 )).toBe(true);
             }
@@ -125,11 +155,14 @@ describe('Token Refresh Integration Tests', () => {
         });
 
         it('should handle refresh token for non-existent user', async () => {
-            // Create a user, get tokens, then simulate user deletion
-            const { refreshToken } = await createUserAndGetTokens();
-            
-            // Clean database to simulate user deletion
-            await cleanupDatabase();
+            // Create a user, get tokens, then delete that specific user
+            const { refreshToken, user } = await createUserAndGetTokens();
+
+            // Delete only this specific user
+            await query('DELETE FROM users WHERE id = $1', [user.id]);
+            // Remove from tracking since we manually deleted
+            const index = createdUserIds.indexOf(user.id);
+            if (index > -1) createdUserIds.splice(index, 1);
 
             const response = await request(app)
                 .post('/api/auth/refresh')
@@ -142,7 +175,7 @@ describe('Token Refresh Integration Tests', () => {
             // Should clear cookies when user not found
             const cookies = response.headers['set-cookie'];
             if (cookies && Array.isArray(cookies)) {
-                expect(cookies.some((cookie: string) => 
+                expect(cookies.some((cookie: string) =>
                     cookie.includes('accessToken=;') || cookie.includes('refreshToken=;')
                 )).toBe(true);
             }
@@ -173,7 +206,7 @@ describe('Token Refresh Integration Tests', () => {
 
             // Use new access token to get profile and verify user data
             const newAccessToken = response.body.data.accessToken;
-            
+
             const profileResponse = await request(app)
                 .get('/api/auth/profile')
                 .set('Cookie', `accessToken=${newAccessToken}`)
@@ -203,14 +236,14 @@ describe('Token Refresh Integration Tests', () => {
             const { refreshToken } = await createUserAndGetTokens();
 
             // Make multiple refresh requests rapidly
-            const requests = Array(20).fill(null).map(() => 
+            const requests = Array(20).fill(null).map(() =>
                 request(app)
                     .post('/api/auth/refresh')
                     .set('Cookie', `refreshToken=${refreshToken}`)
             );
 
             const responses = await Promise.all(requests);
-            
+
             // Some requests should succeed
             const successfulResponses = responses.filter(res => res.status === 200);
             expect(successfulResponses.length).toBeGreaterThan(0);

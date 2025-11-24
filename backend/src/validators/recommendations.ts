@@ -33,13 +33,14 @@ export const createRecommendationSchema = z.object({
         .max(500, 'Address must not exceed 500 characters')
         .trim()
         .optional(),
-    
+
     // Details
     description: z.string()
         .min(10, 'Description must be at least 10 characters long')
         .max(2000, 'Description must not exceed 2000 characters')
-        .trim(),
-    
+        .trim()
+        .optional(),
+
     // Price range
     price_range_min: z.number()
         .min(0, 'Minimum price must be non-negative')
@@ -47,13 +48,13 @@ export const createRecommendationSchema = z.object({
     price_range_max: z.number()
         .min(0, 'Maximum price must be non-negative')
         .optional(),
-    
+
     // Difficulty level
     difficulty_level: z.string()
         .max(20, 'Difficulty level must not exceed 20 characters')
         .trim()
         .optional(),
-    
+
     // Timing Details
     best_time_to_visit: z.string()
         .max(100, 'Best time to visit must not exceed 100 characters')
@@ -67,7 +68,7 @@ export const createRecommendationSchema = z.object({
         .int('Rating must be an integer')
         .min(1, 'Rating must be at least 1')
         .max(5, 'Rating must be at most 5'),
-    
+
     // Geographic coordinates
     latitude: z.number()
         .min(-90, 'Latitude must be between -90 and 90')
@@ -129,14 +130,14 @@ export const validate = (schema: z.ZodSchema) => {
                     field: err.path.join('.'),
                     message: err.message
                 }));
-                
+
                 return res.status(400).json({
                     success: false,
                     message: 'Validation failed',
                     errors: errorMessages
                 });
             }
-            
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid request data'
@@ -157,14 +158,14 @@ export const validateQuery = (schema: z.ZodSchema) => {
                     field: err.path.join('.'),
                     message: err.message
                 }));
-                
+
                 return res.status(400).json({
                     success: false,
                     message: 'Query validation failed',
                     errors: errorMessages
                 });
             }
-            
+
             return res.status(400).json({
                 success: false,
                 message: 'Invalid query parameters'

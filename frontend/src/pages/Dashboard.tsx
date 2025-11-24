@@ -175,9 +175,9 @@ const ActiveBuddiesCard = ({ buddies }: { buddies: ActiveBuddy[] }) => {
                         onClick={() => navigate(`/profile/${buddy.username}`)}
                     >
                         <div className="relative">
-                            {buddy.profile_picture_url ? (
+                            {buddy.profile_photo_url ? (
                                 <img 
-                                    src={buddy.profile_picture_url} 
+                                    src={buddy.profile_photo_url} 
                                     alt={buddy.full_name}
                                     className="w-8 h-8 rounded-full object-cover"
                                 />

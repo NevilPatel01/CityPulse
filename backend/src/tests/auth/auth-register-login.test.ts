@@ -53,11 +53,11 @@ describe('Authentication - Register, Login, Logout', () => {
                 .expect(201);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toBe('User registered successfully');
+            expect(response.body.message).toContain('registered successfully');
             expect(response.body.data.user).toBeDefined();
             expect(response.body.data.user.email).toBe(userRegistration.email);
             expect(response.body.data.user.username).toBe(userRegistration.username);
-            expect(response.body.data.user.full_name).toBe(userRegistration.fullName);
+            expect(response.body.data.user.fullName).toBe(userRegistration.fullName);
             expect(response.body.data.user.role).toBe('user');
             expect(response.body.data.user.account_status).toBe('active');
             expect(response.body.data.user.email_verified).toBe(false);

@@ -5,6 +5,8 @@ import { Input, Button } from '../../components/ui';
 import { GoogleOAuthButton } from '../../components/auth/GoogleOAuthButton';
 import { AuthDivider } from '../../components/auth/AuthDivider';
 import { useAuth } from '../../hooks/useAuth';
+import { apiRequest } from '../../config/api';
+import { useSafeToast } from '../../hooks/useSafeToast';
 
 interface LoginFormData {
   email: string;
@@ -20,6 +22,7 @@ interface LoginFormErrors {
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showSuccess, showError } = useSafeToast();
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -27,6 +30,9 @@ const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailVerificationError, setShowEmailVerificationError] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
 
   // Set page title for accessibility
   useEffect(() => {
@@ -127,18 +133,25 @@ const LoginPage = () => {
       
       // Redirect to dashboard after successful login
       navigate('/dashboard');
-    } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Login failed. Please try again.';
-      setErrors({ general: errorMessage });
+    } catch (error: unknown) {
+      // Check if error is due to unverified email
+      if (error instanceof Error && (error as Error & { code?: string }).code === 'EMAIL_NOT_VERIFIED') {
+        setShowEmailVerificationError(true);
+        setUnverifiedEmail((error as Error & { data?: { email?: string } }).data?.email || formData.email);
+        setErrors({
+          general: 'Please verify your email before logging in. Check your inbox for the verification link.'
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+        setErrors({ general: errorMessage });
+      }
       
       // Announce login failure
       const announcement = document.createElement('div');
       announcement.setAttribute('aria-live', 'assertive');
       announcement.setAttribute('aria-atomic', 'true');
       announcement.className = 'sr-only';
-      announcement.textContent = `Login failed: ${errorMessage}`;
+      announcement.textContent = `Login failed: ${error instanceof Error ? error.message : 'Please try again'}`;
       document.body.appendChild(announcement);
       
       setTimeout(() => {
@@ -146,6 +159,32 @@ const LoginPage = () => {
       }, 3000);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    try {
+      await apiRequest('/api/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email: unverifiedEmail })
+      });
+      
+      showSuccess(
+        'Verification Email Sent',
+        'Please check your inbox for the verification link.',
+        5000
+      );
+      setShowEmailVerificationError(false);
+      setErrors({});
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        showError('Failed to Send Email', error.message, 5000);
+      } else {
+        showError('Failed to Send Email', 'Could not resend verification email. Please try again later.', 5000);
+      }
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -181,7 +220,23 @@ const LoginPage = () => {
                   clipRule="evenodd" 
                 />
               </svg>
-              <span>{errors.general}</span>
+              <div className="flex-1">
+                <span>{errors.general}</span>
+                {showEmailVerificationError && (
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={isResending}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      isLoading={isResending}
+                      loadingText="Sending..."
+                    >
+                      {isResending ? 'Sending...' : 'Resend Verification Email'}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

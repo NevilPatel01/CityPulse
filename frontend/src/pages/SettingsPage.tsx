@@ -7,6 +7,8 @@ import { Header } from '../components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { ChangePasswordModal } from '../components/settings/ChangePasswordModal';
 import { EmailNotificationsModal } from '../components/settings/EmailNotificationsModal';
+import { AccountDeactivation } from '../components/settings/AccountDeactivation';
+import { TravelPreferences } from '../components/profile/TravelPreferences';
 import { apiRequest, buildApiUrl } from '../config/api';
 
 interface PrivacySettings {
@@ -51,36 +53,6 @@ export default function SettingsPage() {
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone. Your account will be permanently deleted within 30 days.')) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await apiRequest<{ success: boolean; message: string }>(
-        buildApiUrl('api/profile/request-deletion'),
-        { method: 'POST' }
-      );
-
-      if (response.success) {
-        showSuccess(response.message || 'Deletion request submitted successfully');
-        // Log out user after deletion request
-        setTimeout(() => {
-          logout();
-          navigate('/login');
-        }, 2000);
-      } else {
-        showError(response.message || 'Failed to submit deletion request');
-      }
-    } catch (error) {
-      console.error('Delete account error:', error);
-      showError('Failed to submit deletion request. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -165,6 +137,9 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Travel Preferences */}
+            <TravelPreferences />
 
             {/* Privacy Settings */}
             <Card className="bg-surface-glass border-subtle">
@@ -315,17 +290,9 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-red-400">Delete Account</h3>
-                    <p className="text-sm text-muted">Permanently delete your account</p>
-                  </div>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
-                  >
-                    Delete
-                  </button>
+                {/* Account Deactivation */}
+                <div className="pt-4 border-t border-subtle">
+                  <AccountDeactivation />
                 </div>
               </CardContent>
             </Card>

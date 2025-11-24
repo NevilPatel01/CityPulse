@@ -31,6 +31,8 @@ import TripDetailPage from './pages/TripDetailPage';
 import CompanionFinderPage from './pages/CompanionFinderPage';
 import ModeratorDashboard from './pages/ModeratorDashboard';
 
+import { InactivityHandler } from './components/auth/InactivityHandler';
+
 function App() {
   useEffect(() => {
     console.log('🚀 [APP] CityPulse App initialized');
@@ -53,6 +55,7 @@ function App() {
   return (
     <ToastProvider>
       <AuthProvider>
+        <InactivityHandler />
         <SearchOverlayProvider>
           <Router>
             <GlobalSearchOverlay />

@@ -13,6 +13,7 @@ import { AchievementProgress } from '../components/achievements/AchievementProgr
 import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeline';
 import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
+import { ImageCropper } from '../components/common/ImageCropper';
 import type { UserAchievement } from '../types/achievement';
 import type { FeedPost } from '../services/feedService';
 
@@ -51,6 +52,12 @@ export default function ProfilePage() {
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savedPage, setSavedPage] = useState(1);
   const [hasMoreSaved, setHasMoreSaved] = useState(true);
+
+  // Image cropping state
+  const [croppingImage, setCroppingImage] = useState<{
+    src: string;
+    type: 'profile' | 'cover';
+  } | null>(null);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
 
@@ -187,16 +194,42 @@ export default function ProfilePage() {
     navigate('/profile/edit');
   };
 
-  const handleImageUpload = async (file: File, type: 'profile' | 'cover') => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cover') => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setCroppingImage({
+          src: reader.result as string,
+          type
+        });
+      });
+      reader.readAsDataURL(file);
+      // Reset input value so same file can be selected again
+      e.target.value = '';
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!croppingImage) return;
+
     try {
+      const { type } = croppingImage;
+      
       // Create a preview URL for immediate display
-      const previewUrl = URL.createObjectURL(file);
+      const previewUrl = URL.createObjectURL(croppedBlob);
       
       // Store locally for immediate display
       setLocalImages(prev => ({
         ...prev,
         [type]: previewUrl
       }));
+      
+      // Convert blob to file
+      const file = new File([croppedBlob], `cropped-${type}.jpg`, { type: 'image/jpeg' });
+
+      // Close cropper
+      setCroppingImage(null);
       
       // Upload to server and get permanent URL
       const response = await profileService.uploadPhoto(file, type);
@@ -219,10 +252,12 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Upload error:', error);
       // Remove the preview on error
-      setLocalImages(prev => ({
-        ...prev,
-        [type]: undefined
-      }));
+      if (croppingImage) {
+        setLocalImages(prev => ({
+          ...prev,
+          [croppingImage.type]: undefined
+        }));
+      }
     }
   };
 
@@ -333,10 +368,7 @@ export default function ProfilePage() {
                       const input = document.createElement('input');
                       input.type = 'file';
                       input.accept = 'image/*';
-                      input.onchange = (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) handleImageUpload(file, 'cover');
-                      };
+                      input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'cover');
                       input.click();
                     }}
                     className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-all duration-200 opacity-0 group-hover:opacity-100"
@@ -374,10 +406,7 @@ export default function ProfilePage() {
                           const input = document.createElement('input');
                           input.type = 'file';
                           input.accept = 'image/*';
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0];
-                            if (file) handleImageUpload(file, 'profile');
-                          };
+                          input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
                           input.click();
                         }}
                         className="absolute -bottom-2 -right-2 bg-pulse text-white p-2 rounded-full hover:bg-pulse/80 transition-all duration-200 shadow-lg opacity-0 group-hover:opacity-100"
@@ -612,7 +641,7 @@ export default function ProfilePage() {
                           <RecommendationsList 
                             userId={profile?.id} 
                             showUser={false}
-                            showActions={isOwnProfile}
+                            showActions={true}
                             className="mt-4"
                           />
                         )
@@ -620,7 +649,7 @@ export default function ProfilePage() {
                         <RecommendationsList 
                           userId={profile?.id} 
                           showUser={false}
-                          showActions={isOwnProfile}
+                          showActions={true}
                           className="mt-4"
                         />
                       )}
@@ -720,6 +749,16 @@ export default function ProfilePage() {
         <BadgeUnlockModal
           achievement={newlyUnlockedAchievements[currentAchievementIndex]}
           onClose={handleCloseAchievementModal}
+        />
+      )}
+
+      {/* Image Cropper Modal */}
+      {croppingImage && (
+        <ImageCropper
+          imageSrc={croppingImage.src}
+          aspect={croppingImage.type === 'profile' ? 1 : 3} // Square for profile, 3:1 for cover
+          onCropComplete={handleCropComplete}
+          onCancel={() => setCroppingImage(null)}
         />
       )}
 

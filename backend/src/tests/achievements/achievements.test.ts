@@ -128,13 +128,11 @@ describe('Achievement System', () => {
                 .post('/api/recommendations')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({
-                    title: 'Test Recommendation',
+                    place_name: 'Test Place',
                     description: 'Test description',
                     category_id: testCategory.id,
-                    user_rating: 5,
-                    recommendation_type: 'attraction',
-                    place_name: 'Test Place',
-                    cities: [{ city_id: testCity.id }]
+                    city_name: testCity.name,
+                    user_rating: 5
                 });
 
             if (recResponse.status !== 201) {
@@ -179,13 +177,11 @@ describe('Achievement System', () => {
                     .post('/api/recommendations')
                     .set('Authorization', `Bearer ${token1}`)
                     .send({
-                        title: `Recommendation for ${city.name}`,
+                        place_name: `Test Place in ${city.name}`,
                         description: 'Test description',
                         category_id: testCategory.id,
-                        user_rating: 5,
-                        recommendation_type: 'attraction',
-                        place_name: `Test Place in ${city.name}`,
-                        cities: [{ city_id: city.id }]
+                        city_name: city.name,
+                        user_rating: 5
                     })
                     .expect(201);
 
@@ -213,13 +209,11 @@ describe('Achievement System', () => {
                 .post('/api/recommendations')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({
-                    title: 'Popular Recommendation',
+                    place_name: 'Popular Place',
                     description: 'This will get many likes',
                     category_id: testCategory.id,
-                    user_rating: 5,
-                    recommendation_type: 'attraction',
-                    place_name: 'Popular Place',
-                    cities: [{ city_id: testCity.id }]
+                    city_name: testCity.name,
+                    user_rating: 5
                 })
                 .expect(201);
 
@@ -229,9 +223,9 @@ describe('Achievement System', () => {
             // Create 10 users who will like the recommendation
             const likers = [];
             for (let i = 1; i <= 10; i++) {
-                const liker = await createTestUser({ 
-                    fullName: `Liker ${i}`, 
-                    email: `liker${i}@test.com` 
+                const liker = await createTestUser({
+                    fullName: `Liker ${i}`,
+                    email: `liker${i}@test.com`
                 });
                 likers.push(liker);
 
@@ -282,13 +276,11 @@ describe('Achievement System', () => {
                     .post('/api/recommendations')
                     .set('Authorization', `Bearer ${token1}`)
                     .send({
-                        title: `Progress Recommendation ${i}`,
+                        place_name: `Progress Place ${i}`,
                         description: 'Test',
                         category_id: testCategory.id,
-                        user_rating: 5,
-                        recommendation_type: 'attraction',
-                        place_name: `Progress Place ${i}`,
-                        cities: [{ city_id: cityResult.rows[0].id }]
+                        city_name: cityResult.rows[0].name,
+                        user_rating: 5
                     })
                     .expect(201);
 
@@ -328,13 +320,11 @@ describe('Achievement System', () => {
                 .post('/api/recommendations')
                 .set('Authorization', `Bearer ${token1}`)
                 .send({
-                    title: 'Test Recommendation',
+                    place_name: 'Security Test Place',
                     description: 'Test',
                     category_id: testCategory.id,
-                    user_rating: 5,
-                    recommendation_type: 'attraction',
-                    place_name: 'Security Test Place',
-                    cities: [{ city_id: testCity.id }]
+                    city_name: testCity.name,
+                    user_rating: 5
                 })
                 .expect(201);
 
@@ -387,7 +377,7 @@ describe('Achievement System', () => {
 
             const achievements = response.body.data.achievements;
             const hasTiers = achievements.some((a: any) => a.tier);
-            
+
             // At least some achievements should have tiers
             expect(achievements.length).toBeGreaterThan(0);
         });

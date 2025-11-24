@@ -5,6 +5,7 @@ import { Input, Button } from '../../components/ui';
 import { GoogleOAuthButton } from '../../components/auth/GoogleOAuthButton';
 import { AuthDivider } from '../../components/auth/AuthDivider';
 import { useAuth } from '../../hooks/useAuth';
+import { PasswordStrengthMeter } from '../../components/auth/PasswordStrengthMeter';
 
 interface SignupFormData {
   email: string;
@@ -278,8 +279,15 @@ const SignupPage = () => {
           helperText="Must be at least 8 characters with uppercase, lowercase, number, and special character"
           disabled={isLoading}
           autoComplete="new-password"
-          required
+          isRequired={true}
         />
+        
+        {/* Password Strength Meter */}
+        {formData.password && (
+          <div className="mt-2">
+            <PasswordStrengthMeter password={formData.password} />
+          </div>
+        )}
 
         {/* Confirm password field */}
         <Input

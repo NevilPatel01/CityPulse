@@ -17,7 +17,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
         } = req.query;
 
         const offset = (Number(page) - 1) * Number(limit);
-        
+
         let whereConditions = ['r.status = $1'];
         let queryParams: any[] = ['active'];
         let paramIndex = 2;
@@ -176,7 +176,7 @@ export const getRecommendationById = async (req: Request, res: Response) => {
                 'SELECT rating, review FROM recommendation_ratings WHERE recommendation_id = $1 AND user_id = $2',
                 [id, userId]
             );
-            
+
             if (userRatingResult.rows.length > 0) {
                 recommendation.user_rating_value = userRatingResult.rows[0].rating;
                 recommendation.user_review = userRatingResult.rows[0].review;
@@ -187,7 +187,7 @@ export const getRecommendationById = async (req: Request, res: Response) => {
                 'SELECT id FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
                 [id, userId]
             );
-            
+
             recommendation.user_has_liked = userLikeResult.rows.length > 0;
         }
 
@@ -216,7 +216,7 @@ export const createRecommendation = async (req: Request, res: Response) => {
     console.log('[CREATE_REC] Request received:', req.method, req.url);
     console.log('[CREATE_REC] Request headers:', JSON.stringify(req.headers, null, 2));
     console.log('[CREATE_REC] Request body:', JSON.stringify(req.body, null, 2));
-    
+
     try {
         const {
             place_name,
@@ -235,9 +235,12 @@ export const createRecommendation = async (req: Request, res: Response) => {
             duration_suggestion,
             user_rating
         } = req.body;
+        // Ensure description is a non-null string for DB insertion
+        const safeDescription = description ?? '';
+
 
         const userId = (req as any).user?.userId;
-        
+
         console.log('[CREATE_REC] User from middleware:', (req as any).user);
         console.log('[CREATE_REC] User ID:', userId);
 
@@ -261,7 +264,7 @@ export const createRecommendation = async (req: Request, res: Response) => {
                     'SELECT id FROM recommendation_categories WHERE name = $1',
                     [custom_category]
                 );
-                
+
                 if (existingCategory.rows.length > 0) {
                     finalCategoryId = existingCategory.rows[0].id;
                     console.log('[CREATE_REC] Using existing category:', finalCategoryId);
@@ -278,7 +281,7 @@ export const createRecommendation = async (req: Request, res: Response) => {
 
             // Handle city - either from city_name or custom_city
             let finalCityId = null;
-            
+
             if (city_name) {
                 console.log('[CREATE_REC] Processing selected city:', city_name);
                 // User selected an existing city from their visited cities
@@ -286,7 +289,7 @@ export const createRecommendation = async (req: Request, res: Response) => {
                     'SELECT id FROM cities WHERE name = $1',
                     [city_name]
                 );
-                
+
                 if (existingCity.rows.length > 0) {
                     finalCityId = existingCity.rows[0].id;
                     console.log('[CREATE_REC] Using existing city:', finalCityId);
@@ -306,13 +309,13 @@ export const createRecommendation = async (req: Request, res: Response) => {
                 const cityParts = custom_city.split(',').map((s: string) => s.trim());
                 const cityName = cityParts[0];
                 const country = cityParts[1] || '';
-                
+
                 // Check if custom city already exists
                 const existingCity = await query(
                     'SELECT id FROM cities WHERE name = $1 AND country = $2',
                     [cityName, country]
                 );
-                
+
                 if (existingCity.rows.length > 0) {
                     finalCityId = existingCity.rows[0].id;
                     console.log('[CREATE_REC] Using existing custom city:', finalCityId);
@@ -339,6 +342,21 @@ export const createRecommendation = async (req: Request, res: Response) => {
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 RETURNING id
             `;
+            const queryValues = [
+                userId,
+                place_name,
+                safeDescription,
+                finalCategoryId,
+                price_range_min,
+                price_range_max,
+                difficulty_level,
+                address,
+                latitude,
+                longitude,
+                best_time_to_visit,
+                duration_suggestion,
+                user_rating
+            ];
 
             console.log('[CREATE_REC] Inserting recommendation with values:', [
                 userId, place_name, description, finalCategoryId,
@@ -368,7 +386,7 @@ export const createRecommendation = async (req: Request, res: Response) => {
             }
 
             console.log('[CREATE_REC] Recommendation created successfully');
-            
+
             // Check and award achievements
             checkAndAwardAchievements(userId, 'recommendations_created').catch(err => {
                 console.error('[CREATE_REC] Error checking achievements:', err);
@@ -376,7 +394,7 @@ export const createRecommendation = async (req: Request, res: Response) => {
             checkAndAwardAchievements(userId, 'cities_visited').catch(err => {
                 console.error('[CREATE_REC] Error checking achievements:', err);
             });
-            
+
             res.status(201).json({
                 success: true,
                 message: 'Recommendation created successfully',
@@ -459,8 +477,8 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             `;
 
             await query(updateQuery, [
-                place_name, description, category_id, address, 
-                latitude, longitude, best_time_to_visit, 
+                place_name, description, category_id, address,
+                latitude, longitude, best_time_to_visit,
                 duration_suggestion, user_rating, id
             ]);
 
@@ -810,11 +828,11 @@ export const getCities = async (req: Request, res: Response) => {
     try {
         const { search } = req.query;
         const userId = (req as any).user?.userId; // Get user ID from auth middleware if available
-        
+
         console.log('[CITIES] Request headers:', JSON.stringify(req.headers, null, 2));
         console.log('[CITIES] User from middleware:', (req as any).user);
         console.log('[CITIES] User ID:', userId);
-        
+
         let cities: any[] = [];
 
         if (userId) {
@@ -830,7 +848,7 @@ export const getCities = async (req: Request, res: Response) => {
             if (profileResult.rows.length > 0 && profileResult.rows[0].cities_visited) {
                 const citiesVisited = profileResult.rows[0].cities_visited;
                 console.log('[CITIES] Cities visited from profile:', citiesVisited);
-                
+
                 // Convert the JSON array to the expected format
                 cities = citiesVisited.map((cityName: string, index: number) => ({
                     id: index + 1, // Use sequential numeric ID
@@ -844,7 +862,7 @@ export const getCities = async (req: Request, res: Response) => {
                 // Filter by search if provided
                 if (search) {
                     const searchLower = search.toString().toLowerCase();
-                    cities = cities.filter(city => 
+                    cities = cities.filter(city =>
                         city.name.toLowerCase().includes(searchLower)
                     );
                 }

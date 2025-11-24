@@ -54,7 +54,7 @@ describe('Profile Management', () => {
             expect(response.body.data.user).toBeDefined();
             expect(response.body.data.user.username).toBe(testUser.username);
             expect(response.body.data.user.email).toBe(testUser.email);
-            expect(response.body.data.user.full_name).toBe(testUser.full_name);
+            expect(response.body.data.user.fullName).toBe(testUser.full_name);
             expect(response.body.data.user.bio).toBe('Test bio');
             expect(response.body.data.user.password_hash).toBeUndefined();
         });
@@ -132,9 +132,9 @@ describe('Profile Management', () => {
 
             expect(response.body.success).toBe(true);
             expect(response.body.message).toContain('updated');
-            expect(response.body.data.full_name).toBe(updateData.fullName);
+            expect(response.body.data.fullName).toBe(updateData.fullName);
             expect(response.body.data.bio).toBe(updateData.bio);
-            expect(response.body.data.current_location).toBe(updateData.currentLocation);
+            expect(response.body.data.currentLocation).toBe(updateData.currentLocation);
             expect(response.body.data.hometown).toBe(updateData.hometown);
         });
 
@@ -151,7 +151,7 @@ describe('Profile Management', () => {
 
             expect(response.body.success).toBe(true);
             expect(response.body.data.bio).toBe('Only updating bio');
-            expect(response.body.data.current_location).toBe('Toronto, ON'); // Should remain unchanged
+            expect(response.body.data.currentLocation).toBe('Toronto, ON'); // Should remain unchanged
         });
 
         it('should reject update without authentication', async () => {

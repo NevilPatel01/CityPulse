@@ -13,6 +13,7 @@ import {
     updateEmailPreferences,
     requestDataDeletion
 } from '../controllers/profile';
+import { getTravelPreferences, updateTravelPreferences } from '../controllers/profile_travel_preferences';
 import {
     updateProfileSchema,
     usernameParamSchema,
@@ -99,10 +100,10 @@ router.delete(
 
 // Data deletion request route
 router.post(
-  '/request-deletion',
-  profileLimiter,
-  authenticateToken,
-  requestDataDeletion
+    '/request-deletion',
+    profileLimiter,
+    authenticateToken,
+    requestDataDeletion
 );
 
 // Public routes (MUST be last as it has a catch-all param)
@@ -142,6 +143,21 @@ router.put(
     profileLimiter,
     authenticateToken,
     updateEmailPreferences
+);
+
+// Travel preferences routes
+router.get(
+    '/travel-preferences',
+    profileLimiter,
+    authenticateToken,
+    getTravelPreferences
+);
+
+router.put(
+    '/travel-preferences',
+    profileLimiter,
+    authenticateToken,
+    updateTravelPreferences
 );
 
 export default router;
