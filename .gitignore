@@ -103,3 +103,4 @@ deploy-letsencrypt.sh
 update-ssl-certificate.sh
 
 citypulse-ui/
+docs/

@@ -8,6 +8,7 @@ import profileRoutes from './routes/profile';
 import recommendationRoutes from './routes/recommendations';
 import searchRoutes from './routes/search';
 import advancedSearchRoutes from './routes/advancedSearch';
+import searchHistoryRoutes from './routes/searchHistory';
 import buddyRoutes from './routes/buddy';
 import notificationRoutes from './routes/notifications';
 import socialRoutes from './routes/social';
@@ -147,6 +148,10 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up advanced search routes...');
     // Advanced search routes - handles advanced filtering and search
     app.use('/api/advanced-search', advancedSearchRoutes);
+
+    console.log('[APP] Setting up search history routes...');
+    // Search history routes - handles search history and saved searches
+    app.use('/api/search', searchHistoryRoutes);
 
     console.log('[APP] Setting up buddy routes...');
     // Buddy routes - handles travel buddy connections, blocking, and reporting

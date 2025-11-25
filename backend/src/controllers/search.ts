@@ -155,6 +155,24 @@ export const searchAll = async (req: Request, res: Response) => {
 
         console.log(`[SEARCH] Found ${results.total} results: ${results.recommendations.length} recommendations, ${results.users.length} users, ${results.cities.length} cities`);
 
+        // Track search history asynchronously (fire and forget)
+        const userId = req.user?.userId;
+        if (userId) {
+            query(
+                `INSERT INTO search_history (user_id, search_query, filters_applied, results_count)
+                    VALUES ($1, $2, $3, $4)`,
+                [
+                    userId,
+                    searchQuery,
+                    type ? JSON.stringify({ type }) : null,
+                    results.total
+                ]
+            ).catch(err => {
+                console.error('[SEARCH] Failed to save search history:', err);
+                // Don't fail the request if history tracking fails
+            });
+        }
+
         res.json({
             success: true,
             data: results,

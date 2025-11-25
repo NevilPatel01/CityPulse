@@ -73,6 +73,24 @@ export const advancedSearch = async (req: Request, res: Response) => {
 
         results.total = results.recommendations.length + results.users.length + results.cities.length;
 
+        // Track search history asynchronously (fire and forget)
+        const userId = req.user?.userId;
+        if (userId && filters.q) {
+            query(
+                `INSERT INTO search_history (user_id, search_query, filters_applied, results_count)
+                    VALUES ($1, $2, $3, $4)`,
+                [
+                    userId,
+                    filters.q,
+                    JSON.stringify(filters),
+                    results.total
+                ]
+            ).catch(err => {
+                console.error('[ADVANCED_SEARCH] Failed to save search history:', err);
+                // Don't fail the request if history tracking fails
+            });
+        }
+
         res.json({
             success: true,
             data: results,

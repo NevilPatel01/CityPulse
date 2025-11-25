@@ -27,17 +27,17 @@ export function useProfile(username: string): UseProfileReturn {
 
       // Single API call that includes all data (profile, stats, badges)
       const profileData = await profileService.getProfile(username);
-      
+
       setProfile(profileData);
       // Extract stats and badges from the profile data
       setStats(profileData.stats);
       setBadges(profileData.badges);
     } catch (err: unknown) {
       console.error('Profile fetch error:', err);
-      
+
       // Handle specific error types with user-friendly messages
       const error = err as { message?: string };
-      
+
       if (error.message?.includes('User not found')) {
         setError('This user profile does not exist');
       } else if (error.message?.includes('PROFILE_INCOMPLETE_OWNER')) {
@@ -72,8 +72,6 @@ export function useProfile(username: string): UseProfileReturn {
         setStats(incompleteProfile.stats);
         setBadges(incompleteProfile.badges);
         return;
-      } else if (error.message?.includes('private')) {
-        setError('This profile is private and cannot be viewed');
       } else if (error.message?.includes('Too many requests')) {
         setError('Too many requests. Please wait a moment and try again.');
       } else if (error.message?.includes('Service temporarily unavailable')) {
