@@ -82,7 +82,7 @@ interface CardHelpersProps {
     closeSearch: () => void;
 }
 
-const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatDifficulty, renderStars, formatDate, closeSearch }) => {
+const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSearch }) => {
     const getDefaultImage = () => {
         if (item.type === 'city') {
             return 'https://via.placeholder.com/400x300?text=City';
@@ -100,13 +100,13 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
     };
 
     return (
-        <div className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-shadow border border-subtle hover-lift">
+        <div className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-all border border-subtle group">
             {/* Image */}
-            <div className="relative h-48 bg-surface-glass rounded-t-2xl">
+            <div className="relative h-52 bg-surface-glass overflow-hidden">
                 <img
                     src={getImageUrl()}
                     alt={item.title || 'Image'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                         (e.target as HTMLImageElement).src = getDefaultImage();
                     }}
@@ -114,144 +114,110 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                 
                 {/* Category Badge */}
                 {item.category && (
-                    <div className="absolute top-3 right-3">
-                        <span className="bg-pulse text-white text-xs font-medium px-2 py-1 rounded-full">
+                    <div className="absolute top-3 left-3">
+                        <span className="bg-pulse text-white text-xs font-semibold px-3 py-1 rounded-md shadow-lg">
                             {typeof item.category === 'string' ? item.category : item.category.name}
                         </span>
                     </div>
                 )}
 
-                {/* Difficulty Badge */}
-                {item.difficulty && (
-                    <div className="absolute top-3 left-3">
-                        {formatDifficulty(item.difficulty)}
+                {/* Rating Badge */}
+                {item.stats && item.stats.rating > 0 && (
+                    <div className="absolute top-3 right-3 bg-base/90 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1">
+                        <svg className="w-4 h-4 text-accent-amber" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.95l-2.8 2.179a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.179a1 1 0 00-1.175 0l-2.8 2.179c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.858c-.783-.71-.38-1.95.588-1.95h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-sm font-bold text-primary">{item.stats.rating.toFixed(1)}</span>
                     </div>
                 )}
             </div>
 
             {/* Content */}
-            <div className="p-4 space-y-3">
-                {/* Title and Location */}
-                <div>
-                    <Link
-                        to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
-                            item.type === 'city' ? `/city/${item.title}` : 
-                            `/profile/${item.author?.username}`}
-                        onClick={closeSearch}
-                        className="text-lg font-semibold text-primary hover:text-pulse transition-colors"
-                    >
-                        {item.title || 'Untitled'}
-                    </Link>
+            <div className="p-5 space-y-3">
+                {/* Title */}
+                <Link
+                    to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
+                        item.type === 'city' ? `/city/${item.title}` : 
+                        `/profile/${item.author?.username}`}
+                    onClick={closeSearch}
+                    className="text-lg font-bold text-primary hover:text-pulse transition-colors line-clamp-1 block"
+                >
+                    {item.title || 'Untitled'}
+                </Link>
+
+                {/* Location, Price, Duration */}
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
                     {item.city && item.type !== 'city' && (
-                        <Link
-                            to={`/city/${typeof item.city === 'string' ? item.city : item.city.name}`}
-                            onClick={closeSearch}
-                            className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1"
-                        >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span className="inline-flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            {typeof item.city === 'string' ? item.city : `${item.city.name}, ${item.city.country}`}
-                        </Link>
+                            <span className="line-clamp-1">{typeof item.city === 'string' ? item.city : item.city.name}</span>
+                        </span>
+                    )}
+                    {formatPrice() ? (
+                        <span className="inline-flex items-center gap-1 font-medium text-pulse">
+                            {formatPrice()}
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center gap-1 font-medium text-green-600">
+                            Free
+                        </span>
+                    )}
+                    {item.duration && (
+                        <span className="inline-flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {item.duration}
+                        </span>
                     )}
                 </div>
 
                 {/* Description */}
                 {item.description && (
-                    <p className="text-primary text-sm line-clamp-2">
+                    <p className="text-primary text-sm line-clamp-2 leading-relaxed">
                         {item.description}
                     </p>
                 )}
 
-                {/* Price and Rating */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        {formatPrice() && (
-                            <span className="text-pulse font-medium text-sm">
-                                {formatPrice()}
-                            </span>
-                        )}
-                        {item.stats && renderStars(item.stats.rating)}
-                    </div>
-                    
-                    <div className="flex items-center space-x-3 text-sm text-muted">
-                        {item.stats && item.stats.views > 0 && (
-                            <span className="flex items-center space-x-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.418 0 8.168 3.943 9.542 7-1.374 3.057-5.124 7-9.542 7-4.477 0-8.268-3.943-9.542-7z" />
-                                </svg>
-                                <span>{item.stats.views}</span>
-                            </span>
-                        )}
-                        {item.stats && item.stats.likes > 0 && (
-                            <span className="flex items-center space-x-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
-                                <span>{item.stats.likes}</span>
-                            </span>
-                        )}
-                    </div>
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 pt-3 border-t border-subtle">
+                    <button
+                        className="p-2 text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors"
+                        aria-label="Save"
+                        title="Save"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                    </button>
+                    <button
+                        className="p-2 text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors"
+                        aria-label="Share"
+                        title="Share"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                    </button>
+                    <Link
+                        to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
+                            item.type === 'city' ? `/city/${item.title}` : 
+                            `/profile/${item.author?.username}`}
+                        onClick={closeSearch}
+                        className="ml-auto px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-accent-amber to-amber-500 hover:from-amber-500 hover:to-accent-amber rounded-lg transition-all shadow-md hover:shadow-lg"
+                    >
+                        View Details
+                    </Link>
                 </div>
-
-                {/* Additional Info */}
-                <div className="flex flex-wrap gap-2 text-xs text-muted">
-                    {item.bestTimeToVisit && (
-                        <span className="flex items-center space-x-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>{item.bestTimeToVisit}</span>
-                        </span>
-                    )}
-                    {item.duration && (
-                        <span className="flex items-center space-x-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>{item.duration}</span>
-                        </span>
-                    )}
-                </div>
-
-                {/* User Info */}
-                {item.author && (
-                    <div className="flex items-center justify-between pt-3 border-t border-subtle">
-                        <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-surface-glass rounded-full flex items-center justify-center">
-                                {item.author.profilePicture ? (
-                                    <img 
-                                        src={item.author.profilePicture.startsWith('http') ? item.author.profilePicture : `${apiConfig.baseUrl}${item.author.profilePicture}`} 
-                                        alt={item.author.name}
-                                        className="w-full h-full rounded-full object-cover"
-                                    />
-                                ) : (
-                                    <span className="text-sm font-semibold text-primary">
-                                        {item.author.name.charAt(0).toUpperCase()}
-                                    </span>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-primary">{item.author.name}</p>
-                                <p className="text-xs text-muted">@{item.author.username}</p>
-                            </div>
-                        </div>
-                        {item.createdAt && (
-                            <span className="text-xs text-muted">
-                                {formatDate(item.createdAt)}
-                            </span>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     );
 };
 
-// List View Card - Matching Profile Card Design
-const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatDifficulty, renderStars, formatDate, closeSearch }) => {
+// List View Card - Matching image design
+const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSearch }) => {
     const getDefaultImage = () => {
         if (item.type === 'city') {
             return 'https://via.placeholder.com/400x300?text=City';
@@ -269,14 +235,14 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
     };
 
     return (
-        <div className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-shadow border border-subtle hover-lift">
-            <div className="flex flex-col sm:flex-row gap-4 p-4">
+        <div className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-shadow border border-subtle">
+            <div className="flex flex-col sm:flex-row gap-0">
                 {/* Image */}
-                <div className="relative w-full sm:w-64 h-48 bg-surface-glass rounded-xl flex-shrink-0">
+                <div className="relative w-full sm:w-72 h-56 bg-surface-glass flex-shrink-0">
                     <img
                         src={getImageUrl()}
                         alt={item.title || 'Image'}
-                        className="w-full h-full object-cover rounded-xl"
+                        className="w-full h-full object-cover"
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = getDefaultImage();
                         }}
@@ -284,137 +250,105 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                     
                     {/* Category Badge */}
                     {item.category && (
-                        <div className="absolute top-3 right-3">
-                            <span className="bg-pulse text-white text-xs font-medium px-2 py-1 rounded-full">
+                        <div className="absolute top-3 left-3">
+                            <span className="bg-pulse text-white text-xs font-semibold px-3 py-1 rounded-md">
                                 {typeof item.category === 'string' ? item.category : item.category.name}
                             </span>
-                        </div>
-                    )}
-
-                    {/* Difficulty Badge */}
-                    {item.difficulty && (
-                        <div className="absolute top-3 left-3">
-                            {formatDifficulty(item.difficulty)}
                         </div>
                     )}
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 space-y-3">
-                    {/* Title and Location */}
-                    <div>
+                <div className="flex-1 p-5 flex flex-col justify-between">
+                    <div className="space-y-3">
+                        {/* Title and Rating Row */}
+                        <div className="flex items-start justify-between gap-3">
+                            <h3 className="text-xl font-bold text-primary flex-1">
+                                {item.title || 'Untitled'}
+                            </h3>
+                            {item.stats && item.stats.rating > 0 && (
+                                <div className="flex items-center gap-1">
+                                    <svg className="w-5 h-5 text-accent-amber" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.95l-2.8 2.179a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.179a1 1 0 00-1.175 0l-2.8 2.179c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.858c-.783-.71-.38-1.95.588-1.95h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    <span className="text-base font-semibold text-primary">{item.stats.rating.toFixed(1)}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Location, Price, Duration */}
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+                            {item.city && item.type !== 'city' && (
+                                <span className="inline-flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    </svg>
+                                    <span>{typeof item.city === 'string' ? item.city : `${item.city.name}, ${item.city.country}`}</span>
+                                </span>
+                            )}
+                            {formatPrice() ? (
+                                <span className="inline-flex items-center gap-1 font-medium text-pulse">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                    </svg>
+                                    {formatPrice()}
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 font-medium text-green-600">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Free
+                                </span>
+                            )}
+                            {item.duration && (
+                                <span className="inline-flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>{item.duration}</span>
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Description */}
+                        {item.description && (
+                            <p className="text-primary text-sm line-clamp-2 leading-relaxed">
+                                {item.description}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-subtle">
+                        <button
+                            className="px-4 py-2 text-sm font-medium text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors inline-flex items-center gap-2"
+                            aria-label="Save"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                            Save
+                        </button>
+                        <button
+                            className="px-4 py-2 text-sm font-medium text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors inline-flex items-center gap-2"
+                            aria-label="Share"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                            </svg>
+                            Share
+                        </button>
                         <Link
                             to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
                                 item.type === 'city' ? `/city/${item.title}` : 
                                 `/profile/${item.author?.username}`}
                             onClick={closeSearch}
-                            className="text-xl font-semibold text-primary hover:text-pulse transition-colors"
+                            className="ml-auto px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-accent-amber to-amber-500 hover:from-amber-500 hover:to-accent-amber rounded-lg transition-all shadow-md hover:shadow-lg"
                         >
-                            {item.title || 'Untitled'}
+                            View Details
                         </Link>
-                        {item.city && item.type !== 'city' && (
-                            <Link
-                                to={`/city/${typeof item.city === 'string' ? item.city : item.city.name}`}
-                                onClick={closeSearch}
-                                className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1 mt-1"
-                            >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                {typeof item.city === 'string' ? item.city : `${item.city.name}, ${item.city.country}`}
-                            </Link>
-                        )}
                     </div>
-
-                    {/* Description */}
-                    {item.description && (
-                        <p className="text-primary text-sm line-clamp-3">
-                            {item.description}
-                        </p>
-                    )}
-
-                    {/* Price and Rating */}
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex items-center space-x-4">
-                            {formatPrice() && (
-                                <span className="text-pulse font-medium">
-                                    {formatPrice()}
-                                </span>
-                            )}
-                            {item.stats && renderStars(item.stats.rating)}
-                        </div>
-                        
-                        <div className="flex items-center space-x-3 text-sm text-muted">
-                            {item.stats && item.stats.views > 0 && (
-                                <span className="flex items-center space-x-1">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.418 0 8.168 3.943 9.542 7-1.374 3.057-5.124 7-9.542 7-4.477 0-8.268-3.943-9.542-7z" />
-                                    </svg>
-                                    <span>{item.stats.views}</span>
-                                </span>
-                            )}
-                            {item.stats && item.stats.likes > 0 && (
-                                <span className="flex items-center space-x-1">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                    </svg>
-                                    <span>{item.stats.likes}</span>
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Additional Info */}
-                    <div className="flex flex-wrap gap-3 text-xs text-muted">
-                        {item.bestTimeToVisit && (
-                            <span className="flex items-center space-x-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{item.bestTimeToVisit}</span>
-                            </span>
-                        )}
-                        {item.duration && (
-                            <span className="flex items-center space-x-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{item.duration}</span>
-                            </span>
-                        )}
-                    </div>
-
-                    {/* User Info */}
-                    {item.author && (
-                        <div className="flex items-center justify-between pt-3 border-t border-subtle">
-                            <div className="flex items-center space-x-2">
-                                <div className="w-8 h-8 bg-surface-glass rounded-full flex items-center justify-center">
-                                    {item.author.profilePicture ? (
-                                        <img 
-                                            src={item.author.profilePicture.startsWith('http') ? item.author.profilePicture : `${apiConfig.baseUrl}${item.author.profilePicture}`} 
-                                            alt={item.author.name}
-                                            className="w-full h-full rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <span className="text-sm font-semibold text-primary">
-                                            {item.author.name.charAt(0).toUpperCase()}
-                                        </span>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-primary">{item.author.name}</p>
-                                    <p className="text-xs text-muted">@{item.author.username}</p>
-                                </div>
-                            </div>
-                            {item.createdAt && (
-                                <span className="text-xs text-muted">
-                                    {formatDate(item.createdAt)}
-                                </span>
-                            )}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

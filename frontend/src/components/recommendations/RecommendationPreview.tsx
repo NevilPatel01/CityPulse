@@ -84,9 +84,12 @@ export function RecommendationPreview({
     }
     if (existingPhotos.length > 0) {
       const primaryPhoto = existingPhotos.find(p => p.is_primary) || existingPhotos[0];
-      return primaryPhoto.photo_url.startsWith('http')
-        ? primaryPhoto.photo_url
-        : `${apiConfig.baseUrl}${primaryPhoto.photo_url}`;
+      // Check if photo_url exists before using it
+      if (primaryPhoto && primaryPhoto.photo_url) {
+        return primaryPhoto.photo_url.startsWith('http')
+          ? primaryPhoto.photo_url
+          : `${apiConfig.baseUrl}${primaryPhoto.photo_url}`;
+      }
     }
     return null;
   };

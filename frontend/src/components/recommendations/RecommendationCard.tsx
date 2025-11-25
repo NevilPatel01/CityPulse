@@ -78,7 +78,7 @@ export function RecommendationCard({
   };
 
   const handleEdit = () => {
-    navigate(`/${recommendation.username}/recommendation/${recommendation.id}/edit`);
+    navigate(`/edit-recommendation/${recommendation.id}`);
   };
 
   const formatPrice = () => {

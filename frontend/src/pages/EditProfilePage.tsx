@@ -131,6 +131,7 @@ export function EditProfilePage() {
         username: formData.username !== user?.username ? formData.username : undefined,
       };
 
+      console.log('[EditProfile] Sending update with cities:', formData.citiesVisited);
       await profileService.updateProfile(updateData);
       
       // Navigate back to profile page

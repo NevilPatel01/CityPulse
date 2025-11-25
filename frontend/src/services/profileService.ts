@@ -85,6 +85,8 @@ export interface ProfileUpdateData {
   locationSharing?: boolean;
   socialLinksVisible?: boolean;
   travelBuddyRequestsEnabled?: boolean;
+  citiesVisited?: string[];
+  username?: string;
 }
 
 class ProfileService {

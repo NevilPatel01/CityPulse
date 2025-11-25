@@ -492,7 +492,7 @@ export function RecommendationDetailPage() {
               {isOwner && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => navigate(`/${recommendation.username}/recommendation/${id}/edit`)}
+                    onClick={() => navigate(`/edit-recommendation/${id}`)}
                     className="p-2 text-muted hover:text-pulse transition-colors"
                     aria-label="Edit recommendation"
                   >

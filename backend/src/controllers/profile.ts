@@ -476,6 +476,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         } = req.body;
 
         console.log(`[PROFILE] Updating profile for user: ${userId}`);
+        console.log(`[PROFILE] Cities visited update:`, citiesVisited);
 
         // Validate username if provided
         if (username !== undefined) {
@@ -635,6 +636,7 @@ export const updateProfile = async (req: Request, res: Response) => {
                 profileUpdateFields.push(`cities_visited = $${paramCount++}`);
                 // Ensure citiesVisited is properly formatted as JSON
                 const citiesJson = Array.isArray(citiesVisited) ? JSON.stringify(citiesVisited) : JSON.stringify([]);
+                console.log(`[PROFILE] Updating cities_visited to:`, citiesJson);
                 profileUpdateValues.push(citiesJson);
             }
 
