@@ -52,6 +52,8 @@ export interface UserProfile {
     whatsapp?: string;
   };
   isOwnProfile: boolean;
+  isPrivate?: boolean;
+  buddyRequestStatus?: 'none' | 'pending' | 'accepted' | 'declined';
 }
 
 export interface UserStats {

@@ -263,24 +263,38 @@ export const getProfile = async (req: Request, res: Response) => {
         const hasMinimumData = user.id && user.username && user.full_name;
         const canDisplayProfile = hasMinimumData && isProfileComplete;
 
-        // For incomplete profiles, only show to the owner
+        // For incomplete profiles, only show to the owner or buddies
         console.log(`[PROFILE] Profile completion check: isComplete=${isProfileComplete}, user.id=${user.id}, currentUserId=${currentUserId}`);
 
         // Check if this is the user's own profile (by username match or user ID match)
         const isOwnProfile = currentUserId ? user.id === currentUserId : false;
+
+        // Check if viewer is a buddy (for incomplete profile access)
+        let isBuddy = false;
+        if (!isOwnProfile && currentUserId) {
+            const buddyCheckForIncomplete = await query(
+                `SELECT id FROM travel_buddy_connections
+                 WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))
+                 AND status = 'accepted'`,
+                [currentUserId, user.id]
+            );
+            isBuddy = buddyCheckForIncomplete.rows.length > 0;
+        }
 
         // Special case: If user is not authenticated but profile is incomplete,
         // I'll allow access but mark it as incomplete for the frontend to handle
         if (!isProfileComplete && !currentUserId) {
             console.log(`[PROFILE] Unauthenticated access to incomplete profile - allowing with completion form`);
             // Don't block, let it continue to show the profile with completion status
-        } else if (!isProfileComplete && !isOwnProfile) {
-            console.log(`[PROFILE] Blocking incomplete profile for non-owner`);
+        } else if (!isProfileComplete && !isOwnProfile && !isBuddy) {
+            console.log(`[PROFILE] Blocking incomplete profile for non-owner and non-buddy`);
             return res.status(403).json({
                 success: false,
                 message: 'This user profile is incomplete and not available for viewing',
                 code: 'PROFILE_INCOMPLETE'
             });
+        } else if (!isProfileComplete && isBuddy) {
+            console.log(`[PROFILE] Allowing buddy ${currentUserId} to view incomplete profile ${user.id}`);
         }
 
         // If profile is incomplete and it's the owner, allow access but mark as incomplete

@@ -281,11 +281,18 @@ export default function ProfilePage() {
   }
 
   // Show private profile view if profile is private and not a buddy
-  if (profile && (profile as any).isPrivate) {
+  if (profile?.isPrivate) {
     return (
       <div className="min-h-screen bg-base">
         <Header />
-        <PrivateProfileView profile={profile as any} />
+        <PrivateProfileView profile={{
+          id: profile.id,
+          username: profile.username,
+          fullName: profile.fullName,
+          bio: profile.bio,
+          profilePhotoUrl: profile.profilePhotoUrl,
+          buddyRequestStatus: profile.buddyRequestStatus || 'none',
+        }} />
         <BottomNavigation />
       </div>
     );
