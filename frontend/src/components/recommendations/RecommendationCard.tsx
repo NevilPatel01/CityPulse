@@ -253,7 +253,7 @@ export function RecommendationCard({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              navigate(`/cities/${recommendation.city_name}`);
+              navigate(`/city/${recommendation.city_name}`);
             }}
             className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1 cursor-pointer"
           >

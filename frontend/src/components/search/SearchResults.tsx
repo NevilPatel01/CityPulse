@@ -1,6 +1,7 @@
 import React from 'react';
 import type { SearchResult } from '../../services/searchService';
 import ResultCard from './ResultCard';
+import { LoadingInline } from '../ui/LoadingSpinner';
 
 interface SearchResultsProps {
     results: {
@@ -15,12 +16,7 @@ interface SearchResultsProps {
 
 const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view }) => {
     if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 border-4 border-pulse border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-muted">Searching...</p>
-            </div>
-        );
+        return <LoadingInline message="Searching..." />;
     }
 
     if (!results) {
@@ -55,9 +51,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
         <div className="space-y-8">
             {/* Recommendations Section */}
             {results.recommendations.length > 0 && (
-                <section>
+                <section aria-labelledby="recommendations-heading">
                     <div className="flex items-center gap-2 mb-4">
-                        <h2 className="text-xl font-bold text-primary">Recommendations</h2>
+                        <h2 id="recommendations-heading" className="text-xl font-bold text-primary">Recommendations</h2>
                         <span className="px-3 py-1 bg-pulse text-pulse-fg text-sm font-semibold rounded-full">
                             {results.recommendations.length}
                         </span>
@@ -80,9 +76,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
 
             {/* Users Section */}
             {results.users.length > 0 && (
-                <section>
+                <section aria-labelledby="users-heading">
                     <div className="flex items-center gap-2 mb-4">
-                        <h2 className="text-xl font-bold text-primary">Travel Buddies</h2>
+                        <h2 id="users-heading" className="text-xl font-bold text-primary">Travel Buddies</h2>
                         <span className="px-3 py-1 bg-accent-teal text-pulse-fg text-sm font-semibold rounded-full">
                             {results.users.length}
                         </span>
@@ -105,9 +101,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
 
             {/* Cities Section */}
             {results.cities.length > 0 && (
-                <section>
+                <section aria-labelledby="cities-heading">
                     <div className="flex items-center gap-2 mb-4">
-                        <h2 className="text-xl font-bold text-primary">Cities</h2>
+                        <h2 id="cities-heading" className="text-xl font-bold text-primary">Cities</h2>
                         <span className="px-3 py-1 bg-accent-amber text-pulse-fg text-sm font-semibold rounded-full">
                             {results.cities.length}
                         </span>

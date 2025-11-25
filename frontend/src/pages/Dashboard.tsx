@@ -21,13 +21,13 @@ const QuickActionsCard = () => {
         <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
             <h3 className="font-semibold text-primary">Quick Actions</h3>
             <button 
-                onClick={() => navigate('/recommendations/create')}
+                onClick={() => navigate('/create-recommendation')}
                 className="w-full bg-pulse text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-pulse/90 transition-colors"
             >
                 Add Recommendation
             </button>
             <button 
-                onClick={() => navigate('/buddies')}
+                onClick={() => navigate('/travel-buddies')}
                 className="w-full bg-white/10 text-primary py-2 px-4 rounded-lg text-sm font-medium border border-white/20 hover:bg-white/20 transition-colors"
             >
                 Find Buddy
@@ -69,7 +69,7 @@ const YourStatsCard = ({ stats }: { stats: UserStats | null }) => {
         { 
             label: "Buddies", 
             value: stats.buddies,
-            onClick: () => navigate('/buddies')
+            onClick: () => navigate('/travel-buddies')
         },
     ];
 
@@ -143,7 +143,7 @@ const ActiveBuddiesCard = ({ buddies }: { buddies: ActiveBuddy[] }) => {
                 <div className="text-center py-4">
                     <p className="text-sm text-muted mb-3">No buddies yet</p>
                     <button 
-                        onClick={() => navigate('/buddies')}
+                        onClick={() => navigate('/travel-buddies')}
                         className="text-sm text-pulse hover:text-pulse/80"
                     >
                         Find Buddies

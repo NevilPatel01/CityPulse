@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { LoadingPage } from '../ui/LoadingSpinner';
 
 interface PublicRouteProps {
   children: React.ReactNode;
@@ -11,14 +12,7 @@ export function PublicRoute({ children, redirectTo = '/dashboard' }: PublicRoute
 
   // Show loading spinner while checking authentication
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-base flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pulse mx-auto mb-4"></div>
-          <p className="text-muted">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingPage message="Loading..." />;
   }
 
   // Redirect to dashboard if already authenticated

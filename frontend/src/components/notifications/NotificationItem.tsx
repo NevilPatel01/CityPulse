@@ -81,7 +81,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     if (notification.action_url) {
       // Redirect buddy notifications to requests tab
       if (notification.notification_type === 'buddy_request' || notification.notification_type === 'buddy_accepted') {
-        navigate('/buddies?tab=requests');
+        navigate('/travel-buddies?tab=requests');
       } else {
         navigate(notification.action_url);
       }

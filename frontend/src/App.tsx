@@ -116,7 +116,7 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/recommendations/create" element={
+          <Route path="/create-recommendation" element={
             <ProtectedRoute>
               <CreateRecommendationPage />
             </ProtectedRoute>
@@ -138,13 +138,7 @@ function App() {
               <RecommendationDetailPage />
             </ProtectedRoute>
           } />
-          <Route path="/:username/recommendation/:id/edit" element={
-            <ProtectedRoute>
-              <EditRecommendationPage />
-            </ProtectedRoute>
-          } />
-          {/* Legacy edit route for backward compatibility */}
-          <Route path="/recommendations/:id/edit" element={
+          <Route path="/edit-recommendation/:id" element={
             <ProtectedRoute>
               <EditRecommendationPage />
             </ProtectedRoute>
@@ -168,7 +162,7 @@ function App() {
           } />
           
           {/* Buddies/Social routes */}
-          <Route path="/buddies" element={
+          <Route path="/travel-buddies" element={
             <ProtectedRoute>
               <BuddiesPage />
             </ProtectedRoute>
@@ -182,7 +176,7 @@ function App() {
           } />
           
           {/* City routes */}
-          <Route path="/cities/:cityName" element={
+          <Route path="/city/:cityName" element={
             <ProtectedRoute>
               <CityPage />
             </ProtectedRoute>

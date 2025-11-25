@@ -29,8 +29,8 @@ export const BottomNavigation: React.FC = () => {
         { 
             icon: "➕", 
             label: "Add", 
-            path: "/recommendations/create",
-            active: location.pathname === "/recommendations/create" 
+            path: "/create-recommendation",
+            active: location.pathname === "/create-recommendation" 
         },
         { 
             icon: "👤", 

@@ -48,8 +48,8 @@ export const getProfile = async (req: Request, res: Response) => {
         let citiesVisitedFromProfile = [];
         try {
             if (user.cities_visited) {
-                citiesVisitedFromProfile = typeof user.cities_visited === 'string' 
-                    ? JSON.parse(user.cities_visited) 
+                citiesVisitedFromProfile = typeof user.cities_visited === 'string'
+                    ? JSON.parse(user.cities_visited)
                     : user.cities_visited;
             }
         } catch (error) {
@@ -69,7 +69,7 @@ export const getProfile = async (req: Request, res: Response) => {
         );
 
         const citiesFromRecommendations = citiesResult.rows.map(row => `${row.name}, ${row.country}`);
-        
+
         // Combine both sources and remove duplicates
         const allCities = [...new Set([...citiesVisitedFromProfile, ...citiesFromRecommendations])];
         console.log('[PROFILE] Cities from profile:', citiesVisitedFromProfile);
@@ -85,7 +85,7 @@ export const getProfile = async (req: Request, res: Response) => {
                     [user.id]
                 );
                 console.log(`[PROFILE] User profiles record created for user: ${user.id}`);
-                
+
                 // Re-fetch user data with the new profile record
                 const updatedUserResult = await query(
                     `SELECT u.id, u.username, u.email, u.full_name, u.bio, u.current_location, 
@@ -106,7 +106,7 @@ export const getProfile = async (req: Request, res: Response) => {
                         WHERE u.username = $1 AND u.account_status = 'active'`,
                     [username]
                 );
-                
+
                 if (updatedUserResult.rows.length > 0) {
                     Object.assign(user, updatedUserResult.rows[0]);
                 }
@@ -116,11 +116,70 @@ export const getProfile = async (req: Request, res: Response) => {
             }
         }
 
-        // Check privacy settings
+        // Check privacy settings - allow travel buddies to view private profiles
+        let isPrivateAccount = false;
         if (user.profile_visibility === 'private' && user.id !== currentUserId) {
-            return res.status(403).json({
-                success: false,
-                message: 'This profile is private'
+            // Check if the current user is a travel buddy
+            if (currentUserId) {
+                const buddyCheckResult = await query(
+                    `SELECT id FROM travel_buddy_connections
+                     WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))
+                     AND status = 'accepted'`,
+                    [currentUserId, user.id]
+                );
+
+                // If they are travel buddies, allow full access
+                if (buddyCheckResult.rows.length > 0) {
+                    console.log(`[PROFILE] Allowing travel buddy ${currentUserId} to view private profile ${user.id}`);
+                } else {
+                    // Not a buddy, return limited profile data (Instagram-like)
+                    console.log(`[PROFILE] Returning limited profile data for private account ${user.id}`);
+                    isPrivateAccount = true;
+                }
+            } else {
+                // Not authenticated, return limited profile data
+                console.log(`[PROFILE] Returning limited profile data for unauthenticated user viewing private account ${user.id}`);
+                isPrivateAccount = true;
+            }
+        }
+
+        // If private account and not a buddy, return limited data
+        if (isPrivateAccount) {
+            const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
+            const profilePhotoUrl = user.profile_photo_url ?
+                (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
+
+            // Check buddy request status
+            let buddyRequestStatus = 'none';
+            if (currentUserId) {
+                const requestResult = await query(
+                    `SELECT status FROM travel_buddy_connections
+                     WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))`,
+                    [currentUserId, user.id]
+                );
+                if (requestResult.rows.length > 0) {
+                    buddyRequestStatus = requestResult.rows[0].status;
+                }
+            }
+
+            return res.json({
+                success: true,
+                data: {
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        fullName: user.full_name,
+                        bio: user.bio,
+                        profilePhotoUrl: profilePhotoUrl,
+                        isPrivate: true,
+                        buddyRequestStatus: buddyRequestStatus,
+                        stats: {
+                            cities: 0,
+                            recommendations: 0,
+                            travelBuddies: 0
+                        }
+                    }
+                }
             });
         }
 
@@ -206,10 +265,10 @@ export const getProfile = async (req: Request, res: Response) => {
 
         // For incomplete profiles, only show to the owner
         console.log(`[PROFILE] Profile completion check: isComplete=${isProfileComplete}, user.id=${user.id}, currentUserId=${currentUserId}`);
-        
+
         // Check if this is the user's own profile (by username match or user ID match)
         const isOwnProfile = currentUserId ? user.id === currentUserId : false;
-        
+
         // Special case: If user is not authenticated but profile is incomplete,
         // I'll allow access but mark it as incomplete for the frontend to handle
         if (!isProfileComplete && !currentUserId) {
@@ -223,7 +282,7 @@ export const getProfile = async (req: Request, res: Response) => {
                 code: 'PROFILE_INCOMPLETE'
             });
         }
-        
+
         // If profile is incomplete and it's the owner, allow access but mark as incomplete
         if (!isProfileComplete && isOwnProfile) {
             console.log(`[PROFILE] Incomplete profile for owner: ${user.id}, allowing access with completion form`);
@@ -232,9 +291,9 @@ export const getProfile = async (req: Request, res: Response) => {
         // Prepare response data
         // Convert relative paths to full URLs for images
         const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
-        const profilePhotoUrl = user.profile_photo_url ? 
+        const profilePhotoUrl = user.profile_photo_url ?
             (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
-        const coverPhotoUrl = user.cover_photo_url ? 
+        const coverPhotoUrl = user.cover_photo_url ?
             (user.cover_photo_url.startsWith('http') ? user.cover_photo_url : `${baseUrl}${user.cover_photo_url}`) : null;
 
         const profileData = {
@@ -310,7 +369,7 @@ export const getProfile = async (req: Request, res: Response) => {
             hint: error.hint,
             position: error.position
         });
-        
+
         // Handle specific database errors
         if (error.code === 'ECONNREFUSED') {
             return res.status(503).json({
@@ -319,7 +378,7 @@ export const getProfile = async (req: Request, res: Response) => {
                 code: 'DATABASE_ERROR'
             });
         }
-        
+
         if (error.code === '23505') { // Unique constraint violation
             return res.status(409).json({
                 success: false,
@@ -639,9 +698,9 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         // Generate filename and process image (new structure: uploads/{userId}/{type}/)
         const filename = generateFilename(req.file.originalname, type as 'profile' | 'cover');
         const imagePath = await processImage(
-            req.file.buffer, 
+            req.file.buffer,
             userId,
-            type as 'profile' | 'cover', 
+            type as 'profile' | 'cover',
             filename
         );
 
@@ -671,7 +730,7 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         // Convert relative path to full URL
         const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
         const fullImageUrl = `${baseUrl}${imagePath}`;
-        
+
         // Set CORS headers for the response
         res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:3001');
         res.header('Access-Control-Allow-Credentials', 'true');

@@ -470,7 +470,7 @@ export function RecommendationDetailPage() {
               
               <div className="flex flex-wrap items-center gap-3 text-muted mb-4">
                 <Link
-                  to={`/cities/${recommendation.city_name}`}
+                  to={`/city/${recommendation.city_name}`}
                   className="inline-flex items-center gap-1 hover:text-pulse transition-colors"
                 >
                   <MapPin className="w-4 h-4" />

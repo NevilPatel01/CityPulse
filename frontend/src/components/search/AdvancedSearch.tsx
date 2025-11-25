@@ -169,11 +169,14 @@ const AdvancedSearch: React.FC = () => {
                             placeholder="Search places, friends, or experiences..."
                             className="w-full pl-12 pr-4 py-4 bg-surface-glass border border-subtle rounded-xl text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-transparent transition-all"
                             autoFocus
+                            aria-label="Search query"
+                            aria-describedby="search-help"
                         />
                         {filters.q && (
                             <button
                                 onClick={() => updateFilters({ q: '' })}
                                 className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted hover:text-primary transition-colors"
+                                aria-label="Clear search query"
                             >
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -181,6 +184,7 @@ const AdvancedSearch: React.FC = () => {
                             </button>
                         )}
                     </div>
+                    <span id="search-help" className="sr-only">Type to search for recommendations, users, or cities. Use filters below to refine your search.</span>
                 </div>
 
                 {/* Filters and Results Layout */}

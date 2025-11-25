@@ -135,7 +135,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                 <div>
                     <Link
                         to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
-                            item.type === 'city' ? `/cities/${item.title}` : 
+                            item.type === 'city' ? `/city/${item.title}` : 
                             `/profile/${item.author?.username}`}
                         onClick={closeSearch}
                         className="text-lg font-semibold text-primary hover:text-pulse transition-colors"
@@ -144,7 +144,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                     </Link>
                     {item.city && item.type !== 'city' && (
                         <Link
-                            to={`/cities/${typeof item.city === 'string' ? item.city : item.city.name}`}
+                            to={`/city/${typeof item.city === 'string' ? item.city : item.city.name}`}
                             onClick={closeSearch}
                             className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1"
                         >
@@ -305,7 +305,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                     <div>
                         <Link
                             to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
-                                item.type === 'city' ? `/cities/${item.title}` : 
+                                item.type === 'city' ? `/city/${item.title}` : 
                                 `/profile/${item.author?.username}`}
                             onClick={closeSearch}
                             className="text-xl font-semibold text-primary hover:text-pulse transition-colors"
@@ -314,7 +314,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, formatD
                         </Link>
                         {item.city && item.type !== 'city' && (
                             <Link
-                                to={`/cities/${typeof item.city === 'string' ? item.city : item.city.name}`}
+                                to={`/city/${typeof item.city === 'string' ? item.city : item.city.name}`}
                                 onClick={closeSearch}
                                 className="text-sm text-muted hover:text-pulse transition-colors inline-flex items-center gap-1 mt-1"
                             >

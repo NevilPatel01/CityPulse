@@ -14,6 +14,7 @@ import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeli
 import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
 import { ImageCropper } from '../components/common/ImageCropper';
+import { PrivateProfileView } from '../components/profile/PrivateProfileView';
 import type { UserAchievement } from '../types/achievement';
 import type { FeedPost } from '../services/feedService';
 
@@ -275,6 +276,17 @@ export default function ProfilePage() {
             </div>
           </div>
         </main>
+      </div>
+    );
+  }
+
+  // Show private profile view if profile is private and not a buddy
+  if (profile && (profile as any).isPrivate) {
+    return (
+      <div className="min-h-screen bg-base">
+        <Header />
+        <PrivateProfileView profile={profile as any} />
+        <BottomNavigation />
       </div>
     );
   }
@@ -606,7 +618,7 @@ export default function ProfilePage() {
                         <h3 className="text-lg font-semibold text-primary">My Recommendations</h3>
                         {isOwnProfile && recommendationCount > 0 && (
                           <button
-                            onClick={() => navigate('/recommendations/create')}
+                            onClick={() => navigate('/create-recommendation')}
                             className="bg-pulse hover:bg-pulse/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 hover-lift"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -628,7 +640,7 @@ export default function ProfilePage() {
                             <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
                             <p className="text-muted mb-4">Share your favorite places with the community</p>
                             <button
-                              onClick={() => navigate('/recommendations/create')}
+                              onClick={() => navigate('/create-recommendation')}
                               className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
