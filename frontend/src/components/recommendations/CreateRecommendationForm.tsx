@@ -289,7 +289,17 @@ export function CreateRecommendationForm({
   };
 
   const handleFilesSelected = (files: File[]) => {
-    setSelectedFiles(files);
+    // Append new files to existing ones instead of replacing
+    setSelectedFiles(prev => {
+      const combined = [...prev, ...files];
+      // Limit to 5 photos total (existing photos + new photos)
+      const totalAllowed = 5 - existingPhotos.length;
+      if (combined.length > totalAllowed) {
+        // Only add files up to the limit
+        return [...prev, ...files].slice(0, totalAllowed);
+      }
+      return combined;
+    });
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -386,7 +396,8 @@ export function CreateRecommendationForm({
           onSuccess(targetId);
         } else if (targetId) {
           // If no onSuccess callback, navigate to the recommendation detail page
-          navigate(`/recommendations/${targetId}`);
+          // Use replace: true to prevent back button from returning to create form
+          navigate(`/recommendations/${targetId}`, { replace: true });
         }
       } else {
         if (data.errors && Array.isArray(data.errors)) {

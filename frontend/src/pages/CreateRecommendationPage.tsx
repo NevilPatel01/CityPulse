@@ -10,7 +10,8 @@ export function CreateRecommendationPage() {
 
   const handleSuccess = (id: number) => {
     const username = user?.username || '';
-    navigate(`/${username}/recommendation/${id}`);
+    // Use replace: true to prevent back button from returning to create form
+    navigate(`/${username}/recommendation/${id}`, { replace: true });
   };
 
   const handleCancel = () => {

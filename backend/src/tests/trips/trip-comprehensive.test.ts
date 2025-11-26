@@ -49,7 +49,7 @@ describe('Trip Planning Comprehensive Tests', () => {
         // Create buddy connection between organizer and companion
         await query(
             `INSERT INTO travel_buddy_connections (requester_id, requested_id, status)
-             VALUES ($1, $2, 'accepted')`,
+                VALUES ($1, $2, 'accepted')`,
             [organizer.id, companion.id]
         );
 
@@ -140,7 +140,7 @@ describe('Trip Planning Comprehensive Tests', () => {
             // Create itinerary item
             await query(
                 `INSERT INTO trip_itinerary (trip_id, day_number, activity_date, time_slot, title, description)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                    VALUES ($1, $2, $3, $4, $5, $6)`,
                 [testTrip.id, 1, '2025-12-01', '10:00:00', 'Test Activity', 'Test']
             );
 
@@ -502,7 +502,7 @@ describe('Trip Planning Comprehensive Tests', () => {
             // Add companion
             await query(
                 `INSERT INTO trip_companions (trip_id, user_id, status, role)
-                 VALUES ($1, $2, $3, $4)`,
+                    VALUES ($1, $2, $3, $4)`,
                 [trip.id, companion.id, 'accepted', 'participant']
             );
 

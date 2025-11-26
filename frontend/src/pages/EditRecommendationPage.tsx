@@ -144,7 +144,8 @@ export function EditRecommendationPage() {
           }}
           onSuccess={(id) => {
             const username = recommendation.username || user?.username || '';
-            navigate(`/${username}/recommendation/${id}`);
+            // Use replace: true to prevent back button from returning to edit form
+            navigate(`/${username}/recommendation/${id}`, { replace: true });
           }}
           onCancel={() => {
             const username = recommendation.username || user?.username || '';
