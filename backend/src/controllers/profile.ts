@@ -744,8 +744,18 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         }
 
         // Convert relative path to full URL
-        const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
+        // Try multiple environment variable sources for production compatibility
+        const baseUrl = process.env.API_BASE_URL || 
+                       process.env.BACKEND_URL || 
+                       process.env.VITE_API_URL ||
+                       (req.protocol + '://' + req.get('host')) ||
+                       'http://localhost:5001';
+        
+        console.log('[PROFILE] Base URL for image:', baseUrl);
+        console.log('[PROFILE] Image path:', imagePath);
+        
         const fullImageUrl = `${baseUrl}${imagePath}`;
+        console.log('[PROFILE] Full image URL:', fullImageUrl);
 
         // Set CORS headers for the response
         res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:3001');
@@ -756,6 +766,7 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
             message: `${type === 'profile' ? 'Profile' : 'Cover'} photo uploaded successfully`,
             data: {
                 imageUrl: fullImageUrl,
+                relativePath: imagePath, // Also send relative path for debugging
                 metadata: {
                     width: metadata.width,
                     height: metadata.height,
@@ -767,9 +778,11 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error('Upload profile photo error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Internal server error';
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error : undefined
         });
     }
 };

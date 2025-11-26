@@ -70,6 +70,21 @@ export default function ProfilePage() {
     }
   }, [isOwnProfile, activeTab]);
 
+  // Helper function to get full image URL with cache-busting
+  const getFullImageUrl = (imageUrl: string | undefined): string | undefined => {
+    if (!imageUrl) return undefined;
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('blob:')) return imageUrl;
+    
+    // Get base URL from environment or window location
+    const baseUrl = import.meta.env.VITE_API_URL || 
+                    (typeof window !== 'undefined' && window.location.origin) || 
+                    'http://localhost:5001';
+    
+    // Add cache-busting timestamp to force reload on updates
+    const cacheBust = `?t=${Date.now()}`;
+    return `${baseUrl}${imageUrl}${cacheBust}`;
+  };
+
   // Fetch recommendation count
   useEffect(() => {
     const fetchRecommendationCount = async () => {
@@ -242,16 +257,20 @@ export default function ProfilePage() {
         // Refresh profile data to get the updated URLs
         await refetch();
         
-        // Clean up local preview URL
-        URL.revokeObjectURL(previewUrl);
-        setLocalImages(prev => ({
-          ...prev,
-          [type]: undefined
-        }));
+        // Clean up local preview URL after a small delay to ensure new image is loaded
+        setTimeout(() => {
+          URL.revokeObjectURL(previewUrl);
+          setLocalImages(prev => ({
+            ...prev,
+            [type]: undefined
+          }));
+        }, 500);
       }
       
     } catch (error) {
       console.error('Upload error:', error);
+      // Show user-friendly error message
+      alert(`Failed to upload ${croppingImage.type} image. Please try again.`);
       // Remove the preview on error
       if (croppingImage) {
         setLocalImages(prev => ({
@@ -367,12 +386,17 @@ export default function ProfilePage() {
             {/* Right Content - Profile Info and Tabs */}
             <section className="space-y-6">
               {/* Cover Image */}
-              <div className="relative h-48 md:h-64 lg:h-80 bg-gradient-to-br from-gray-800/20 to-gray-700/20 rounded-2xl overflow-hidden group">
+              <div className="relative h-48 md:h-64 lg:h-80 bg-gradient-to-br from-gray-800/20 to-gray-700/20 rounded-t-2xl overflow-hidden group">
                 {(localImages.cover || profile.coverPhotoUrl) ? (
                   <img 
-                    src={localImages.cover || profile.coverPhotoUrl} 
+                    src={localImages.cover || getFullImageUrl(profile.coverPhotoUrl)} 
                     alt="Cover" 
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Cover image failed to load:', e);
+                      e.currentTarget.src = '';
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-gray-800/30 to-gray-700/30 flex items-center justify-center">
@@ -402,20 +426,24 @@ export default function ProfilePage() {
               </div>
 
               {/* Profile Picture and Info */}
-              <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6 -mt-20 relative z-10">
-                <div className="flex items-start space-x-6">
+              <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-b-2xl md:rounded-2xl p-6 md:-mt-16 relative z-10 shadow-glass">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
                   {/* Profile Photo */}
-                  <div className="relative group">
-                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-base overflow-hidden bg-gray-700 flex items-center justify-center shadow-2xl">
+                  <div className="relative group mx-auto md:mx-0 md:-mt-12">
+                    <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 md:border-6 border-base overflow-hidden bg-gray-700 flex items-center justify-center shadow-2xl">
                       {(localImages.profile || profile.profilePhotoUrl) ? (
                         <img 
-                          src={localImages.profile || profile.profilePhotoUrl} 
+                          src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
                           alt={profile.fullName}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('Profile image failed to load:', e);
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                          <span className="text-white text-2xl md:text-3xl font-bold">
+                          <span className="text-white text-3xl md:text-4xl font-bold">
                             {profile.fullName.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -444,21 +472,21 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Profile Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                  <div className="flex-1 text-center md:text-left w-full">
+                    <div className="flex flex-col md:flex-row items-center md:items-center gap-3 mb-2">
                       <h1 className="text-2xl md:text-3xl font-bold text-primary">
                         {profile.fullName}
                       </h1>
                       {isOwnProfile && (
                         <button
                           onClick={handleEditProfile}
-                          className="bg-pulse text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pulse/80 transition-all duration-200"
+                          className="bg-pulse text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-pulse/80 transition-all duration-200 shadow-md hover:shadow-lg"
                         >
-                          Edit
+                          Edit Profile
                         </button>
                       )}
                     </div>
-                    <p className="text-muted text-lg mb-3">@{profile.username}</p>
+                    <p className="text-muted text-base md:text-lg mb-3">@{profile.username}</p>
                     
                     {/* Location Info */}
                     {(profile.currentLocation || profile.hometown) && (
