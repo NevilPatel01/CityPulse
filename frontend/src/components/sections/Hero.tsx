@@ -20,17 +20,17 @@ export const Hero: React.FC = () => {
       className='py-20 px-4 lg:py-32'
       aria-labelledby="hero-heading"
     >
-      <div className='container mx-auto'>
-        <div className='grid lg:grid-cols-2 gap-12 items-center'>
+      <div className='container mx-auto max-w-7xl'>
+        <div className='grid md:grid-cols-2 gap-8 md:gap-12 items-center'>
           {/* Left Column - Text */}
-          <div className='space-y-8'>
+          <div className='space-y-6 md:space-y-8 max-w-2xl mx-auto md:mx-0'>
             <h1 
               id="hero-heading"
-              className='text-4xl lg:text-6xl font-bold text-primary leading-tight'
+              className='text-4xl md:text-5xl lg:text-6xl font-bold text-primary leading-tight'
             >
               Discover cities like a <span className='text-pulse'>local</span>
             </h1>
-            <p className='text-muted text-lg lg:text-xl max-w-lg'>
+            <p className='text-muted text-lg lg:text-xl'>
               Get authentic recommendations from people who know the city best.
               Skip the tourist traps and experience the real culture.
             </p>

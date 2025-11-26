@@ -143,8 +143,8 @@ export const Header: React.FC = () => {
 
               {/* Action Buttons for unauthenticated users */}
               <div className='flex items-center gap-3'>
-                {/* Login and Sign Up buttons when not authenticated - visible on desktop */}
-                <div className="hidden md:flex items-center gap-2">
+                {/* Login and Sign Up buttons when not authenticated - visible on large desktop only */}
+                <div className="hidden lg:flex items-center gap-2">
                   <Link to="/login">
                     <Button 
                       variant="outline"
@@ -166,7 +166,7 @@ export const Header: React.FC = () => {
                   </Link>
                 </div>
 
-                {/* Mobile Menu Button - Only visible when NOT authenticated */}
+                {/* Mobile/Tablet Menu Button - Hidden on large desktop when buttons show */}
                 <button
                   className='mobile-menu-button lg:hidden p-3 rounded-md hover:bg-surface-glass transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pulse focus:ring-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center'
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
