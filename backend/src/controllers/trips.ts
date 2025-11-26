@@ -199,6 +199,7 @@ export const getTripById = async (req: Request, res: Response) => {
                 cities: citiesResult.rows,
                 companions: companionsResult.rows,
                 itinerary: itineraryResult.rows,
+                itinerary_items: itineraryResult.rows, // Alias for frontend compatibility
                 recommendations: recommendationsResult.rows
             }
         });

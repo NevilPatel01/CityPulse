@@ -128,7 +128,9 @@ export function EditRecommendationPage() {
             place_name: recommendation.title,
             description: recommendation.description,
             category_id: recommendation.category_id?.toString() || '',
-            city_id: recommendation.city_name || '',
+            city_id: recommendation.country 
+              ? `${recommendation.city_name}, ${recommendation.country}`
+              : recommendation.city_name || '',
             address: recommendation.address || '',
             price_range_min: recommendation.price_range_min?.toString() || '',
             price_range_max: recommendation.price_range_max?.toString() || '',

@@ -206,7 +206,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
                             item.type === 'city' ? `/city/${item.title}` : 
                             `/profile/${item.author?.username}`}
                         onClick={closeSearch}
-                        className="ml-auto px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-accent-amber to-amber-500 hover:from-amber-500 hover:to-accent-amber rounded-lg transition-all shadow-md hover:shadow-lg"
+                        className="ml-auto px-4 py-2 text-sm font-medium text-white bg-pulse hover:bg-pulse/80 rounded-lg transition-all shadow-md hover:shadow-lg"
                     >
                         View Details
                     </Link>
@@ -344,7 +344,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
                                 item.type === 'city' ? `/city/${item.title}` : 
                                 `/profile/${item.author?.username}`}
                             onClick={closeSearch}
-                            className="ml-auto px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-accent-amber to-amber-500 hover:from-amber-500 hover:to-accent-amber rounded-lg transition-all shadow-md hover:shadow-lg"
+                            className="ml-auto px-6 py-2 text-sm font-medium text-white bg-pulse hover:bg-pulse/80 rounded-lg transition-all shadow-md hover:shadow-lg"
                         >
                             View Details
                         </Link>

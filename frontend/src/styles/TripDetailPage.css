@@ -321,58 +321,164 @@
 /* Companions */
 .companions-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
 }
 
-.companion-card {
+/* Enhanced Companion Card */
+.companion-card-enhanced {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 15px;
+  gap: 16px;
+  padding: 20px;
   background: var(--surface-glass);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  transition: all 0.2s;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.companion-card:hover {
+.companion-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pulse) 0%, var(--accent-teal) 100%);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.companion-card-enhanced:hover {
   border-color: var(--pulse);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(255, 153, 0, 0.15);
+}
+
+.companion-card-enhanced:hover::before {
+  transform: scaleX(1);
+}
+
+.companion-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .companion-avatar {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--pulse);
+  border: 3px solid var(--pulse);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.companion-info h3 {
-  margin: 0 0 8px;
-  font-size: 1rem;
+.companion-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.companion-name-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.companion-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.companion-username {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.companion-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .role-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  font-size: 0.75rem;
-  border-radius: 12px;
-  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  font-weight: 600;
   text-transform: capitalize;
+  border: 1px solid;
 }
 
 .role-badge.organizer {
-  background: rgba(255, 153, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.15) 0%, rgba(255, 153, 0, 0.25) 100%);
   color: var(--pulse);
+  border-color: rgba(255, 153, 0, 0.3);
 }
 
 .role-badge.participant {
   background: rgba(29, 185, 129, 0.2);
   color: var(--success);
+  border-color: rgba(29, 185, 129, 0.3);
+}
+
+.status-badge-enhanced {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  font-weight: 500;
+  text-transform: capitalize;
+  border: 1px solid;
+}
+
+.status-badge-enhanced.invited {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.status-badge-enhanced.accepted {
+  background: rgba(29, 185, 129, 0.15);
+  color: var(--success);
+  border-color: rgba(29, 185, 129, 0.3);
+}
+
+.status-badge-enhanced.declined {
+  background: rgba(244, 67, 54, 0.15);
+  color: var(--error);
+  border-color: rgba(244, 67, 54, 0.3);
+}
+
+.btn-remove-companion {
+  padding: 8px 16px;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  color: var(--error);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-remove-companion:hover {
+  background: var(--error);
+  color: white;
+  border-color: var(--error);
+  transform: scale(1.05);
 }
 
 /* Comments */
@@ -537,40 +643,270 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .trip-detail-content {
+    margin-top: 60px;
+    padding: 0 16px 20px;
+  }
+
   .trip-title-section h1 {
-    font-size: 1.8rem;
+    font-size: 1.75rem;
+    line-height: 1.2;
   }
 
   .trip-hero {
-    height: 300px;
+    height: 250px;
+    border-radius: 12px;
+    margin-bottom: 20px;
   }
 
   .trip-hero-overlay {
-    padding: 20px;
+    padding: 16px;
+  }
+
+  .back-button,
+  .edit-button {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+  }
+
+  .trip-meta {
+    gap: 8px;
+  }
+
+  .status-badge,
+  .privacy-badge {
+    font-size: 0.8125rem;
+    padding: 5px 10px;
+  }
+
+  .info-card {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+
+  .info-card h2 {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
   }
 
   .info-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .info-item {
+    gap: 10px;
+  }
+
+  .companions-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .companion-card-enhanced {
+    padding: 16px;
+    gap: 12px;
+    border-radius: 12px;
+  }
+
+  .companion-avatar {
+    width: 50px;
+    height: 50px;
+    border-width: 2px;
+  }
+
+  .companion-name {
+    font-size: 1rem;
+  }
+
+  .companion-username {
+    font-size: 0.8125rem;
+  }
+
+  .btn-remove-companion {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+  }
+
+  /* Tabs - Horizontal scroll on mobile */
+  .trip-tabs {
+    gap: 8px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 4px;
+  }
+
+  .trip-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tab-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tab-header-actions {
+    margin-bottom: 16px;
+  }
+
+  .tab-header-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Cities */
+  .cities-list {
+    gap: 12px;
+  }
+
+  .city-item {
+    padding: 12px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .city-info h3 {
+    font-size: 1rem;
+  }
+
+  .city-info p {
+    font-size: 0.875rem;
+  }
+
+  /* Comments */
+  .comment-form {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+
+  .comment-form textarea {
+    padding: 12px;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+  }
+
+  .comments-list {
+    gap: 12px;
+  }
+
+  .comment-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .comment-header {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .comment-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .comment-meta strong {
+    font-size: 0.875rem;
+  }
+
+  .comment-time {
+    font-size: 0.75rem;
+  }
+
+  .comment-text {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .delete-comment-btn {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+  }
+
+  /* Empty States */
+  .empty-state {
+    padding: 40px 20px;
+  }
+
+  .empty-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+
+  .empty-state p {
+    font-size: 0.9375rem;
+    margin-bottom: 16px;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    padding: 12px 20px;
+    font-size: 0.9375rem;
+    border-radius: 8px;
+  }
+
+  .btn-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Very Small Mobile Devices */
+@media (max-width: 375px) {
+  .trip-detail-content {
+    padding: 0 12px 20px;
+  }
+
+  .trip-hero {
+    height: 200px;
+  }
+
+  .trip-title-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .info-card {
+    padding: 12px;
   }
 
   .companions-list {
     grid-template-columns: 1fr;
   }
 
-  .trip-tabs {
-    gap: 4px;
+  .companion-card-enhanced {
+    padding: 12px;
+    gap: 10px;
   }
 
-  .tab {
-    padding: 10px 12px;
-    font-size: 0.85rem;
+  .companion-avatar {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Landscape Mode */
+@media (max-width: 896px) and (orientation: landscape) {
+  .trip-hero {
+    height: 40vh;
   }
 
-  .tab-header-actions {
-    margin-bottom: 15px;
+  .trip-hero-overlay {
+    padding: 16px;
   }
 
-  .tab-header-actions button {
-    width: 100%;
+  .trip-title-section h1 {
+    font-size: 1.5rem;
   }
 }

@@ -90,12 +90,13 @@ const TripDetailPage = () => {
   useEffect(() => {
     if (id) {
       loadTrip();
+      loadComments(); // Load comments immediately to get accurate count
     }
-  }, [id, loadTrip]);
+  }, [id, loadTrip, loadComments]);
 
   useEffect(() => {
     if (activeTab === 'comments' && id) {
-      loadComments();
+      loadComments(); // Refresh comments when tab is opened
     }
   }, [activeTab, id, loadComments]);
 
@@ -347,7 +348,7 @@ const TripDetailPage = () => {
             onClick={() => setActiveTab('comments')}
           >
             <MessageSquare className="tab-icon" />
-            Comments ({trip.comment_count || 0})
+            Comments ({comments.length})
           </button>
         </div>
 
@@ -463,34 +464,75 @@ const TripDetailPage = () => {
               
               {trip.companions && trip.companions.length > 0 ? (
                 <div className="companions-list">
-                  {trip.companions.map((companion: TripCompanion) => (
-                    <div key={companion.companion_id || companion.id} className="companion-card">
-                      <Avatar
-                        src={companion.profile_photo_url}
-                        name={companion.username}
-                        size="md"
-                        className="companion-avatar"
-                      />
-                      <div className="companion-info">
-                        <h3>{companion.username}</h3>
-                        <span className={`role-badge ${companion.role}`}>
-                          {companion.role}
-                        </span>
-                        <span className={`status-badge ${companion.status}`}>
-                          {companion.status}
-                        </span>
+                  {trip.companions.map((companion: TripCompanion) => {
+                    const isOrganizerRole = companion.role === 'organizer';
+                    const statusLabel = isOrganizerRole 
+                      ? null // Don't show status for organizer
+                      : companion.status === 'invited' 
+                        ? 'Invited' 
+                        : companion.status === 'accepted' 
+                          ? 'Member' 
+                          : companion.status === 'declined'
+                            ? 'Declined'
+                            : companion.status;
+                    
+                    return (
+                      <div key={companion.companion_id || companion.id} className="companion-card-enhanced">
+                        <div className="companion-avatar-wrapper">
+                          <Avatar
+                            src={companion.profile_photo_url}
+                            name={companion.full_name || companion.username}
+                            size="lg"
+                            className="companion-avatar"
+                          />
+                        </div>
+                        <div className="companion-details">
+                          <div className="companion-name-section">
+                            <h3 className="companion-name">{companion.full_name || companion.username}</h3>
+                            <span className="companion-username">@{companion.username}</span>
+                          </div>
+                          <div className="companion-badges">
+                            {isOrganizerRole ? (
+                              <span className="role-badge organizer">
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364zM3 11a1 1 0 011 1v1.42l1.246.712a1 1 0 11-.992 1.736l-1.75-1A1 1 0 012 14v-2a1 1 0 011-1zm14 0a1 1 0 011 1v2a1 1 0 01-.504.868l-1.75 1a1 1 0 11-.992-1.736L16 13.42V12a1 1 0 011-1zm-9.618 5.504a1 1 0 011.364-.372l.254.145V16a1 1 0 112 0v.277l.254-.145a1 1 0 11.992 1.736l-1.735.992a.995.995 0 01-1.022 0l-1.735-.992a1 1 0 01-.372-1.364z" clipRule="evenodd" />
+                                </svg>
+                                Organizer
+                              </span>
+                            ) : (
+                              <span className={`status-badge-enhanced ${companion.status}`}>
+                                {companion.status === 'invited' && (
+                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                )}
+                                {companion.status === 'accepted' && (
+                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                {companion.status === 'declined' && (
+                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                )}
+                                {statusLabel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isOrganizer && companion.status === 'accepted' && !isOrganizerRole && (
+                          <button 
+                            onClick={() => handleRemoveCompanion(companion.user_id)}
+                            className="btn-remove-companion"
+                            title="Remove companion"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
-                      {isOrganizer && companion.status === 'accepted' && (
-                        <button 
-                          onClick={() => handleRemoveCompanion(companion.user_id)}
-                          className="btn-danger btn-sm"
-                          style={{ marginLeft: 'auto' }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="empty-state">
@@ -530,19 +572,22 @@ const TripDetailPage = () => {
                     <div className="comment-header">
                       <Avatar
                         src={comment.profile_photo_url}
-                        name={comment.username}
+                        name={comment.full_name || comment.username}
                         size="sm"
                         className="comment-avatar"
                       />
                       <div className="comment-meta">
-                        <strong>{comment.username}</strong>
+                        <strong>{comment.full_name || comment.username}</strong>
+                        {comment.full_name && (
+                          <span className="text-xs text-muted ml-2">@{comment.username}</span>
+                        )}
                         <span className="comment-time">
                           {new Date(comment.created_at).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
                     <p className="comment-text">{comment.comment_text}</p>
-                    {comment.can_delete && (
+                    {(comment.can_delete || (user && comment.user_id === Number(user.id))) && (
                       <button
                         onClick={() => handleDeleteComment(comment.comment_id || comment.id)}
                         className="delete-comment-btn"

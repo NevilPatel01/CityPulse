@@ -216,26 +216,75 @@
 
   .modal-overlay {
     padding: 0;
+    align-items: flex-end;
   }
 
   .form-row {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+    position: sticky;
+    top: 0;
+    background: var(--surface-glass);
+    z-index: 10;
+    backdrop-filter: blur(10px);
   }
 
   .modal-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
+  }
+
+  .close-button {
+    width: 40px;
+    height: 40px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .modal-form {
-    padding: 20px;
+    padding: 16px 20px;
+    padding-bottom: max(env(safe-area-inset-bottom), 20px);
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    font-size: 16px; /* Prevent iOS zoom */
+    padding: 14px;
   }
 
   .modal-actions {
     flex-direction: column-reverse;
+    gap: 10px;
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
   }
 
   .btn-cancel,
   .btn-submit {
     width: 100%;
+    min-height: 48px;
+    font-size: 1rem;
+  }
+}
+
+/* Very Small Devices */
+@media (max-width: 375px) {
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-form {
+    padding: 12px 16px;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
   }
 }

@@ -228,9 +228,23 @@ export const addItineraryItem = async (req: Request, res: Response) => {
                 status, notes, added_by)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
              RETURNING *`,
-            [id, trip_city_id, day_number, activity_date, time_slot, title, description,
-                activity_type, duration_minutes, estimated_cost, location_name, location_coordinates,
-                status, notes, userId]
+            [
+                id, 
+                trip_city_id, 
+                day_number, 
+                activity_date, 
+                time_slot, 
+                title, 
+                description,
+                activity_type, 
+                duration_minutes ? Number(duration_minutes) : null, 
+                estimated_cost ? Number(estimated_cost) : null, 
+                location_name, 
+                location_coordinates,
+                status, 
+                notes, 
+                userId
+            ]
         );
 
         res.status(201).json({
@@ -285,7 +299,13 @@ export const updateItineraryItem = async (req: Request, res: Response) => {
         }
 
         const setClause = updateFields.map((field, index) => `${field} = $${index + 3}`).join(', ');
-        const values = updateFields.map(field => updates[field]);
+        const values = updateFields.map(field => {
+            // Convert numeric fields to proper numbers
+            if (field === 'duration_minutes' || field === 'estimated_cost') {
+                return updates[field] ? Number(updates[field]) : null;
+            }
+            return updates[field];
+        });
 
         const result = await pool.query(
             `UPDATE trip_itinerary 
@@ -581,11 +601,27 @@ export const addTripComment = async (req: Request, res: Response) => {
             });
         }
 
-        const result = await pool.query(
+        const insertResult = await pool.query(
             `INSERT INTO trip_comments (trip_id, user_id, comment_text)
                 VALUES ($1, $2, $3)
-                RETURNING *`,
+                RETURNING id`,
             [id, userId, comment_text]
+        );
+
+        const commentId = insertResult.rows[0].id;
+
+        // Fetch the comment with user details
+        const result = await pool.query(
+            `SELECT 
+                tc.*,
+                u.username,
+                u.full_name,
+                up.profile_photo_url
+            FROM trip_comments tc
+            JOIN users u ON tc.user_id = u.id
+            LEFT JOIN user_profiles up ON u.id = up.user_id
+            WHERE tc.id = $1`,
+            [commentId]
         );
 
         res.status(201).json({

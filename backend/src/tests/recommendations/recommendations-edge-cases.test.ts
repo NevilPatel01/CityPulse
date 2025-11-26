@@ -339,7 +339,7 @@ describe('Recommendation Edge Cases', () => {
             if (response.status === 200) {
                 const ratingResult = await query(
                     `SELECT rating, review FROM recommendation_ratings 
-                     WHERE recommendation_id = $1 AND user_id = $2`,
+                        WHERE recommendation_id = $1 AND user_id = $2`,
                     [testRecommendation.id, user2.id]
                 );
                 expect(ratingResult.rows[0].rating).toBe(5);
@@ -354,7 +354,7 @@ describe('Recommendation Edge Cases', () => {
                 // Clean up previous rating if exists
                 await query(
                     `DELETE FROM recommendation_ratings 
-                     WHERE recommendation_id = $1 AND user_id = $2`,
+                        WHERE recommendation_id = $1 AND user_id = $2`,
                     [testRecommendation.id, user2.id]
                 );
 

@@ -141,9 +141,15 @@ export const getRecommendationById = async (req: Request, res: Response) => {
                 rc.name as category_name,
                 c.name as city_name,
                 c.country,
-                (SELECT array_agg(photo_url ORDER BY is_primary DESC, created_at ASC) 
-                    FROM recommendation_photos 
-                    WHERE recommendation_id = r.id) as photos,
+                (SELECT json_agg(
+                    json_build_object(
+                        'id', rp.id,
+                        'photo_url', rp.photo_url,
+                        'is_primary', rp.is_primary,
+                        'display_order', rp.created_at,
+                        'caption', rp.caption
+                    ) ORDER BY rp.is_primary DESC, rp.created_at ASC
+                ) FROM recommendation_photos rp WHERE rp.recommendation_id = r.id) as photos,
                 (SELECT array_agg(rt.name) 
                     FROM recommendation_tag_links rtl
                     JOIN recommendation_tags rt ON rtl.tag_id = rt.id
@@ -426,11 +432,17 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             place_name,
             description,
             category_id,
+            custom_category,
             city_id,
+            city_name,
+            custom_city,
             location,
             address,
             pros_points,
             progress_percentage,
+            price_range_min,
+            price_range_max,
+            difficulty_level,
             latitude,
             longitude,
             best_time_to_visit,
@@ -441,6 +453,9 @@ export const updateRecommendation = async (req: Request, res: Response) => {
         } = req.body;
 
         const userId = (req as any).user?.userId;
+
+        console.log('[UPDATE_REC] Updating recommendation:', id);
+        console.log('[UPDATE_REC] Request body:', JSON.stringify(req.body, null, 2));
 
         // Check if recommendation exists and user owns it
         const existingRecommendation = await query(
@@ -466,21 +481,95 @@ export const updateRecommendation = async (req: Request, res: Response) => {
         await query('BEGIN');
 
         try {
+            // Handle category - either from category_id or custom_category
+            let finalCategoryId = category_id;
+
+            if (!finalCategoryId && custom_category) {
+                console.log('[UPDATE_REC] Processing custom category:', custom_category);
+                const existingCategory = await query(
+                    'SELECT id FROM recommendation_categories WHERE name = $1',
+                    [custom_category]
+                );
+
+                if (existingCategory.rows.length > 0) {
+                    finalCategoryId = existingCategory.rows[0].id;
+                    console.log('[UPDATE_REC] Using existing category:', finalCategoryId);
+                } else {
+                    const newCategoryResult = await query(
+                        'INSERT INTO recommendation_categories (name, description) VALUES ($1, $2) RETURNING id',
+                        [custom_category, `Custom category: ${custom_category}`]
+                    );
+                    finalCategoryId = newCategoryResult.rows[0].id;
+                    console.log('[UPDATE_REC] Created new category:', finalCategoryId);
+                }
+            }
+
+            // Handle city - either from city_name, custom_city, or city_id
+            let finalCityId = city_id;
+
+            if (!finalCityId && city_name) {
+                console.log('[UPDATE_REC] Processing selected city:', city_name);
+                const existingCity = await query(
+                    'SELECT id FROM cities WHERE name = $1',
+                    [city_name]
+                );
+
+                if (existingCity.rows.length > 0) {
+                    finalCityId = existingCity.rows[0].id;
+                    console.log('[UPDATE_REC] Using existing city:', finalCityId);
+                } else {
+                    const newCityResult = await query(
+                        'INSERT INTO cities (name, country, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id',
+                        [city_name, '', latitude || 0, longitude || 0]
+                    );
+                    finalCityId = newCityResult.rows[0].id;
+                    console.log('[UPDATE_REC] Created new city:', finalCityId);
+                }
+            } else if (!finalCityId && custom_city) {
+                console.log('[UPDATE_REC] Processing custom city:', custom_city);
+                // Parse custom city (format: "City, Country" or just "City")
+                const cityParts = custom_city.split(',').map((s: string) => s.trim());
+                const cityName = cityParts[0];
+                const country = cityParts[1] || '';
+
+                // Check if custom city already exists
+                const existingCity = await query(
+                    'SELECT id FROM cities WHERE name = $1 AND country = $2',
+                    [cityName, country]
+                );
+
+                if (existingCity.rows.length > 0) {
+                    finalCityId = existingCity.rows[0].id;
+                    console.log('[UPDATE_REC] Using existing city:', finalCityId);
+                } else {
+                    const newCityResult = await query(
+                        'INSERT INTO cities (name, country, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id',
+                        [cityName, country, latitude || 0, longitude || 0]
+                    );
+                    finalCityId = newCityResult.rows[0].id;
+                    console.log('[UPDATE_REC] Created new city:', finalCityId);
+                }
+            }
+
             // Update recommendation
             const updateQuery = `
                 UPDATE recommendations SET
                     title = $1, description = $2, category_id = $3,
                     address = $4, latitude = $5, longitude = $6, 
                     best_time_to_visit = $7, duration_suggestion = $8, 
-                    user_rating = $9, updated_at = NOW()
-                WHERE id = $10
+                    user_rating = $9, price_range_min = $10, price_range_max = $11, 
+                    difficulty_level = $12, updated_at = NOW()
+                WHERE id = $13
             `;
 
             await query(updateQuery, [
-                place_name, description, category_id, address,
+                place_name, description, finalCategoryId, address,
                 latitude, longitude, best_time_to_visit,
-                duration_suggestion, user_rating, id
+                duration_suggestion, user_rating, 
+                price_range_min, price_range_max, difficulty_level, id
             ]);
+
+            console.log('[UPDATE_REC] Updated recommendation with city:', finalCityId);
 
             // Update city link
             await query(
@@ -488,11 +577,12 @@ export const updateRecommendation = async (req: Request, res: Response) => {
                 [id]
             );
 
-            if (city_id) {
+            if (finalCityId) {
                 await query(
                     'INSERT INTO recommendation_cities (recommendation_id, city_id) VALUES ($1, $2)',
-                    [id, city_id]
+                    [id, finalCityId]
                 );
+                console.log('[UPDATE_REC] Linked recommendation to city:', finalCityId);
             }
 
             // Update tags

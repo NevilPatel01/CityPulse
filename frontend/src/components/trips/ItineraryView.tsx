@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Clock, MapPin, DollarSign, CheckCircle, Circle, XCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, DollarSign, CheckCircle, Circle, XCircle, Edit2, Trash2 } from 'lucide-react';
 import type { TripItineraryItem } from '../../types/trip';
 
 interface ItineraryViewProps {
@@ -130,7 +130,7 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({ items, onEdit, onDelete, 
                               <span>{item.time_slot}</span>
                               {item.duration_minutes && (
                                 <span className="text-[var(--text-muted)]">
-                                  ({Math.floor(item.duration_minutes / 60)}h {item.duration_minutes % 60}m)
+                                  ({Math.floor(Number(item.duration_minutes) / 60)}h {Number(item.duration_minutes) % 60}m)
                                 </span>
                               )}
                             </div>
@@ -158,10 +158,10 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({ items, onEdit, onDelete, 
                           )}
 
                           {/* Cost */}
-                          {item.estimated_cost !== undefined && item.estimated_cost > 0 && (
+                          {item.estimated_cost !== undefined && Number(item.estimated_cost) > 0 && (
                             <div className="flex items-center gap-2 text-sm text-[var(--accent-amber)]">
                               <DollarSign className="w-4 h-4" />
-                              <span>{item.estimated_cost.toFixed(2)}</span>
+                              <span>{Number(item.estimated_cost).toFixed(2)}</span>
                             </div>
                           )}
 
@@ -179,23 +179,23 @@ const ItineraryView: React.FC<ItineraryViewProps> = ({ items, onEdit, onDelete, 
                             {onEdit && (
                               <button
                                 onClick={() => onEdit(item)}
-                                className="p-2 text-[var(--text-muted)] hover:text-[var(--pulse)] hover:bg-[var(--pulse)]/10 rounded-lg transition-colors"
-                                title="Edit"
+                                className="p-2 text-[var(--text-muted)] hover:text-[var(--pulse)] hover:bg-[var(--pulse)]/10 rounded-lg transition-all duration-200 hover:scale-110"
+                                title="Edit activity"
                               >
-                                ✏️
+                                <Edit2 className="w-4 h-4" />
                               </button>
                             )}
                             {onDelete && (
                               <button
                                 onClick={() => {
-                                  if (confirm('Delete this itinerary item?')) {
+                                  if (confirm('Are you sure you want to delete this activity?')) {
                                     onDelete(item.id);
                                   }
                                 }}
-                                className="p-2 text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-colors"
-                                title="Delete"
+                                className="p-2 text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-all duration-200 hover:scale-110"
+                                title="Delete activity"
                               >
-                                🗑️
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
                           </div>

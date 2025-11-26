@@ -35,7 +35,13 @@ interface Recommendation {
   category_name: string;
   city_name: string;
   country: string;
-  photos?: string[];
+  photos?: (string | {
+    id: number;
+    photo_url: string;
+    is_primary: boolean;
+    display_order?: string;
+    caption?: string;
+  })[];
   tags?: string[];
   user_id?: number;
   average_rating?: number;
@@ -531,9 +537,10 @@ export function RecommendationDetailPage() {
             {/* Image Carousel */}
             {recommendation.photos && recommendation.photos.length > 0 ? (
               <ImageCarousel 
-                images={recommendation.photos.map(photo => 
-                  photo.startsWith('http') ? photo : `${apiConfig.baseUrl}${photo}`
-                )}
+                images={recommendation.photos.map(photo => {
+                  const photoUrl = typeof photo === 'string' ? photo : photo.photo_url;
+                  return photoUrl.startsWith('http') ? photoUrl : `${apiConfig.baseUrl}${photoUrl}`;
+                })}
                 title={recommendation.title}
                 autoPlay={true}
                 autoPlayInterval={5000}

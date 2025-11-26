@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Button, Textarea, Select, StarRating, FileUpload } from '../ui';
 import { useSafeToast } from '../../hooks/useSafeToast';
-import { apiRequest } from '../../config/api';
+import { apiRequest, apiConfig } from '../../config/api';
 import { RecommendationPreview } from './RecommendationPreview';
 
 interface CreateRecommendationFormProps {
@@ -621,10 +621,19 @@ export function CreateRecommendationForm({
               <div className="mb-4">
                 <h4 className="text-sm font-medium text-primary mb-3">Current Photos</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {existingPhotos.map((photo) => (
+                  {existingPhotos.map((photo) => {
+                    // Skip photos without URLs
+                    if (!photo.photo_url) return null;
+                    
+                    // Convert relative photo URL to full URL
+                    const photoUrl = photo.photo_url.startsWith('http') 
+                      ? photo.photo_url 
+                      : `${apiConfig.baseUrl}${photo.photo_url}`;
+                    
+                    return (
                     <div key={photo.id} className="relative group">
                       <img
-                        src={photo.photo_url}
+                        src={photoUrl}
                         alt="Recommendation"
                         className="w-full h-32 object-cover rounded-lg border-2 border-subtle"
                       />
@@ -668,7 +677,8 @@ export function CreateRecommendationForm({
                         </button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
