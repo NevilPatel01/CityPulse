@@ -52,8 +52,7 @@ const SignupPage = () => {
     formData.acceptTerms;
 
   // Check if form is valid for submission
-  const isFormValid = isFormComplete && passwordsMatch && Object.keys(errors).length === 0;
-
+  const isFormValid = isFormComplete && passwordsMatch && Object.keys(errors).filter(key => key !== 'general').length === 0;
   const validateForm = (): SignupFormErrors => {
     const newErrors: SignupFormErrors = {};
 
@@ -119,18 +118,38 @@ const SignupPage = () => {
       if (field === 'password' || field === 'confirmPassword') {
         const pass = field === 'password' ? value as string : updated.password;
         const confirmPass = field === 'confirmPassword' ? value as string : updated.confirmPassword;
-        setPasswordsMatch(pass !== '' && confirmPass !== '' && pass === confirmPass);
+        const doMatch = pass !== '' && confirmPass !== '' && pass === confirmPass;
+        setPasswordsMatch(doMatch);
+        
+        // Clear password-related errors when they match and password is valid
+        if (doMatch && pass.length >= 8 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/.test(pass)) {
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.confirmPassword;
+            delete newErrors.password;
+            delete newErrors.general;
+            return newErrors;
+          });
+        } else {
+          // Only clear the specific field error when typing
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[field];
+            delete newErrors.general;
+            return newErrors;
+          });
+        }
+      } else {
+        // Clear field error and general error when user starts typing/changing
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          delete newErrors.general;
+          return newErrors;
+        });
       }
       
       return updated;
-    });
-    
-    // Clear field error and general error when user starts typing/changing
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[field];
-      delete newErrors.general; // Clear general error to re-enable button
-      return newErrors;
     });
   };
 
