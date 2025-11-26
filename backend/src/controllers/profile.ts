@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { query } from '../lib/database';
 import { processImage, generateFilename, deleteOldImage, validateImageFile, getImageMetadata } from '../utils/imageUpload';
 import { validateSocialUrls } from '../validators/profile';
+import { comparePassword } from '../utils/auth';
 
 // Get user profile by username
 export const getProfile = async (req: Request, res: Response) => {
@@ -1344,6 +1345,79 @@ export const requestDataDeletion = async (req: Request, res: Response) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to process deletion request'
+        });
+    }
+};
+
+// Deactivate account (with 30-day reactivation window)
+export const deactivateAccount = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const { password } = req.body;
+
+        // Validate password is provided
+        if (!password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Password is required to deactivate account' 
+            });
+        }
+
+        // Get user with password hash
+        const userResult = await query(
+            'SELECT id, email, username, password_hash, is_google_user FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+
+        // For non-Google users, verify password
+        if (!user.is_google_user) {
+            if (!user.password_hash) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Invalid account state' 
+                });
+            }
+
+            const isValidPassword = await comparePassword(password, user.password_hash);
+            if (!isValidPassword) {
+                return res.status(401).json({ 
+                    success: false, 
+                    message: 'Invalid password' 
+                });
+            }
+        }
+
+        // Update account status to pending_deletion and record deactivation time
+        await query(
+            `UPDATE users 
+             SET account_status = $1, 
+                 deactivated_at = NOW(), 
+                 updated_at = NOW() 
+             WHERE id = $2`,
+            ['pending_deletion', userId]
+        );
+
+        console.log(`[ACCOUNT DEACTIVATION] User ${user.username} (${userId}) deactivated their account`);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Account deactivated successfully. You can reactivate within 30 days by logging in.'
+        });
+    } catch (error) {
+        console.error('[ACCOUNT DEACTIVATION]', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to deactivate account'
         });
     }
 };

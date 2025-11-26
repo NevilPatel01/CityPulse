@@ -11,7 +11,8 @@ import {
     updatePrivacySettings,
     getEmailPreferences,
     updateEmailPreferences,
-    requestDataDeletion
+    requestDataDeletion,
+    deactivateAccount
 } from '../controllers/profile';
 import { getTravelPreferences, updateTravelPreferences } from '../controllers/profile_travel_preferences';
 import {
@@ -104,6 +105,14 @@ router.post(
     profileLimiter,
     authenticateToken,
     requestDataDeletion
+);
+
+// Account deactivation route (with 30-day reactivation window)
+router.post(
+    '/deactivate',
+    profileLimiter,
+    authenticateToken,
+    deactivateAccount
 );
 
 // Public routes (MUST be last as it has a catch-all param)

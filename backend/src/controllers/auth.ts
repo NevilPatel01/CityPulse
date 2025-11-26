@@ -166,12 +166,44 @@ export const login = async (req: Request, res: Response) => {
             });
         }
 
-        // Check account status
+        // Check account status and handle reactivation
         if (user.account_status !== 'active') {
-            return res.status(403).json({
-                success: false,
-                message: 'Account is suspended or deactivated'
-            });
+            // Check if account is pending_deletion and within 30-day reactivation window
+            if (user.account_status === 'pending_deletion' && user.deactivated_at) {
+                const deactivatedDate = new Date(user.deactivated_at);
+                const daysSinceDeactivation = Math.floor((Date.now() - deactivatedDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysSinceDeactivation <= 30) {
+                    // Reactivate the account
+                    await query(
+                        `UPDATE users 
+                         SET account_status = 'active', 
+                             deactivated_at = NULL, 
+                             updated_at = NOW() 
+                         WHERE id = $1`,
+                        [user.id]
+                    );
+                    
+                    console.log(`[REACTIVATION] User ${user.username} (${user.id}) reactivated their account (${daysSinceDeactivation} days after deactivation)`);
+                    
+                    // Update user object for token generation
+                    user.account_status = 'active';
+                } else {
+                    // Account has been deactivated for more than 30 days
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your account has been permanently deleted. The 30-day reactivation period has expired. Please register for a new account.',
+                        code: 'ACCOUNT_EXPIRED'
+                    });
+                }
+            } else {
+                // Account is suspended or banned
+                return res.status(403).json({
+                    success: false,
+                    message: 'Account is suspended or banned. Please contact support.',
+                    code: 'ACCOUNT_SUSPENDED'
+                });
+            }
         }
 
         // Check email verification - CRITICAL SECURITY REQUIREMENT
@@ -548,16 +580,49 @@ export const googleOAuth = async (req: Request, res: Response) => {
             user = existingUserResult.rows[0];
             console.log('✅ Existing user found:', user.id);
 
-            // Update Google ID if not set or update last login
-            await query(
-                `UPDATE users SET 
-                    google_id = $1, 
-                    is_google_user = true, 
-                    last_login = NOW(), 
-                    updated_at = NOW()
-                WHERE id = $2`,
-                [googleId, user.id]
-            );
+            // Check if account is deactivated and handle reactivation
+            if (user.account_status === 'pending_deletion' && user.deactivated_at) {
+                const deactivatedDate = new Date(user.deactivated_at);
+                const daysSinceDeactivation = Math.floor((Date.now() - deactivatedDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysSinceDeactivation <= 30) {
+                    // Reactivate the account
+                    await query(
+                        `UPDATE users SET 
+                            google_id = $1, 
+                            is_google_user = true, 
+                            account_status = 'active',
+                            deactivated_at = NULL,
+                            last_login = NOW(), 
+                            updated_at = NOW()
+                        WHERE id = $2`,
+                        [googleId, user.id]
+                    );
+                    
+                    console.log(`[GOOGLE REACTIVATION] User ${user.username} (${user.id}) reactivated via Google OAuth (${daysSinceDeactivation} days after deactivation)`);
+                    
+                    // Update user object
+                    user.account_status = 'active';
+                } else {
+                    // Account has been deactivated for more than 30 days
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your account has been permanently deleted. The 30-day reactivation period has expired. Please register for a new account.',
+                        code: 'ACCOUNT_EXPIRED'
+                    });
+                }
+            } else {
+                // Normal update - no reactivation needed
+                await query(
+                    `UPDATE users SET 
+                        google_id = $1, 
+                        is_google_user = true, 
+                        last_login = NOW(), 
+                        updated_at = NOW()
+                    WHERE id = $2`,
+                    [googleId, user.id]
+                );
+            }
 
         } else {
             // Create new user
@@ -600,11 +665,12 @@ export const googleOAuth = async (req: Request, res: Response) => {
             }
         }
 
-        // Check account status
+        // Check account status (should be active at this point due to reactivation logic above)
         if (user.account_status !== 'active') {
             return res.status(403).json({
                 success: false,
-                message: 'Account is suspended or deactivated'
+                message: 'Account is suspended or banned. Please contact support.',
+                code: 'ACCOUNT_SUSPENDED'
             });
         }
 
