@@ -60,12 +60,11 @@ interface RecommendationsApiResponse {
 
 interface RecommendationsListProps {
   userId?: number;
-  showUser?: boolean;
   showActions?: boolean;
   className?: string;
 }
 
-export function RecommendationsList({ userId, showUser = true, showActions = false, className = '' }: RecommendationsListProps) {
+export function RecommendationsList({ userId, showActions = false, className = '' }: RecommendationsListProps) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<City[]>([]);
@@ -267,7 +266,6 @@ export function RecommendationsList({ userId, showUser = true, showActions = fal
               <RecommendationCard
                 key={recommendation.id}
                 recommendation={recommendation}
-                showUser={showUser}
                 showActions={showActions}
                 onDelete={handleDelete}
               />

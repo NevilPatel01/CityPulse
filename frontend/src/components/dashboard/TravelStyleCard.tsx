@@ -135,7 +135,7 @@ export const TravelStyleCard = () => {
             });
             
             // Silent success - no toast notification for quick interactions
-        } catch (error) {
+        } catch {
             // Revert on error
             setSelectedStyles(selectedStyles);
             showError(

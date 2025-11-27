@@ -29,7 +29,6 @@ interface RecommendationCardProps {
     photos?: string[];
     user_id?: number;
   };
-  showUser?: boolean;
   showActions?: boolean;
   className?: string;
   onDelete?: () => void;
@@ -37,7 +36,6 @@ interface RecommendationCardProps {
 
 export function RecommendationCard({ 
   recommendation, 
-  showUser = true, 
   showActions = false,
   className = '',
   onDelete
