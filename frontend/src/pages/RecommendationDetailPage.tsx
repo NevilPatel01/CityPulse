@@ -27,6 +27,7 @@ interface Recommendation {
   views_count: number;
   likes_count: number;
   saves_count?: number;
+  shares_count?: number;
   created_at: string;
   updated_at: string;
   username: string;
@@ -489,10 +490,6 @@ export function RecommendationDetailPage() {
                   <MapPin className="w-4 h-4" />
                   {recommendation.city_name}, {recommendation.country}
                 </Link>
-                <span className="inline-flex items-center gap-1">
-                  <Eye className="w-4 h-4" />
-                  {recommendation.views_count} views
-                </span>
               </div>
             </div>
             
@@ -581,61 +578,55 @@ export function RecommendationDetailPage() {
               </div>
             )}
 
-            {/* Instagram-style Action Buttons */}
-            <div className="flex items-center justify-between py-3 border-b border-subtle">
-              <div className="flex items-center gap-4">
+            {/* Social Media Style Action Buttons with Counts Below */}
+            <div className="py-4 border-b border-subtle">
+              <div className="flex items-center gap-6 mb-3">
                 {user && (
                   <>
                     <button
                       onClick={handleLike}
                       disabled={isLiking}
-                      className="group relative disabled:opacity-50"
+                      className="flex flex-col items-center gap-1 disabled:opacity-50 group"
                       title={isLiked ? 'Unlike' : 'Like'}
                     >
-                      <Heart className={`w-7 h-7 transition-all ${isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-primary hover:text-red-500 hover:scale-110'}`} />
-                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {likesCount} {likesCount === 1 ? 'like' : 'likes'}
-                      </span>
+                      <Heart className={`w-6 h-6 transition-all ${
+                        isLiked 
+                          ? 'fill-red-500 text-red-500' 
+                          : 'text-red-500 hover:text-red-600 hover:scale-110'
+                      }`} style={!isLiked ? { strokeWidth: 2.5 } : {}} />
+                      <span className="text-xs font-medium text-primary">{likesCount}</span>
                     </button>
                     <button
                       onClick={handleSave}
                       disabled={isSaving}
-                      className="group relative disabled:opacity-50"
+                      className="flex flex-col items-center gap-1 disabled:opacity-50 group"
                       title={isSaved ? 'Unsave' : 'Save'}
                     >
-                      <Bookmark className={`w-7 h-7 transition-all ${isSaved ? 'fill-pulse text-pulse scale-110' : 'text-primary hover:text-pulse hover:scale-110'}`} />
-                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {savesCount} {savesCount === 1 ? 'save' : 'saves'}
-                      </span>
+                      {isSaved ? (
+                        <Bookmark className="w-6 h-6 fill-pulse text-pulse transition-all hover:scale-110" />
+                      ) : (
+                        <Bookmark className="w-6 h-6 text-pulse hover:text-pulse/80 hover:scale-110 transition-all" style={{ strokeWidth: 2.5 }} />
+                      )}
+                      <span className="text-xs font-medium text-primary">{savesCount}</span>
                     </button>
                   </>
                 )}
                 <button
                   onClick={handleShare}
-                  className="group relative"
+                  className="flex flex-col items-center gap-1 group"
                   title="Share"
                 >
                   {linkCopied ? (
-                    <Check className="w-7 h-7 text-green-500" />
+                    <Check className="w-6 h-6 text-green-500" />
                   ) : (
-                    <Share2 className="w-7 h-7 text-primary hover:text-pulse hover:scale-110 transition-all" />
+                    <Share2 className="w-6 h-6 text-primary hover:text-pulse hover:scale-110 transition-all" />
                   )}
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Share
-                  </span>
+                  <span className="text-xs font-medium text-primary">{recommendation.shares_count || 0}</span>
                 </button>
-              </div>
-              
-              {/* Engagement Stats */}
-              <div className="flex items-center gap-4 text-sm text-muted">
-                <span className="hover:text-primary cursor-pointer transition-colors" title="Likes">
-                  {likesCount} {likesCount === 1 ? 'like' : 'likes'}
-                </span>
-                {user && (
-                  <span className="hover:text-primary cursor-pointer transition-colors" title="Saves">
-                    {savesCount} {savesCount === 1 ? 'save' : 'saves'}
-                  </span>
-                )}
+                <div className="flex flex-col items-center gap-1">
+                  <Eye className="w-6 h-6 text-primary" />
+                  <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
+                </div>
               </div>
             </div>
 
@@ -853,16 +844,22 @@ export function RecommendationDetailPage() {
               </div>
             </div>
 
-            {/* Report Button */}
+            {/* Report Recommendation Card */}
             {!isOwner && (
-              <Button
-                variant="outline"
-                onClick={() => setShowReportModal(true)}
-                className="w-full flex items-center justify-center gap-2 text-muted hover:text-red-400 hover:border-red-400"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                Report this recommendation
-              </Button>
+              <div className="bg-surface-glass backdrop-blur-glass rounded-lg p-6 shadow-glass border border-subtle">
+                <h3 className="text-lg font-semibold text-primary mb-3">Report</h3>
+                <p className="text-sm text-muted mb-4">
+                  If you find this recommendation inappropriate or misleading, please report it.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReportModal(true)}
+                  className="w-full flex items-center justify-center gap-2 text-muted hover:text-red-400 hover:border-red-400"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  Report this recommendation
+                </Button>
+              </div>
             )}
           </div>
         </div>
