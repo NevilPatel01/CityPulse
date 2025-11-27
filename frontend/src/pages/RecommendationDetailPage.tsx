@@ -280,11 +280,12 @@ export function RecommendationDetailPage() {
         // If backend returns error, try to toggle anyway (backend now handles toggle)
         setIsLiked(!isLiked);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Backend now handles toggle, so if error, just toggle UI state
       setIsLiked(!isLiked);
       // Only show error if it's not a toggle-related error
-      if (!error.message?.includes('Already liked') && !error.message?.includes('not liked yet')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('Already liked') && !errorMessage.includes('not liked yet')) {
         console.error('Error updating like:', error);
       }
     } finally {

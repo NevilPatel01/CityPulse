@@ -13,7 +13,8 @@ import {
   sendBuddyRequest, 
   removeBuddy, 
   cancelBuddyRequest,
-  getSentBuddyRequests
+  getSentBuddyRequests,
+  type BuddyRequest
 } from '../services/buddyService';
 import { useSafeToast } from '../hooks/useSafeToast';
 import { AchievementProgress } from '../components/achievements/AchievementProgress';
@@ -359,7 +360,7 @@ export default function ProfilePage() {
       
       if (response.success && response.data.requests) {
         const request = response.data.requests.find(
-          (r: any) => (r.requested_id === profile.id || r.requested_id === profile.id.toString())
+          (r: BuddyRequest) => r.requested_id === profile.id
         );
         
         if (request) {
