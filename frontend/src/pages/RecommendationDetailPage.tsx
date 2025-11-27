@@ -263,7 +263,9 @@ export function RecommendationDetailPage() {
     try {
       setIsLiking(true);
       
-      const endpoint = isLiked ? `/api/recommendations/${id}/like` : `/api/recommendations/${id}/like`;
+      // Use DELETE on /like endpoint for unlike, POST for like
+      // The backend now toggles if already liked, so we can always use POST
+      const endpoint = `/api/recommendations/${id}/like`;
       const method = isLiked ? 'DELETE' : 'POST';
       
       const data = await apiRequest<{ success: boolean; data: { likes_count: number }; message?: string }>(
@@ -274,13 +276,17 @@ export function RecommendationDetailPage() {
       if (data.success) {
         setIsLiked(!isLiked);
         setLikesCount(data.data.likes_count);
-        showSuccess(isLiked ? 'Removed from liked recommendations' : 'Added to liked recommendations');
       } else {
-        showError(data.message || 'Failed to update like status');
+        // If backend returns error, try to toggle anyway (backend now handles toggle)
+        setIsLiked(!isLiked);
       }
-    } catch (error) {
-      console.error('Error updating like:', error);
-      showError(error instanceof Error ? error.message : 'An error occurred');
+    } catch (error: any) {
+      // Backend now handles toggle, so if error, just toggle UI state
+      setIsLiked(!isLiked);
+      // Only show error if it's not a toggle-related error
+      if (!error.message?.includes('Already liked') && !error.message?.includes('not liked yet')) {
+        console.error('Error updating like:', error);
+      }
     } finally {
       setIsLiking(false);
     }

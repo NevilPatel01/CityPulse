@@ -1210,16 +1210,37 @@ export const likeRecommendation = async (req: Request, res: Response) => {
         const { id } = req.params;
         const userId = (req as any).user?.userId;
 
-        // Check if already liked
+        // Check if already liked - if so, unlike it (toggle behavior)
         const existingLike = await query(
             'SELECT id FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
             [id, userId]
         );
 
         if (existingLike.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Already liked this recommendation'
+            // Unlike it (toggle behavior)
+            await query(
+                'DELETE FROM recommendation_likes WHERE recommendation_id = $1 AND user_id = $2',
+                [id, userId]
+            );
+
+            // Update likes count
+            await query(
+                'UPDATE recommendations SET likes_count = GREATEST(likes_count - 1, 0) WHERE id = $1',
+                [id]
+            );
+
+            // Get updated count
+            const countResult = await query(
+                'SELECT likes_count FROM recommendations WHERE id = $1',
+                [id]
+            );
+
+            return res.json({
+                success: true,
+                message: 'Recommendation unliked successfully',
+                data: {
+                    likes_count: countResult.rows[0]?.likes_count || 0
+                }
             });
         }
 

@@ -54,6 +54,7 @@ export interface UserProfile {
   isOwnProfile: boolean;
   isPrivate?: boolean;
   buddyRequestStatus?: 'none' | 'pending' | 'accepted' | 'declined';
+  buddyRequestDirection?: 'sent' | 'received';
 }
 
 export interface UserStats {

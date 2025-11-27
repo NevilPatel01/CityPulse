@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     whatsapp_contact VARCHAR(50),
     website_url VARCHAR(255),
     cities_visited JSONB DEFAULT '[]'::JSONB,
+    current_city_id INTEGER REFERENCES cities(id),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
     profile_visibility VARCHAR(20) DEFAULT 'public' CHECK (profile_visibility IN ('public', 'private')),
     location_sharing BOOLEAN DEFAULT TRUE,
     social_links_visible BOOLEAN DEFAULT TRUE,
@@ -90,13 +93,13 @@ CREATE TABLE IF NOT EXISTS interest_categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- User Interests
+-- User Interests (links users to recommendation categories they're interested in)
 CREATE TABLE IF NOT EXISTS user_interests (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    interest_category_id INTEGER NOT NULL REFERENCES interest_categories(id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES recommendation_categories(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, interest_category_id)
+    UNIQUE(user_id, category_id)
 );
 
 -- =====================================================
@@ -158,10 +161,12 @@ CREATE TABLE IF NOT EXISTS recommendations (
     duration_suggestion VARCHAR(50),
     user_rating INTEGER CHECK (user_rating >= 1 AND user_rating <= 5),
     status VARCHAR(20) DEFAULT 'active',
+    visibility VARCHAR(20) DEFAULT 'public' CHECK (visibility IN ('public', 'private', 'friends_only')),
     report_reason TEXT,
     views_count INTEGER DEFAULT 0,
     likes_count INTEGER DEFAULT 0,
     saves_count INTEGER DEFAULT 0,
+    shares_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -232,15 +237,6 @@ CREATE TABLE IF NOT EXISTS recommendation_likes (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(recommendation_id, user_id)
-);
-
--- User Favorites
-CREATE TABLE IF NOT EXISTS user_favorites (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, recommendation_id)
 );
 
 -- Recommendation Views (track who viewed what)
@@ -374,6 +370,46 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- =====================================================
+-- 12.1 EMAIL VERIFICATION & PREFERENCES
+-- =====================================================
+
+-- Email Verification Tokens
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Email Preferences
+CREATE TABLE IF NOT EXISTS email_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    buddy_requests BOOLEAN DEFAULT TRUE,
+    recommendations BOOLEAN DEFAULT TRUE,
+    trips BOOLEAN DEFAULT TRUE,
+    achievements BOOLEAN DEFAULT TRUE,
+    weekly_digest BOOLEAN DEFAULT FALSE,
+    marketing BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 12.2 SOCIAL SHARING
+-- =====================================================
+
+-- Recommendation Shares (Track share count)
+CREATE TABLE IF NOT EXISTS recommendation_shares (
+    id SERIAL PRIMARY KEY,
+    recommendation_id INTEGER NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    share_platform VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
 -- 13. MODERATION & CONTENT SAFETY
 -- =====================================================
 
@@ -453,6 +489,23 @@ CREATE INDEX IF NOT EXISTS idx_recommendations_category_id ON recommendations(ca
 CREATE INDEX IF NOT EXISTS idx_recommendations_status ON recommendations(status);
 CREATE INDEX IF NOT EXISTS idx_recommendations_created_at ON recommendations(created_at);
 CREATE INDEX IF NOT EXISTS idx_recommendations_location ON recommendations(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_recommendations_visibility ON recommendations(visibility);
+CREATE INDEX IF NOT EXISTS idx_recommendations_user_visibility ON recommendations(user_id, visibility);
+
+-- User interests indexes
+CREATE INDEX IF NOT EXISTS idx_user_interests_user_id ON user_interests(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_interests_category_id ON user_interests(category_id);
+
+-- Email verification tokens indexes
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON email_verification_tokens(token);
+
+-- Email preferences indexes
+CREATE INDEX IF NOT EXISTS idx_email_preferences_user_id ON email_preferences(user_id);
+
+-- Recommendation shares indexes
+CREATE INDEX IF NOT EXISTS idx_recommendation_shares_recommendation_id ON recommendation_shares(recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_shares_user_id ON recommendation_shares(user_id);
 
 -- Travel buddy connections indexes (for stats)
 CREATE INDEX IF NOT EXISTS idx_travel_buddy_connections_requester ON travel_buddy_connections(requester_id);
@@ -478,6 +531,25 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(notification_type);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+-- Content reports indexes
+CREATE INDEX IF NOT EXISTS idx_content_reports_reporter_id ON content_reports(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_content_reports_status ON content_reports(status);
+CREATE INDEX IF NOT EXISTS idx_content_reports_content_type ON content_reports(reported_content_type);
+CREATE INDEX IF NOT EXISTS idx_content_reports_content_id ON content_reports(reported_content_id);
+CREATE INDEX IF NOT EXISTS idx_content_reports_created_at ON content_reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_content_reports_status_created ON content_reports(status, created_at DESC);
+
+-- Moderator actions indexes
+CREATE INDEX IF NOT EXISTS idx_moderator_actions_moderator_id ON moderator_actions(moderator_id);
+CREATE INDEX IF NOT EXISTS idx_moderator_actions_target_type ON moderator_actions(target_type);
+CREATE INDEX IF NOT EXISTS idx_moderator_actions_created_at ON moderator_actions(created_at DESC);
+
+-- User warnings indexes
+CREATE INDEX IF NOT EXISTS idx_user_warnings_user_id ON user_warnings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_warnings_moderator_id ON user_warnings(moderator_id);
+CREATE INDEX IF NOT EXISTS idx_user_warnings_is_active ON user_warnings(is_active);
+CREATE INDEX IF NOT EXISTS idx_user_warnings_user_active ON user_warnings(user_id, is_active);
 
 -- User achievements indexes (for badges)
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON user_achievements(user_id);
@@ -542,6 +614,31 @@ CREATE TRIGGER update_recommendation_ratings_updated_at
     BEFORE UPDATE ON recommendation_ratings 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to automatically update updated_at for email_preferences
+DROP TRIGGER IF EXISTS update_email_preferences_updated_at ON email_preferences;
+CREATE TRIGGER update_email_preferences_updated_at 
+    BEFORE UPDATE ON email_preferences 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to update shares count on recommendations
+CREATE OR REPLACE FUNCTION update_recommendation_shares_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE recommendations 
+    SET shares_count = shares_count + 1 
+    WHERE id = NEW.recommendation_id;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update shares_count when a share is recorded
+DROP TRIGGER IF EXISTS trigger_update_shares_count ON recommendation_shares;
+CREATE TRIGGER trigger_update_shares_count
+    AFTER INSERT ON recommendation_shares
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_recommendation_shares_count();
 
 -- Trigger to automatically update updated_at for trips
 DROP TRIGGER IF EXISTS update_trips_updated_at ON trips;

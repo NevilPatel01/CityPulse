@@ -150,16 +150,22 @@ export const getProfile = async (req: Request, res: Response) => {
             const profilePhotoUrl = user.profile_photo_url ?
                 (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
 
-            // Check buddy request status
+            // Check buddy request status and direction
             let buddyRequestStatus = 'none';
+            let buddyRequestDirection = undefined;
             if (currentUserId) {
                 const requestResult = await query(
-                    `SELECT status FROM travel_buddy_connections
+                    `SELECT status, requester_id, requested_id FROM travel_buddy_connections
                      WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))`,
                     [currentUserId, user.id]
                 );
                 if (requestResult.rows.length > 0) {
-                    buddyRequestStatus = requestResult.rows[0].status;
+                    const connection = requestResult.rows[0];
+                    buddyRequestStatus = connection.status;
+                    
+                    if (connection.status === 'pending' || connection.status === 'accepted') {
+                        buddyRequestDirection = connection.requester_id === currentUserId ? 'sent' : 'received';
+                    }
                 }
             }
 
@@ -174,6 +180,7 @@ export const getProfile = async (req: Request, res: Response) => {
                         profilePhotoUrl: profilePhotoUrl,
                         isPrivate: true,
                         buddyRequestStatus: buddyRequestStatus,
+                        buddyRequestDirection: buddyRequestDirection,
                         stats: {
                             cities: 0,
                             recommendations: 0,
@@ -311,6 +318,28 @@ export const getProfile = async (req: Request, res: Response) => {
         const coverPhotoUrl = user.cover_photo_url ?
             (user.cover_photo_url.startsWith('http') ? user.cover_photo_url : `${baseUrl}${user.cover_photo_url}`) : null;
 
+        // Check buddy request status and direction if not own profile
+        let buddyRequestStatus = 'none';
+        let buddyRequestDirection: 'sent' | 'received' | undefined = undefined;
+        
+        if (!isOwnProfile && currentUserId) {
+            const buddyRequestResult = await query(
+                `SELECT status, requester_id, requested_id 
+                 FROM travel_buddy_connections 
+                 WHERE (requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1)`,
+                [currentUserId, user.id]
+            );
+
+            if (buddyRequestResult.rows.length > 0) {
+                const connection = buddyRequestResult.rows[0];
+                buddyRequestStatus = connection.status;
+                
+                if (connection.status === 'pending' || connection.status === 'accepted') {
+                    buddyRequestDirection = connection.requester_id === currentUserId ? 'sent' : 'received';
+                }
+            }
+        }
+
         const profileData = {
             id: user.id,
             username: user.username,
@@ -321,13 +350,6 @@ export const getProfile = async (req: Request, res: Response) => {
             profilePhotoUrl: profilePhotoUrl,
             coverPhotoUrl: coverPhotoUrl,
             citiesVisited: allCities, // Use combined cities list
-            instagramUrl: user.instagram_url,
-            facebookUrl: user.facebook_url,
-            twitterUrl: user.twitter_url,
-            linkedinUrl: user.linkedin_url,
-            whatsappContact: user.whatsapp_contact,
-            websiteUrl: user.website_url,
-            email: user.email,
             createdAt: user.created_at,
             lastLogin: user.last_login,
             stats: {
@@ -347,18 +369,20 @@ export const getProfile = async (req: Request, res: Response) => {
             ...(user.id === currentUserId && {
                 email: user.email,
                 phone: user.phone,
-                instagramUrl: user.instagram_url,
-                facebookUrl: user.facebook_url,
-                twitterUrl: user.twitter_url,
-                linkedinUrl: user.linkedin_url,
-                whatsappContact: user.whatsapp_contact,
                 profileVisibility: user.profile_visibility,
                 locationSharing: user.location_sharing,
                 socialLinksVisible: user.social_links_visible,
                 travelBuddyRequestsEnabled: user.travel_buddy_requests_enabled
             }),
-            // Show social links based on visibility settings
-            ...(user.social_links_visible && {
+            // Show social links to profile owner, or if visibility is enabled, or if users are buddies
+            ...((user.id === currentUserId || user.social_links_visible || isBuddy) && {
+                instagramUrl: user.instagram_url,
+                facebookUrl: user.facebook_url,
+                twitterUrl: user.twitter_url,
+                linkedinUrl: user.linkedin_url,
+                whatsappContact: user.whatsapp_contact,
+                websiteUrl: user.website_url,
+                email: user.id === currentUserId ? user.email : undefined,
                 socialLinks: {
                     instagram: user.instagram_url,
                     facebook: user.facebook_url,
@@ -367,6 +391,8 @@ export const getProfile = async (req: Request, res: Response) => {
                     whatsapp: user.whatsapp_contact
                 }
             }),
+            buddyRequestStatus: buddyRequestStatus,
+            buddyRequestDirection: buddyRequestDirection,
             isOwnProfile: user.id === currentUserId
         };
 

@@ -20,6 +20,7 @@ export interface ContentReport {
     content_title: string;
     content_description: string | null;
     content_image: string | null;
+    content_owner_username: string | null;
     report_reason: string;
     description: string;
     status: string;
@@ -51,6 +52,9 @@ export interface ModeratorAction {
     reason: string;
     notes: string | null;
     created_at: string;
+    target_title?: string | null;
+    affected_user_id?: number | null;
+    affected_username?: string | null;
 }
 
 export interface ReportedUser {

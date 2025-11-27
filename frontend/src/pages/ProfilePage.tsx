@@ -9,6 +9,13 @@ import { profileService } from '../services/profileService';
 import { apiRequest } from '../config/api';
 import { getBookmarkedPosts } from '../services/feedService';
 import { RecommendationsList } from '../components/recommendations/RecommendationsList';
+import { 
+  sendBuddyRequest, 
+  removeBuddy, 
+  cancelBuddyRequest,
+  getSentBuddyRequests
+} from '../services/buddyService';
+import { useSafeToast } from '../hooks/useSafeToast';
 import { AchievementProgress } from '../components/achievements/AchievementProgress';
 import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeline';
 import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
@@ -20,18 +27,24 @@ import type { FeedPost } from '../services/feedService';
 import { 
   Camera, MapPin, Home, Instagram, Facebook, Mail, Globe, 
   ChevronDown, ChevronUp, Users, Heart, 
-  Calendar, Shield, MessageCircle, UserPlus, Check
+  Calendar, Shield, MessageCircle, UserPlus, UserMinus, X, Send, RotateCcw
 } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user: currentUser } = useAuth();
+  const [showBuddyModal, setShowBuddyModal] = useState(false);
+  const [showBuddyRequestModal, setShowBuddyRequestModal] = useState(false);
+  const [buddyRequestMessage, setBuddyRequestMessage] = useState('');
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
   
   useAuthGuard({ requireAuth: true });
   
   const { profile, stats, loading, error, refetch } = useProfile(username || '');
+  const { showSuccess, showError } = useSafeToast();
   
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(() => {
@@ -299,6 +312,71 @@ export default function ProfilePage() {
   // Buddy request status helpers
   const isBuddyConnected = profile.buddyRequestStatus === 'accepted';
   const isPendingBuddy = profile.buddyRequestStatus === 'pending';
+  const isPendingRequestSent = profile.buddyRequestStatus === 'pending' && profile.buddyRequestDirection === 'sent';
+
+  const handleAddBuddy = () => {
+    setShowBuddyRequestModal(true);
+  };
+
+  const handleSendBuddyRequest = async () => {
+    if (!profile?.id) return;
+    
+    setIsSendingRequest(true);
+    try {
+      await sendBuddyRequest(profile.id, buddyRequestMessage.trim() || undefined);
+      showSuccess('Success', 'Buddy request sent successfully');
+      setBuddyRequestMessage('');
+      setShowBuddyRequestModal(false);
+      refetch();
+    } catch (err) {
+      const error = err as Error;
+      showError('Error', error.message || 'Failed to send buddy request');
+    } finally {
+      setIsSendingRequest(false);
+    }
+  };
+
+  const handleRemoveBuddy = async () => {
+    if (!profile?.id) return;
+    
+    try {
+      await removeBuddy(profile.id);
+      showSuccess('Success', 'Travel buddy removed');
+      setShowBuddyModal(false);
+      refetch();
+    } catch (err) {
+      const error = err as Error;
+      showError('Error', error.message || 'Failed to remove buddy');
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!profile?.id) return;
+    
+    try {
+      // Get sent requests to find the request ID for this user
+      const response = await getSentBuddyRequests();
+      
+      if (response.success && response.data.requests) {
+        const request = response.data.requests.find(
+          (r: any) => (r.requested_id === profile.id || r.requested_id === profile.id.toString())
+        );
+        
+        if (request) {
+          await cancelBuddyRequest(request.id);
+          showSuccess('Success', 'Buddy request cancelled');
+          refetch();
+        } else {
+          showError('Error', 'Request not found');
+        }
+      } else {
+        showError('Error', 'Failed to fetch requests');
+      }
+    } catch (err) {
+      const error = err as Error;
+      showError('Error', error.message || 'Failed to cancel request');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-base">
@@ -367,53 +445,68 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Social Links Card - Only visible on desktop */}
-                {(isOwnProfile || isBuddyConnected) && (profile.instagramUrl || profile.facebookUrl || profile.email || profile.websiteUrl) && (
+                {(isOwnProfile || isBuddyConnected) && (
                   <div className="hidden lg:block bg-surface-glass backdrop-blur-glass rounded-2xl p-4 shadow-xl">
                     <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Connect</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.instagramUrl && (
-                        <a
-                          href={profile.instagramUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
-                          title="Instagram"
-                        >
-                          <Instagram size={18} className="text-muted hover:text-white" />
-                        </a>
-                      )}
-                      {profile.facebookUrl && (
-                        <a
-                          href={profile.facebookUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
-                          title="Facebook"
-                        >
-                          <Facebook size={18} className="text-muted hover:text-white" />
-                        </a>
-                      )}
-                      {profile.email && (
-                        <a
-                          href={`mailto:${profile.email}`}
-                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
-                          title="Email"
-                        >
-                          <Mail size={18} className="text-muted hover:text-white" />
-                        </a>
-                      )}
-                      {profile.websiteUrl && (
-                        <a
-                          href={profile.websiteUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
-                          title="Website"
-                        >
-                          <Globe size={18} className="text-muted hover:text-white" />
-                        </a>
-                      )}
-                    </div>
+                    {(profile.instagramUrl || profile.facebookUrl || profile.email || profile.websiteUrl || profile.whatsappContact) ? (
+                      <div className="flex flex-wrap gap-2">
+                        {profile.instagramUrl && (
+                          <a
+                            href={profile.instagramUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
+                            title="Instagram"
+                          >
+                            <Instagram size={18} className="text-muted hover:text-white" />
+                          </a>
+                        )}
+                        {profile.facebookUrl && (
+                          <a
+                            href={profile.facebookUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
+                            title="Facebook"
+                          >
+                            <Facebook size={18} className="text-muted hover:text-white" />
+                          </a>
+                        )}
+                        {profile.email && (
+                          <a
+                            href={`mailto:${profile.email}`}
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
+                            title="Email"
+                          >
+                            <Mail size={18} className="text-muted hover:text-white" />
+                          </a>
+                        )}
+                        {profile.websiteUrl && (
+                          <a
+                            href={profile.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
+                            title="Website"
+                          >
+                            <Globe size={18} className="text-muted hover:text-white" />
+                          </a>
+                        )}
+                        {profile.whatsappContact && (
+                          <a
+                            href={`https://wa.me/${profile.whatsappContact.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-green-500 hover:border-transparent transition-all"
+                            title="WhatsApp"
+                          >
+                            <MessageCircle size={18} className="text-muted hover:text-white" />
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted italic">No social networks available</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -534,20 +627,39 @@ export default function ProfilePage() {
                           <>
                             {isBuddyConnected ? (
                               <>
-                                <button className="px-4 py-2 rounded-full text-white text-sm font-semibold bg-green-600 border border-green-500 flex items-center gap-1.5">
-                                  <Check size={14} />
-                                  Connected
-                                </button>
-                                <button className="p-2.5 rounded-full text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all">
-                                  <MessageCircle size={16} />
+                                <button 
+                                  onClick={() => setShowBuddyModal(true)}
+                                  className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-green-600 hover:bg-green-700 border border-green-500 flex items-center gap-1.5 transition-all duration-300 shadow-md shadow-green-600/20"
+                                  title="Manage Travel Buddy"
+                                >
+                                  <Users size={14} />
+                                  Buddy
                                 </button>
                               </>
                             ) : isPendingBuddy ? (
-                              <button className="px-5 py-2 rounded-full text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default">
-                                Pending
-                              </button>
+                              isPendingRequestSent ? (
+                                <button 
+                                  onClick={handleCancelRequest}
+                                  className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-orange-600 hover:bg-orange-700 border border-orange-500 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-orange-600/20"
+                                  title="Cancel Buddy Request"
+                                >
+                                  <RotateCcw size={14} />
+                                  Request Sent
+                                </button>
+                              ) : (
+                                <button 
+                                  className="px-5 py-2 rounded-full text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default"
+                                  title="Request Pending"
+                                  disabled
+                                >
+                                  Pending
+                                </button>
+                              )
                             ) : (
-                              <button className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20">
+                              <button 
+                                onClick={handleAddBuddy}
+                                className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20"
+                              >
                                 <UserPlus size={14} />
                                 Add Buddy
                               </button>
@@ -617,52 +729,67 @@ export default function ProfilePage() {
                   )}
 
                   {/* Mobile Social Links */}
-                  {(isOwnProfile || isBuddyConnected) && (profile.instagramUrl || profile.facebookUrl || profile.email || profile.websiteUrl) && (
+                  {(isOwnProfile || isBuddyConnected) && (
                     <div className="lg:hidden mt-4 pt-4 border-t border-white/10">
-                      <div className="flex gap-2">
-                        {profile.email && (
-                          <a
-                            href={`mailto:${profile.email}`}
-                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
-                            title="Email"
-                          >
-                            <Mail size={18} className="text-muted" />
-                          </a>
-                        )}
-                        {profile.instagramUrl && (
-                          <a
-                            href={profile.instagramUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
-                            title="Instagram"
-                          >
-                            <Instagram size={18} className="text-muted" />
-                          </a>
-                        )}
-                        {profile.facebookUrl && (
-                          <a
-                            href={profile.facebookUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
-                            title="Facebook"
-                          >
-                            <Facebook size={18} className="text-muted" />
-                          </a>
-                        )}
-                        {profile.websiteUrl && (
-                          <a
-                            href={profile.websiteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
-                            title="Website"
-                          >
-                            <Globe size={18} className="text-muted" />
-                          </a>
-                        )}
-                      </div>
+                      {(profile.instagramUrl || profile.facebookUrl || profile.email || profile.websiteUrl || profile.whatsappContact) ? (
+                        <div className="flex gap-2">
+                          {profile.email && (
+                            <a
+                              href={`mailto:${profile.email}`}
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
+                              title="Email"
+                            >
+                              <Mail size={18} className="text-muted" />
+                            </a>
+                          )}
+                          {profile.instagramUrl && (
+                            <a
+                              href={profile.instagramUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
+                              title="Instagram"
+                            >
+                              <Instagram size={18} className="text-muted" />
+                            </a>
+                          )}
+                          {profile.facebookUrl && (
+                            <a
+                              href={profile.facebookUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
+                              title="Facebook"
+                            >
+                              <Facebook size={18} className="text-muted" />
+                            </a>
+                          )}
+                          {profile.websiteUrl && (
+                            <a
+                              href={profile.websiteUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
+                              title="Website"
+                            >
+                              <Globe size={18} className="text-muted" />
+                            </a>
+                          )}
+                          {profile.whatsappContact && (
+                            <a
+                              href={`https://wa.me/${profile.whatsappContact.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-500 hover:border-transparent transition-all"
+                              title="WhatsApp"
+                            >
+                              <MessageCircle size={18} className="text-muted" />
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted italic">No social networks available</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -821,6 +948,115 @@ export default function ProfilePage() {
           onClose={handleCloseAchievementModal}
         />
       )}
+
+      {/* Buddy Request Modal */}
+      <Modal
+        isOpen={showBuddyRequestModal}
+        onClose={() => {
+          setShowBuddyRequestModal(false);
+          setBuddyRequestMessage('');
+        }}
+        title="Send Buddy Request"
+        size="md"
+      >
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-pulse/20 flex items-center justify-center">
+                <UserPlus className="w-6 h-6 text-pulse" />
+              </div>
+              <div>
+                <p className="text-primary font-semibold">{profile?.fullName}</p>
+                <p className="text-muted text-sm">@{profile?.username}</p>
+              </div>
+            </div>
+            <p className="text-muted text-sm mb-4">
+              Send a message with your buddy request to introduce yourself and explain why you'd like to connect.
+            </p>
+            
+            <div className="space-y-2">
+              <label htmlFor="buddy-message" className="block text-sm font-medium text-primary">
+                Message (Optional)
+              </label>
+              <textarea
+                id="buddy-message"
+                value={buddyRequestMessage}
+                onChange={(e) => setBuddyRequestMessage(e.target.value)}
+                placeholder="Hey! I'd love to connect and share travel experiences..."
+                className="w-full px-4 py-3 rounded-lg bg-base border border-subtle text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-transparent resize-none"
+                rows={5}
+                maxLength={500}
+              />
+              <p className="text-xs text-muted text-right">
+                {buddyRequestMessage.length}/500 characters
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleSendBuddyRequest}
+              disabled={isSendingRequest}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-pulse hover:bg-pulse/90 text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send size={18} />
+              {isSendingRequest ? 'Sending...' : 'Send Request'}
+            </button>
+            <button
+              onClick={() => {
+                setShowBuddyRequestModal(false);
+                setBuddyRequestMessage('');
+              }}
+              disabled={isSendingRequest}
+              className="px-4 py-3 rounded-lg bg-surface-glass hover:bg-surface-glass/80 border border-subtle text-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Buddy Management Modal */}
+      <Modal
+        isOpen={showBuddyModal}
+        onClose={() => setShowBuddyModal(false)}
+        title="Travel Buddy"
+        size="sm"
+      >
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-green-600/20 flex items-center justify-center">
+                <Users className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <p className="text-primary font-semibold">{profile?.fullName}</p>
+                <p className="text-muted text-sm">@{profile?.username}</p>
+              </div>
+            </div>
+            <p className="text-muted text-sm">
+              You are connected as travel buddies. You can view each other's social networks and contact information.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={handleRemoveBuddy}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-400 hover:text-red-300 transition-all duration-200"
+            >
+              <UserMinus size={18} />
+              Remove Travel Buddy
+            </button>
+            <button
+              onClick={() => setShowBuddyModal(false)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-surface-glass hover:bg-surface-glass/80 border border-subtle text-primary transition-all duration-200"
+            >
+              <X size={18} />
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

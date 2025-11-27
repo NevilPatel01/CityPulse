@@ -1,113 +1,99 @@
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Card, CardContent } from '../components/ui/card';
+import { 
+  MapPin, Users, Search, Award, Plane, Shield,
+  Heart, Bookmark, Filter, TrendingUp, Calendar,
+  Lock, Star, Bell, Image
+} from 'lucide-react';
 
 const FeaturesPage = () => {
+
   const mainFeatures = [
     {
-      icon: '📍',
-      title: 'Local Expertise',
+      icon: MapPin,
+      title: 'City Recommendations',
       description:
-        'Connect with verified locals who share insider knowledge about their cities.',
+        'Create and share detailed recommendations for attractions, local foods, shops, hikes, and unique experiences.',
       details: [
-        'Verified local profiles with city expertise ratings',
-        'Authentic recommendations from people who live there',
-        'Direct messaging with locals for personalized advice',
-        'Local events and hidden gem discoveries',
+        'Upload multiple photos with descriptions',
+        'Add location data and price ranges',
+        'Set difficulty levels and categories',
+        'Tag recommendations for easy discovery',
       ],
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
     },
     {
-      icon: '👥',
-      title: 'Travel Buddy Matching',
+      icon: Users,
+      title: 'Travel Buddy Connections',
       description:
-        'Find like-minded travelers and locals to explore destinations together.',
+        'Connect with fellow travelers or locals. Send buddy requests and access social media profiles once connected.',
       details: [
-        'Smart matching based on interests and travel style',
-        'Group formation for activities and events',
-        'Safety-verified meetup coordination',
-        'Shared experience planning and booking',
+        'Send and manage connection requests',
+        'View connected buddies\' social profiles',
+        'Access contact information of connections',
+        'Build a trusted network for meetups',
       ],
+      color: 'text-pulse',
+      bgColor: 'bg-pulse/10',
     },
     {
-      icon: '🌟',
-      title: 'Verified Reviews',
+      icon: Search,
+      title: 'Advanced Search',
       description:
-        'Trust authentic reviews from real people, not fake accounts or bots.',
+        'Discover recommendations through an interactive, searchable interface with powerful filtering capabilities.',
       details: [
-        'Identity verification for all reviewers',
-        'Photo and location verification for reviews',
-        'Community moderation and quality control',
-        'Detailed rating system for different aspects',
+        'Dropdown selection: Filter by city, category type, difficulty level',
+        'Numeric range: Price range slider, rating range (1-5 stars)',
+        'Tag/Category filter: Multiple tag selection (budget-friendly, family-friendly, adventure)',
+        'Date range: Filter by when recommendations were added',
+        'Multiple filters work simultaneously with structured grid/list display',
       ],
+      color: 'text-green-500',
+      bgColor: 'bg-green-500/10',
     },
     {
-      icon: '🗺️',
-      title: 'Hidden Gems Discovery',
+      icon: Award,
+      title: 'Travel History & Achievements',
       description:
-        "Uncover places that aren't in guidebooks but locals absolutely love.",
+        'Track visited cities in a LinkedIn-style format and earn badges for milestones and contributions.',
       details: [
-        'Crowdsourced local favorite spots',
-        'Off-the-beaten-path recommendations',
-        'Seasonal and time-sensitive suggestions',
-        'Local business support and promotion',
+        'Track visited cities with dates and impact metrics (views, ratings received)',
+        'Earn badges for milestones (first recommendation, 10 cities visited, top-rated content creator)',
+        'Track progress towards achievements and display badges on profile',
+        'Achievement sharing and notifications with leaderboard participation',
       ],
+      color: 'text-yellow-500',
+      bgColor: 'bg-yellow-500/10',
     },
     {
-      icon: '🕒',
-      title: 'Real-Time Updates',
+      icon: Plane,
+      title: 'Find Travel Companions',
       description:
-        'Get live information about wait times, crowds, events, and local conditions.',
+        'Plan collaborative trips by specifying destination, dates, and requirements to find like-minded travel companions.',
       details: [
-        'Live crowd levels and wait times',
-        'Weather-based activity suggestions',
-        'Event notifications and last-minute opportunities',
-        'Local transport and accessibility updates',
+        'Specify trip details and dates',
+        'Set companion requirements',
+        'Send collaboration requests',
+        'Plan trips together',
       ],
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
     },
     {
-      icon: '🔒',
-      title: 'Safety & Privacy',
+      icon: Shield,
+      title: 'Community Moderation',
       description:
-        'All interactions are verified, secure, and designed with user safety in mind.',
+        'Moderators review reported content to maintain quality and reliability of shared information.',
       details: [
-        'Identity verification for all users',
-        'Secure messaging with privacy controls',
-        'Location sharing with safety features',
-        '24/7 support and emergency assistance',
+        'Review reported content for accuracy',
+        'Remove inappropriate posts',
+        'Manage user warnings and restrictions',
+        'Maintain platform quality',
       ],
-    },
-  ];
-
-  const additionalFeatures = [
-    {
-      title: 'Smart Itinerary Builder',
-      description:
-        'AI-powered trip planning that adapts to your preferences and local insights.',
-    },
-    {
-      title: 'Cultural Exchange Hub',
-      description:
-        'Language exchange, cultural learning, and meaningful connection opportunities.',
-    },
-    {
-      title: 'Local Business Support',
-      description:
-        'Discover and support small, local businesses that make each city unique.',
-    },
-    {
-      title: 'Sustainable Travel Tools',
-      description:
-        'Choose eco-friendly options and contribute positively to local communities.',
-    },
-    {
-      title: 'Offline Access',
-      description:
-        'Download recommendations and maps for offline use while traveling.',
-    },
-    {
-      title: 'Multi-Language Support',
-      description:
-        'Connect with locals and travelers worldwide in your preferred language.',
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
     },
   ];
 
@@ -122,10 +108,13 @@ const FeaturesPage = () => {
             <h1 className='text-4xl lg:text-6xl font-bold text-primary mb-6 leading-tight'>
               Features that <span className='text-pulse'>transform</span> travel
             </h1>
-            <p className='text-xl text-muted mb-8 leading-relaxed max-w-4xl mx-auto'>
-              Discover how CityPulse's innovative features connect you with
-              authentic local experiences, genuine travel companions, and
-              insider knowledge that no guidebook can provide.
+            <p className='text-xl text-muted mb-4 leading-relaxed max-w-4xl mx-auto'>
+              Discover authentic, crowd-sourced travel recommendations and connect with travelers or locals in real-time for meetups, collaborative trip planning, and shared experiences.
+            </p>
+            <p className='text-lg text-muted mb-8 leading-relaxed max-w-4xl mx-auto'>
+              CityPulse helps you discover city recommendations through an interactive, searchable interface 
+              with filtering capabilities and location-based organization. Whether you're looking for the best 
+              local food spots, hidden hiking trails, or travel companions for your next adventure, we've got you covered.
             </p>
           </div>
         </section>
@@ -137,44 +126,55 @@ const FeaturesPage = () => {
               <h2 className='text-3xl lg:text-4xl font-bold text-primary mb-6'>
                 Core Features
               </h2>
-              <p className='text-muted text-lg max-w-2xl mx-auto'>
+              <p className='text-muted text-lg max-w-3xl mx-auto mb-4'>
                 Everything you need to experience cities like a local
+              </p>
+              <p className='text-muted max-w-3xl mx-auto'>
+                The primary data entity is <strong className='text-primary'>City Recommendations</strong> - including 
+                attraction details, local experiences, food recommendations, shops, hikes, user ratings, photos, 
+                location data, and associated metadata (tags, difficulty levels, price ranges, etc.).
               </p>
             </div>
 
-            <div className='grid lg:grid-cols-2 gap-12 max-w-7xl mx-auto'>
-              {mainFeatures.map((feature, index) => (
-                <Card
-                  key={index}
-                  className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-glass hover:shadow-lg transition-all duration-300'
-                >
-                  <CardContent className='p-8'>
-                    <div className='flex items-start gap-4 mb-6'>
-                      <div className='text-4xl'>{feature.icon}</div>
-                      <div>
-                        <h3 className='text-2xl font-semibold text-primary mb-2'>
-                          {feature.title}
-                        </h3>
-                        <p className='text-muted text-lg leading-relaxed'>
-                          {feature.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className='space-y-3'>
-                      {feature.details.map((detail, detailIndex) => (
-                        <div
-                          key={detailIndex}
-                          className='flex items-start gap-3'
-                        >
-                          <div className='w-2 h-2 bg-pulse rounded-full mt-2 flex-shrink-0'></div>
-                          <p className='text-muted'>{detail}</p>
+            <div className='grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto'>
+              {mainFeatures.map((feature, index) => {
+                const IconComponent = feature.icon;
+                
+                return (
+                  <Card
+                    key={index}
+                    className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300'
+                  >
+                    <CardContent className='p-8'>
+                      <div className='flex items-start gap-4 mb-6'>
+                        <div className={`p-3 rounded-xl ${feature.bgColor} flex-shrink-0 transition-transform duration-300 hover:scale-110`}>
+                          <IconComponent className={`w-8 h-8 ${feature.color}`} />
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <div className='flex-1'>
+                          <h3 className='text-2xl font-semibold text-primary mb-2'>
+                            {feature.title}
+                          </h3>
+                          <p className='text-muted text-lg leading-relaxed'>
+                            {feature.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className='space-y-3'>
+                        {feature.details.map((detail, detailIndex) => (
+                          <div
+                            key={detailIndex}
+                            className='flex items-start gap-3'
+                          >
+                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${feature.color.replace('text-', 'bg-')}`}></div>
+                            <p className='text-muted'>{detail}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -184,30 +184,97 @@ const FeaturesPage = () => {
           <div className='container mx-auto'>
             <div className='text-center mb-16'>
               <h2 className='text-3xl lg:text-4xl font-bold text-primary mb-6'>
-                And Much More
+                More Features
               </h2>
               <p className='text-muted text-lg max-w-2xl mx-auto'>
-                Additional features designed to enhance every aspect of your
-                travel experience
+                Additional features that enhance your travel experience
               </p>
             </div>
 
-            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto'>
-              {additionalFeatures.map((feature, index) => (
-                <Card
-                  key={index}
-                  className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-glass hover:shadow-lg transition-shadow duration-300'
-                >
-                  <CardContent className='p-6'>
-                    <h3 className='text-lg font-semibold text-primary mb-3'>
-                      {feature.title}
-                    </h3>
-                    <p className='text-muted leading-relaxed'>
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto'>
+              {[
+                {
+                  icon: Heart,
+                  title: 'Like & Save',
+                  description: 'Like recommendations and save them to your profile for easy access later.',
+                  color: 'text-red-500',
+                },
+                {
+                  icon: Bookmark,
+                  title: 'Personalized Feed',
+                  description: 'Content based on your preferences, location-based recommendations, friends\' activity updates, trending content in your areas of interest, and seasonal content.',
+                  color: 'text-blue-500',
+                },
+                {
+                  icon: TrendingUp,
+                  title: 'Discovery Feeds',
+                  description: 'Top places this month, popular content in current country, featured destinations, and category-specific feeds (food, adventure, etc.).',
+                  color: 'text-yellow-500',
+                },
+                {
+                  icon: Filter,
+                  title: 'Smart Filtering',
+                  description: 'Filter recommendations by multiple criteria simultaneously.',
+                  color: 'text-green-500',
+                },
+                {
+                  icon: Calendar,
+                  title: 'Travel Planning',
+                  description: 'Plan your trips and track your travel history with dates.',
+                  color: 'text-purple-500',
+                },
+                {
+                  icon: Shield,
+                  title: 'Privacy Controls',
+                  description: 'Control your profile visibility and content sharing preferences.',
+                  color: 'text-pulse',
+                },
+                {
+                  icon: Lock,
+                  title: 'Secure Authentication',
+                  description: 'Email validation, password strength checker, secure storage with bcrypt, and optional Google login.',
+                  color: 'text-orange-500',
+                },
+                {
+                  icon: Star,
+                  title: 'Rating & Reviews',
+                  description: 'Rate recommendations (1-5 stars) and provide detailed reviews to help other travelers.',
+                  color: 'text-yellow-500',
+                },
+                {
+                  icon: Bell,
+                  title: 'Real-time Notifications',
+                  description: 'Get alerts for connection requests, likes, achievement unlocks, and system announcements.',
+                  color: 'text-pink-500',
+                },
+                {
+                  icon: Image,
+                  title: 'Photo Management',
+                  description: 'Upload multiple photos per recommendation with captions, descriptions, and image optimization.',
+                  color: 'text-cyan-500',
+                },
+              ].map((feature, index) => {
+                const IconComponent = feature.icon;
+                
+                return (
+                  <Card
+                    key={index}
+                    className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]'
+                  >
+                    <CardContent className='p-6'>
+                      <div className={`inline-flex p-3 rounded-lg ${feature.color.replace('text-', 'bg-').replace('-500', '-500/10')} mb-4`}>
+                        <IconComponent className={`w-6 h-6 ${feature.color}`} />
+                      </div>
+                      <h3 className='text-lg font-semibold text-primary mb-2'>
+                        {feature.title}
+                      </h3>
+                      <p className='text-muted leading-relaxed text-sm'>
+                        {feature.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -230,44 +297,46 @@ const FeaturesPage = () => {
                   step: '1',
                   title: 'Create Your Profile',
                   description:
-                    'Tell us about your travel style, interests, and the type of experiences you seek.',
+                    'Set up your profile with travel preferences, interests, and social links.',
                 },
                 {
                   step: '2',
-                  title: 'Connect with Locals',
+                  title: 'Share Recommendations',
                   description:
-                    'Browse verified local profiles and connect with people who share your interests.',
+                    'Create and share city recommendations for attractions, food, shops, and hikes.',
                 },
                 {
                   step: '3',
-                  title: 'Get Recommendations',
+                  title: 'Connect & Discover',
                   description:
-                    'Receive personalized suggestions for restaurants, activities, and hidden gems.',
+                    'Find travel buddies, search recommendations, and discover new places.',
                 },
                 {
                   step: '4',
-                  title: 'Explore & Share',
+                  title: 'Track & Achieve',
                   description:
-                    'Experience the city authentically and share your discoveries with the community.',
+                    'Track your travel history and earn achievement badges for milestones.',
                 },
-              ].map((step, index) => (
-                <Card
-                  key={index}
-                  className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-glass text-center'
-                >
-                  <CardContent className='p-6'>
-                    <div className='w-12 h-12 rounded-full bg-pulse text-pulse-fg flex items-center justify-center mx-auto mb-4 text-xl font-bold'>
-                      {step.step}
-                    </div>
-                    <h3 className='text-lg font-semibold text-primary mb-3'>
-                      {step.title}
-                    </h3>
-                    <p className='text-muted leading-relaxed'>
-                      {step.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+              ].map((step, index) => {
+                return (
+                  <Card
+                    key={index}
+                    className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl text-center transition-all duration-300 hover:scale-[1.02]'
+                  >
+                    <CardContent className='p-6'>
+                      <div className='w-16 h-16 rounded-full bg-pulse text-white flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg transition-transform duration-300 hover:scale-110'>
+                        {step.step}
+                      </div>
+                      <h3 className='text-lg font-semibold text-primary mb-3'>
+                        {step.title}
+                      </h3>
+                      <p className='text-muted leading-relaxed text-sm'>
+                        {step.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>

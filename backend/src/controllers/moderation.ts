@@ -70,23 +70,29 @@ export const getContentReports = async (req: Request, res: Response) => {
         up.profile_photo_url as reporter_photo,
         m.username as reviewer_username,
         CASE 
-            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT title FROM recommendations WHERE id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'profile' THEN (SELECT username FROM users WHERE id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'trip' THEN (SELECT title FROM trips WHERE id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT r.title FROM recommendations r WHERE r.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_user.username FROM users reported_user WHERE reported_user.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'trip' THEN (SELECT t.title FROM trips t WHERE t.id = cr.reported_content_id)
             ELSE 'Unknown'
         END as content_title,
         CASE 
-            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT description FROM recommendations WHERE id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'profile' THEN (SELECT bio FROM user_profiles WHERE user_id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'trip' THEN (SELECT description FROM trips WHERE id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT r.description FROM recommendations r WHERE r.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_user.bio FROM users reported_user WHERE reported_user.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'trip' THEN (SELECT t.description FROM trips t WHERE t.id = cr.reported_content_id)
             ELSE NULL
         END as content_description,
         CASE 
-            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT cover_photo FROM recommendations WHERE id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'profile' THEN (SELECT profile_photo_url FROM user_profiles WHERE user_id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT rp.photo_url FROM recommendation_photos rp WHERE rp.recommendation_id = cr.reported_content_id ORDER BY rp.is_primary DESC, rp.created_at ASC LIMIT 1)
+            WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_up.profile_photo_url FROM user_profiles reported_up WHERE reported_up.user_id = cr.reported_content_id)
             WHEN cr.reported_content_type = 'trip' THEN NULL
             ELSE NULL
-        END as content_image
+        END as content_image,
+        CASE 
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT owner_user.username FROM recommendations r JOIN users owner_user ON r.user_id = owner_user.id WHERE r.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'trip' THEN (SELECT owner_user.username FROM trips t JOIN users owner_user ON t.user_id = owner_user.id WHERE t.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_user.username FROM users reported_user WHERE reported_user.id = cr.reported_content_id)
+            ELSE NULL
+        END as content_owner_username
         FROM content_reports cr
         JOIN users u ON cr.reporter_id = u.id
         LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -142,21 +148,31 @@ export const updateReportStatus = async (req: Request, res: Response) => {
         const { reportId } = req.params;
         const { status, notes } = req.body;
 
-        if (!['under_review', 'resolved', 'dismissed'].includes(status)) {
+        if (!['pending', 'under_review', 'resolved', 'dismissed'].includes(status)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid status'
             });
         }
 
-        const updateQuery = `
-        UPDATE content_reports
-        SET status = $1, reviewed_by = $2, reviewed_at = NOW()
-        WHERE id = $3
-      RETURNING *
-    `;
+        // If setting to pending, clear reviewed_by and reviewed_at to indicate it needs review again
+        const updateQuery = status === 'pending'
+            ? `
+                UPDATE content_reports
+                SET status = $1, reviewed_by = NULL, reviewed_at = NULL
+                WHERE id = $2
+                RETURNING *
+            `
+            : `
+                UPDATE content_reports
+                SET status = $1, reviewed_by = $2, reviewed_at = NOW()
+                WHERE id = $3
+                RETURNING *
+            `;
 
-        const result = await pool.query(updateQuery, [status, moderatorId, reportId]);
+        const result = status === 'pending'
+            ? await pool.query(updateQuery, [status, reportId])
+            : await pool.query(updateQuery, [status, moderatorId, reportId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -165,12 +181,21 @@ export const updateReportStatus = async (req: Request, res: Response) => {
             });
         }
 
-        // Log moderator action
-        await pool.query(
-            `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
-        VALUES ($1, $2, $3, $4, $5, $6)`,
-            [moderatorId, 'report_status_update', 'content_report', reportId, `Status changed to ${status}`, notes || null]
-        );
+        // Log moderator action (skip if reopening to pending)
+        if (status !== 'pending') {
+            await pool.query(
+                `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
+            VALUES ($1, $2, $3, $4, $5, $6)`,
+                [moderatorId, 'report_status_update', 'content_report', reportId, `Status changed to ${status}`, notes || null]
+            );
+        } else {
+            // Log as report reopened
+            await pool.query(
+                `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
+            VALUES ($1, $2, $3, $4, $5, $6)`,
+                [moderatorId, 'report_status_update', 'content_report', reportId, 'Report reopened for review', notes || null]
+            );
+        }
 
         res.json({
             success: true,
@@ -578,7 +603,26 @@ export const getModeratorActions = async (req: Request, res: Response) => {
         SELECT 
         ma.*,
         u.username as moderator_username,
-        up.profile_photo_url as moderator_photo
+        up.profile_photo_url as moderator_photo,
+        CASE 
+            WHEN ma.target_type = 'recommendation' THEN (SELECT r.title FROM recommendations r WHERE r.id = ma.target_id)
+            WHEN ma.target_type = 'trip' THEN (SELECT t.title FROM trips t WHERE t.id = ma.target_id)
+            WHEN ma.target_type = 'user' THEN (SELECT target_user.username FROM users target_user WHERE target_user.id = ma.target_id)
+            WHEN ma.target_type = 'content_report' THEN (SELECT CONCAT('Report #', cr.id::text, ' - ', cr.report_reason) FROM content_reports cr WHERE cr.id = ma.target_id)
+            ELSE NULL
+        END as target_title,
+        CASE 
+            WHEN ma.target_type = 'recommendation' THEN (SELECT r.user_id FROM recommendations r WHERE r.id = ma.target_id)
+            WHEN ma.target_type = 'trip' THEN (SELECT t.user_id FROM trips t WHERE t.id = ma.target_id)
+            WHEN ma.target_type = 'user' THEN ma.target_id
+            ELSE NULL
+        END as affected_user_id,
+        CASE 
+            WHEN ma.target_type = 'recommendation' THEN (SELECT affected_user.username FROM recommendations r JOIN users affected_user ON r.user_id = affected_user.id WHERE r.id = ma.target_id)
+            WHEN ma.target_type = 'trip' THEN (SELECT affected_user.username FROM trips t JOIN users affected_user ON t.user_id = affected_user.id WHERE t.id = ma.target_id)
+            WHEN ma.target_type = 'user' THEN (SELECT target_user.username FROM users target_user WHERE target_user.id = ma.target_id)
+            ELSE NULL
+        END as affected_username
         FROM moderator_actions ma
         JOIN users u ON ma.moderator_id = u.id
         LEFT JOIN user_profiles up ON u.id = up.user_id
