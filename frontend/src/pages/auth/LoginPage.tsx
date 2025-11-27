@@ -280,7 +280,7 @@ const LoginPage = () => {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 rounded border-subtle bg-gray-700 text-pulse focus:ring-2 focus:ring-pulse focus:ring-offset-2 focus:ring-offset-base transition-colors cursor-pointer"
+              className="w-4 h-4 min-w-[1rem] min-h-[1rem] max-w-[1rem] max-h-[1rem] flex-shrink-0 rounded border-subtle bg-gray-700 text-pulse focus:ring-2 focus:ring-pulse focus:ring-offset-2 focus:ring-offset-base transition-colors cursor-pointer"
               disabled={isLoading}
               aria-label="Remember me on this device"
             />

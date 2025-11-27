@@ -153,8 +153,8 @@ describe('Account Reactivation Tests', () => {
             // Set deactivation to exactly 30 days ago
             await query(
                 `UPDATE users 
-                 SET deactivated_at = NOW() - INTERVAL '30 days' 
-                 WHERE id = $1`,
+                    SET deactivated_at = NOW() - INTERVAL '30 days' 
+                    WHERE id = $1`,
                 [testUser.id]
             );
 
@@ -182,9 +182,9 @@ describe('Account Reactivation Tests', () => {
             // Set deactivation to 31 days ago
             await query(
                 `UPDATE users 
-                 SET account_status = 'pending_deletion',
-                     deactivated_at = NOW() - INTERVAL '31 days' 
-                 WHERE id = $1`,
+                    SET account_status = 'pending_deletion',
+                    deactivated_at = NOW() - INTERVAL '31 days' 
+                    WHERE id = $1`,
                 [testUser.id]
             );
 
@@ -213,9 +213,9 @@ describe('Account Reactivation Tests', () => {
             // Set deactivation to 60 days ago
             await query(
                 `UPDATE users 
-                 SET account_status = 'pending_deletion',
-                     deactivated_at = NOW() - INTERVAL '60 days' 
-                 WHERE id = $1`,
+                    SET account_status = 'pending_deletion',
+                    deactivated_at = NOW() - INTERVAL '60 days' 
+                    WHERE id = $1`,
                 [testUser.id]
             );
 
@@ -264,9 +264,9 @@ describe('Account Reactivation Tests', () => {
             // Deactivate the account
             await query(
                 `UPDATE users 
-                 SET account_status = 'pending_deletion', 
-                     deactivated_at = NOW() - INTERVAL '10 days'
-                 WHERE id = $1`,
+                    SET account_status = 'pending_deletion', 
+                    deactivated_at = NOW() - INTERVAL '10 days'
+                    WHERE id = $1`,
                 [googleUser.id]
             );
 
@@ -296,9 +296,9 @@ describe('Account Reactivation Tests', () => {
             // Set deactivation to 31 days ago
             await query(
                 `UPDATE users 
-                 SET account_status = 'pending_deletion',
-                     deactivated_at = NOW() - INTERVAL '31 days'
-                 WHERE id = $1`,
+                    SET account_status = 'pending_deletion',
+                    deactivated_at = NOW() - INTERVAL '31 days'
+                    WHERE id = $1`,
                 [googleUser.id]
             );
 
@@ -323,9 +323,9 @@ describe('Account Reactivation Tests', () => {
             // Suspend the account (without deactivated_at)
             await query(
                 `UPDATE users 
-                 SET account_status = 'suspended', 
-                     deactivated_at = NULL 
-                 WHERE id = $1`,
+                    SET account_status = 'suspended', 
+                    deactivated_at = NULL 
+                    WHERE id = $1`,
                 [testUser.id]
             );
 
@@ -353,9 +353,9 @@ describe('Account Reactivation Tests', () => {
             // Ban the account
             await query(
                 `UPDATE users 
-                 SET account_status = 'banned', 
-                     deactivated_at = NULL 
-                 WHERE id = $1`,
+                    SET account_status = 'banned', 
+                    deactivated_at = NULL 
+                    WHERE id = $1`,
                 [testUser.id]
             );
 

@@ -6,11 +6,31 @@
 @media (max-width: 768px) {
   button,
   a,
-  input[type="checkbox"],
-  input[type="radio"],
   select {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Keep checkboxes and radio buttons small, but ensure their labels provide touch target */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    max-width: 1rem;
+    max-height: 1rem;
+    flex-shrink: 0;
+  }
+
+  /* Make the label the touch target for checkboxes/radios */
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
   }
 
   /* Increase touch targets for interactive elements */

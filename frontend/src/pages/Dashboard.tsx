@@ -8,10 +8,12 @@ import { useFeed } from '../hooks/useFeed';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
 import { TripFeedCard } from '../components/trips/TripFeedCard';
+import { TravelStyleCard } from '../components/dashboard/TravelStyleCard';
+import { InterestTabs } from '../components/dashboard/InterestTabs';
 import { getUserStats, getActiveBuddies } from '../services/feedService';
 import type { UserStats, ActiveBuddy } from '../services/feedService';
 import type { Trip } from '../types/trip';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 // Dashboard Components
 const QuickActionsCard = () => {
@@ -92,53 +94,13 @@ const YourStatsCard = ({ stats }: { stats: UserStats | null }) => {
     );
 };
 
-const InterestsCard = ({ 
-    selectedInterest, 
-    onSelectInterest 
-}: { 
-    selectedInterest: string | null;
-    onSelectInterest: (interest: string | null) => void;
-}) => {
-    const interests = ["Coffee", "Food", "Hiking", "Places", "Culture"];
-
-    return (
-        <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-primary">Interests</h3>
-                {selectedInterest && (
-                    <button
-                        onClick={() => onSelectInterest(null)}
-                        className="text-xs text-pulse hover:text-pulse/80"
-                    >
-                        Clear
-                    </button>
-                )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-                {interests.map((interest, index) => (
-                    <span
-                        key={index}
-                        onClick={() => onSelectInterest(interest === selectedInterest ? null : interest)}
-                        className={`px-3 py-1 rounded-full text-sm border cursor-pointer transition-colors ${
-                            interest === selectedInterest
-                                ? 'bg-pulse text-white border-pulse'
-                                : 'bg-white/10 text-primary border-white/20 hover:bg-white/20'
-                        }`}
-                    >
-                        {interest}
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-};
 
 const ActiveBuddiesCard = ({ buddies }: { buddies: ActiveBuddy[] }) => {
     const navigate = useNavigate();
     
     if (!buddies || buddies.length === 0) {
         return (
-            <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
+            <div className="bg-surface-glass border border-subtle rounded-2xl p-4 space-y-3 overflow-hidden">
                 <h3 className="font-semibold text-primary">Active Buddies</h3>
                 <div className="text-center py-4">
                     <p className="text-sm text-muted mb-3">No buddies yet</p>
@@ -165,7 +127,7 @@ const ActiveBuddiesCard = ({ buddies }: { buddies: ActiveBuddy[] }) => {
     };
 
     return (
-        <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 space-y-3">
+        <div className="bg-surface-glass border border-subtle rounded-2xl p-4 space-y-3 overflow-hidden">
             <h3 className="font-semibold text-primary">Active Buddies</h3>
             <div className="space-y-3">
                 {buddies.slice(0, 4).map((buddy) => (
@@ -351,23 +313,32 @@ export default function Dashboard() {
             {/* Mobile Layout */}
             <div className="lg:hidden">
                 <main id="main-content" role="main" className="pb-20 pt-16">
-                    <div className="space-y-6 p-4">
-                        <QuickActionsCard />
-                        <InterestsCard 
-                            selectedInterest={selectedInterest}
-                            onSelectInterest={setSelectedInterest}
-                        />
+                    <div className="space-y-4 p-4">
+                        {/* Sidebar Cards */}
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <QuickActionsCard />
+                            <TravelStyleCard />
+                        </div>
 
-                        <section>
-                            <div className="flex items-center justify-between mb-4">
+                        {/* Feed Section */}
+                        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+                            {/* Interest Tabs */}
+                            <InterestTabs 
+                                selectedInterest={selectedInterest}
+                                onSelectInterest={setSelectedInterest}
+                            />
+                            
+                            {/* Feed Header */}
+                            <div className="flex items-center justify-between">
                                 <h2 className="text-lg font-semibold text-primary">
-                                    {selectedInterest ? `${selectedInterest} Recommendations` : 'Your Feed'}
+                                    {selectedInterest ? `${selectedInterest} Feed` : 'Your Feed'}
                                 </h2>
                                 <button 
                                     onClick={refresh}
-                                    className="text-sm text-pulse hover:text-pulse/80"
+                                    className="flex items-center gap-1.5 text-sm text-pulse hover:text-pulse/80 transition-all hover:scale-105 active:scale-95"
                                 >
-                                    Refresh
+                                    <RefreshCw size={14} className={feedLoading ? 'animate-spin' : ''} />
+                                    <span>Refresh</span>
                                 </button>
                             </div>
                             <div className="space-y-4">
@@ -427,28 +398,31 @@ export default function Dashboard() {
                 <main id="main-content" role="main" className="pt-16">
                     <div className="grid grid-cols-[280px_1fr_320px] gap-6 container mx-auto px-4 py-6">
                         {/* Left Sidebar */}
-                        <div className="space-y-6 sticky top-20 h-fit">
-                            <QuickActionsCard />
+                        <div className="space-y-6 sticky top-5 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20 animate-in fade-in slide-in-from-left-8 duration-500">
                             <YourStatsCard stats={stats} />
-                            <InterestsCard 
-                                selectedInterest={selectedInterest}
-                                onSelectInterest={setSelectedInterest}
-                            />
+                            <TravelStyleCard />
                         </div>
 
                         {/* Center Feed */}
-                        <div className="space-y-6">
-                            <section>
-                                <div className="flex items-center justify-between mb-6">
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500 delay-150">
+                            <section className="space-y-4">
+                                {/* Interest Tabs */}
+                                <InterestTabs 
+                                    selectedInterest={selectedInterest}
+                                    onSelectInterest={setSelectedInterest}
+                                />
+                                
+                                {/* Feed Header */}
+                                <div className="flex items-center justify-between">
                                     <h2 className="text-xl font-semibold text-primary">
-                                        {selectedInterest ? `${selectedInterest} Recommendations` : 'Your Feed'}
+                                        {selectedInterest ? `${selectedInterest} Feed` : 'Your Feed'}
                                     </h2>
                                     <button 
                                         onClick={refresh}
-                                        className="text-sm text-pulse hover:text-pulse/80 flex items-center gap-2"
+                                        className="flex items-center gap-2 text-sm text-pulse hover:text-pulse/80 transition-all hover:scale-105 active:scale-95"
                                     >
-                                        <MapPin size={16} />
-                                        Refresh
+                                        <RefreshCw size={16} className={feedLoading ? 'animate-spin' : ''} />
+                                        <span>Refresh</span>
                                     </button>
                                 </div>
                                 
@@ -513,7 +487,8 @@ export default function Dashboard() {
                         </div>
 
                         {/* Right Sidebar */}
-                        <div className="space-y-6 sticky top-20 h-fit">
+                        <div className="space-y-6 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20 animate-in fade-in slide-in-from-right-8 duration-500 delay-300">
+                            <QuickActionsCard />
                             <ActiveBuddiesCard buddies={buddies} />
                             <QuickLinksCard />
                         </div>

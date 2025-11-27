@@ -114,12 +114,12 @@ export const TravelHistoryTimeline: React.FC<TravelHistoryTimelineProps> = ({ us
             onClick={() => navigate(`/recommendations/${item.id}`)}
           >
             {/* Timeline Dot */}
-            <div className="absolute left-[18px] top-6 w-4 h-4 bg-pulse rounded-full border-4 border-base shadow-lg hidden md:block group-hover:scale-125 transition-transform duration-200">
+            <div className="absolute left-[18px] top-6 w-4 h-4 bg-pulse rounded-full shadow-lg hidden md:block group-hover:scale-125 transition-transform duration-200">
               <div className="absolute inset-0 bg-pulse rounded-full animate-ping opacity-75" />
             </div>
 
             {/* Content Card */}
-            <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-xl p-6 hover:bg-white/5 hover:border-pulse/30 transition-all duration-200 shadow-lg">
+            <div className="bg-surface-glass backdrop-blur-glass rounded-xl p-6 hover:bg-white/5 transition-all duration-200 shadow-lg">
               {/* Date Badge */}
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="w-4 h-4 text-pulse" />
@@ -195,8 +195,6 @@ export const TravelHistoryTimeline: React.FC<TravelHistoryTimelineProps> = ({ us
                 </div>
               </div>
 
-              {/* Hover Indicator */}
-              <div className="absolute inset-0 border-2 border-pulse/0 group-hover:border-pulse/50 rounded-xl pointer-events-none transition-all duration-200" />
             </div>
 
             {/* Connection Line to Next Item */}
@@ -209,10 +207,10 @@ export const TravelHistoryTimeline: React.FC<TravelHistoryTimelineProps> = ({ us
 
       {/* Timeline End */}
       <div className="relative pl-0 md:pl-16 mt-8">
-        <div className="absolute left-[14px] top-0 w-6 h-6 bg-gradient-to-br from-pulse to-orange-500 rounded-full border-4 border-base shadow-lg hidden md:flex items-center justify-center">
+        <div className="absolute left-[14px] top-0 w-6 h-6 bg-gradient-to-br from-pulse to-orange-500 rounded-full shadow-lg hidden md:flex items-center justify-center">
           <div className="w-2 h-2 bg-white rounded-full" />
         </div>
-        <div className="bg-surface-glass/50 backdrop-blur-glass border border-subtle rounded-xl p-4 text-center">
+        <div className="bg-surface-glass/50 backdrop-blur-glass rounded-xl p-4 text-center">
           <p className="text-sm text-text-secondary">
             {history.length} {history.length === 1 ? 'destination' : 'destinations'} explored
           </p>

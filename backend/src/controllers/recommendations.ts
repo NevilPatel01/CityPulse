@@ -13,6 +13,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
             category_id,
             city_id,
             user_id,
+            username,
             search
         } = req.query;
 
@@ -38,6 +39,13 @@ export const getRecommendations = async (req: Request, res: Response) => {
         if (user_id) {
             whereConditions.push(`r.user_id = $${paramIndex}`);
             queryParams.push(user_id);
+            paramIndex++;
+        }
+
+        // Filter by username - for Travel History timeline
+        if (username) {
+            whereConditions.push(`u.username = $${paramIndex}`);
+            queryParams.push(username);
             paramIndex++;
         }
 
@@ -97,6 +105,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
         const countQuery = `
             SELECT COUNT(*) as total
             FROM recommendations r
+            LEFT JOIN users u ON r.user_id = u.id
             LEFT JOIN recommendation_cities rec_cities ON r.id = rec_cities.recommendation_id
             WHERE ${whereClause}
         `;

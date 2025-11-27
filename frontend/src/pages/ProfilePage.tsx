@@ -17,6 +17,11 @@ import { ImageCropper } from '../components/common/ImageCropper';
 import { PrivateProfileView } from '../components/profile/PrivateProfileView';
 import type { UserAchievement } from '../types/achievement';
 import type { FeedPost } from '../services/feedService';
+import { 
+  Camera, MapPin, Home, Instagram, Facebook, Mail, Globe, 
+  ChevronDown, ChevronUp, Users, Heart, 
+  Calendar, Shield, MessageCircle, UserPlus, Check
+} from 'lucide-react';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -24,12 +29,10 @@ export default function ProfilePage() {
   const [searchParams] = useSearchParams();
   const { user: currentUser } = useAuth();
   
-  // Additional auth guard for extra protection
   useAuthGuard({ requireAuth: true });
   
   const { profile, stats, loading, error, refetch } = useProfile(username || '');
   
-  // Read tab from URL params on initial load
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(() => {
     if (tabParam !== null) {
@@ -40,29 +43,20 @@ export default function ProfilePage() {
     }
     return 0;
   });
-  const [localImages, setLocalImages] = useState<{
-    profile?: string;
-    cover?: string;
-  }>({});
+  
+  const [localImages, setLocalImages] = useState<{ profile?: string; cover?: string; }>({});
   const [recommendationCount, setRecommendationCount] = useState<number>(0);
   const [newlyUnlockedAchievements, setNewlyUnlockedAchievements] = useState<UserAchievement[]>([]);
   const [currentAchievementIndex, setCurrentAchievementIndex] = useState(0);
-  
-  // Saved recommendations state
   const [savedRecommendations, setSavedRecommendations] = useState<FeedPost[]>([]);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savedPage, setSavedPage] = useState(1);
   const [hasMoreSaved, setHasMoreSaved] = useState(true);
-
-  // Image cropping state
-  const [croppingImage, setCroppingImage] = useState<{
-    src: string;
-    type: 'profile' | 'cover';
-  } | null>(null);
+  const [croppingImage, setCroppingImage] = useState<{ src: string; type: 'profile' | 'cover'; } | null>(null);
+  const [showAllCities, setShowAllCities] = useState(false);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
 
-  // Reset activeTab if it's out of bounds (e.g., when switching from own profile to other's)
   useEffect(() => {
     const maxTab = isOwnProfile ? 3 : 2;
     if (activeTab > maxTab) {
@@ -70,22 +64,25 @@ export default function ProfilePage() {
     }
   }, [isOwnProfile, activeTab]);
 
-  // Helper function to get full image URL with cache-busting
   const getFullImageUrl = (imageUrl: string | undefined): string | undefined => {
     if (!imageUrl) return undefined;
     if (imageUrl.startsWith('http') || imageUrl.startsWith('blob:')) return imageUrl;
     
-    // Get base URL from environment or window location
     const baseUrl = import.meta.env.VITE_API_URL || 
                     (typeof window !== 'undefined' && window.location.origin) || 
                     'http://localhost:5001';
     
-    // Add cache-busting timestamp to force reload on updates
     const cacheBust = `?t=${Date.now()}`;
     return `${baseUrl}${imageUrl}${cacheBust}`;
   };
 
-  // Fetch recommendation count
+  // Format member since date
+  const formatMemberSince = (dateString?: string) => {
+    if (!dateString) return 'Member';
+    const date = new Date(dateString);
+    return `Member since ${date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+  };
+
   useEffect(() => {
     const fetchRecommendationCount = async () => {
       try {
@@ -94,7 +91,6 @@ export default function ProfilePage() {
         if (data && data.success) {
           setRecommendationCount(data.data.pagination?.total || 0);
         } else {
-          console.warn('Failed to fetch recommendation count');
           setRecommendationCount(0);
         }
       } catch (error) {
@@ -108,7 +104,6 @@ export default function ProfilePage() {
     }
   }, [profile?.id]);
 
-  // Fetch saved recommendations when Saved tab is active
   useEffect(() => {
     const fetchSavedRecommendations = async () => {
       if (!isOwnProfile || activeTab !== 3) return;
@@ -119,11 +114,7 @@ export default function ProfilePage() {
           success: boolean;
           data: {
             posts: FeedPost[];
-            pagination: {
-              currentPage: number;
-              totalPages: number;
-              totalItems: number;
-            };
+            pagination: { currentPage: number; totalPages: number; totalItems: number; };
           };
         };
         
@@ -145,28 +136,21 @@ export default function ProfilePage() {
     fetchSavedRecommendations();
   }, [isOwnProfile, activeTab, savedPage]);
 
-  // Check for newly unlocked achievements
   useEffect(() => {
     const checkNewAchievements = async () => {
       if (!isOwnProfile || !profile?.id) return;
 
       try {
-        // Get user's achievements
         const response = await apiRequest<{
           success: boolean;
-          data: {
-            completed: UserAchievement[];
-            inProgress: UserAchievement[];
-          };
+          data: { completed: UserAchievement[]; inProgress: UserAchievement[]; };
         }>(`/api/achievements/user/${username}`);
 
         if (response.success && response.data.completed) {
-          // Get previously shown achievements from localStorage
           const shownAchievements = JSON.parse(
             localStorage.getItem(`shown_achievements_${profile.id}`) || '[]'
           );
 
-          // Find newly unlocked achievements
           const newAchievements = response.data.completed.filter(
             (achievement) => !shownAchievements.includes(achievement.id)
           );
@@ -175,7 +159,6 @@ export default function ProfilePage() {
             setNewlyUnlockedAchievements(newAchievements);
             setCurrentAchievementIndex(0);
 
-            // Mark them as shown
             const updatedShown = [
               ...shownAchievements,
               ...newAchievements.map((a) => a.id),
@@ -194,7 +177,6 @@ export default function ProfilePage() {
     checkNewAchievements();
   }, [isOwnProfile, profile?.id, username]);
 
-  // Handle closing achievement modal and showing next one
   const handleCloseAchievementModal = () => {
     if (currentAchievementIndex < newlyUnlockedAchievements.length - 1) {
       setCurrentAchievementIndex(currentAchievementIndex + 1);
@@ -203,8 +185,6 @@ export default function ProfilePage() {
       setCurrentAchievementIndex(0);
     }
   };
-
-
 
   const handleEditProfile = () => {
     navigate('/profile/edit');
@@ -221,7 +201,6 @@ export default function ProfilePage() {
         });
       });
       reader.readAsDataURL(file);
-      // Reset input value so same file can be selected again
       e.target.value = '';
     }
   };
@@ -232,86 +211,46 @@ export default function ProfilePage() {
     try {
       const { type } = croppingImage;
       
-      // Create a preview URL for immediate display
       const previewUrl = URL.createObjectURL(croppedBlob);
       
-      // Store locally for immediate display
       setLocalImages(prev => ({
         ...prev,
         [type]: previewUrl
       }));
       
-      // Convert blob to file
-      const file = new File([croppedBlob], `cropped-${type}.jpg`, { type: 'image/jpeg' });
-
-      // Close cropper
+      const file = new File([croppedBlob], `${type}.jpg`, { type: 'image/jpeg' });
+      
+      await profileService.uploadPhoto(file, type);
+      await refetch();
+      
       setCroppingImage(null);
-      
-      // Upload to server and get permanent URL
-      const response = await profileService.uploadPhoto(file, type);
-      
-      if (response.success) {
-        // Update the profile data with the new image URL
-        console.log(`${type} image uploaded successfully:`, response.data.imageUrl);
-        
-        // Refresh profile data to get the updated URLs
-        await refetch();
-        
-        // Clean up local preview URL after a small delay to ensure new image is loaded
-        setTimeout(() => {
-          URL.revokeObjectURL(previewUrl);
-          setLocalImages(prev => ({
-            ...prev,
-            [type]: undefined
-          }));
-        }, 500);
-      }
-      
     } catch (error) {
-      console.error('Upload error:', error);
-      // Show user-friendly error message
-      alert(`Failed to upload ${croppingImage.type} image. Please try again.`);
-      // Remove the preview on error
-      if (croppingImage) {
-        setLocalImages(prev => ({
-          ...prev,
-          [croppingImage.type]: undefined
-        }));
-      }
+      console.error(`Error uploading ${croppingImage.type} photo:`, error);
+      setLocalImages(prev => {
+        const updated = { ...prev };
+        delete updated[croppingImage.type];
+        return updated;
+      });
     }
+  };
+
+  const handlePostUpdate = (postId: number, updates: Partial<FeedPost>) => {
+    setSavedRecommendations(prev =>
+      prev.map(post => post.id === postId ? { ...post, ...updates } : post)
+    );
+  };
+
+  const handlePostRemove = (postId: number) => {
+    setSavedRecommendations(prev => prev.filter(post => post.id !== postId));
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-base">
         <Header />
-        <main className="pt-16 px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-8">
-              <div className="flex items-center space-x-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pulse"></div>
-                <span className="text-primary">Loading profile...</span>
-              </div>
-            </div>
-          </div>
+        <main className="pt-16 pb-20 flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pulse"></div>
         </main>
-      </div>
-    );
-  }
-
-  // Show private profile view if profile is private and not a buddy
-  if (profile?.isPrivate) {
-    return (
-      <div className="min-h-screen bg-base">
-        <Header />
-        <PrivateProfileView profile={{
-          id: profile.id,
-          username: profile.username,
-          fullName: profile.fullName,
-          bio: profile.bio,
-          profilePhotoUrl: profile.profilePhotoUrl,
-          buddyRequestStatus: profile.buddyRequestStatus || 'none',
-        }} />
         <BottomNavigation />
       </div>
     );
@@ -321,239 +260,126 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-base">
         <Header />
-        <main className="pt-16 px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-8 text-center">
-              <h1 className="text-2xl font-bold text-primary mb-4">Profile Not Found</h1>
-              <p className="text-muted mb-6">
-                {error || 'The profile you are looking for does not exist.'}
-              </p>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="bg-pulse text-white px-6 py-2 rounded-lg hover:opacity-90"
-              >
-                Back to Dashboard
-              </button>
-            </div>
+        <main className="pt-16 pb-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-primary mb-2">Profile Not Found</h2>
+            <p className="text-muted">The profile you're looking for doesn't exist.</p>
           </div>
         </main>
+        <BottomNavigation />
       </div>
     );
   }
 
-  const tabs = isOwnProfile ? [
-    'My Recommendations',
-    'Travel History', 
-    'Achievements',
-    'Saved'
-  ] : [
-    'My Recommendations',
-    'Travel History', 
-    'Achievements'
-  ];
+  if (profile.profileVisibility === 'private' && !isOwnProfile) {
+    return <PrivateProfileView profile={{
+      ...profile,
+      buddyRequestStatus: profile.buddyRequestStatus || 'none'
+    }} />;
+  }
+
+  // Tabs with short labels for mobile
+  const tabsData = isOwnProfile
+    ? [
+        { full: 'Recommendations', short: 'Recs' },
+        { full: 'Travel History', short: 'History' },
+        { full: 'Achievements', short: 'Badges' },
+        { full: 'Saved', short: 'Saved' }
+      ]
+    : [
+        { full: 'Recommendations', short: 'Recs' },
+        { full: 'Travel History', short: 'History' },
+        { full: 'Achievements', short: 'Badges' }
+      ];
+
+  const displayedCities = showAllCities 
+    ? profile.citiesVisited 
+    : profile.citiesVisited?.slice(0, 8);
+
+  // Buddy request status helpers
+  const isBuddyConnected = profile.buddyRequestStatus === 'accepted';
+  const isPendingBuddy = profile.buddyRequestStatus === 'pending';
 
   return (
     <div className="min-h-screen bg-base">
       <Header />
+      <BottomNavigation />
       
-      {/* Main Content Layout - Exact Alex Kim Design */}
-      <main className="pt-16 pb-20 lg:pb-8"> {/* Add bottom padding for mobile navigation */}
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
-            {/* Left Sidebar - Statistics and Actions - Hidden on mobile */}
-            <aside className="hidden lg:block space-y-6">
-                      {/* Statistics Cards - Vertical Layout like Alex Kim */}
-                      {stats && (
-                        <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                          <div className="space-y-3">
-                            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                              <div className="text-primary text-2xl font-bold">{profile.citiesVisited?.length || 0}</div>
-                              <div className="text-muted text-sm">Cities</div>
-                            </div>
-                            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                              <div className="text-primary text-2xl font-bold">{stats.recommendations || 0}</div>
-                              <div className="text-muted text-sm">Recommendations</div>
-                            </div>
-                            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                              <div className="text-primary text-2xl font-bold">{stats.travelBuddies || 0}</div>
-                              <div className="text-muted text-sm">Travel Buddies</div>
-                            </div>
-                          </div>
+      <main id="main-content" role="main" className="pt-16 pb-20">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-6">
+          
+          {/* Two Column Layout - Stats Sidebar + Profile Card */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            
+            {/* Left Sidebar - Stats Cards (Desktop vertical, Mobile horizontal) */}
+            <div className="order-2 lg:order-1 w-full lg:w-64 flex-shrink-0">
+              <div className="lg:sticky lg:top-24 space-y-4">
+                {/* Stats Cards - Horizontal on mobile, Vertical on desktop */}
+                <div className="bg-surface-glass backdrop-blur-glass rounded-2xl overflow-hidden shadow-xl">
+                  <div className="flex flex-row lg:flex-col divide-x lg:divide-x-0 lg:divide-y divide-white/5">
+                    {/* Cities */}
+                    <div className="flex-1 lg:flex-none p-4 lg:p-5 hover:bg-white/5 transition-all duration-300 cursor-pointer group">
+                      <div className="flex flex-col lg:flex-row items-center lg:items-center gap-2 lg:gap-4">
+                        <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-pulse/20 to-orange-500/10 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-pulse/20 transition-all duration-300">
+                          <MapPin size={20} className="text-pulse" />
                         </div>
-                      )}
-            </aside>
-
-            {/* Right Content - Profile Info and Tabs */}
-            <section className="space-y-6">
-              {/* Cover Image */}
-              <div className="relative h-48 md:h-64 lg:h-80 bg-gradient-to-br from-gray-800/20 to-gray-700/20 rounded-t-2xl overflow-hidden group">
-                {(localImages.cover || profile.coverPhotoUrl) ? (
-                  <img 
-                    src={localImages.cover || getFullImageUrl(profile.coverPhotoUrl)} 
-                    alt="Cover" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Cover image failed to load:', e);
-                      e.currentTarget.src = '';
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-gray-800/30 to-gray-700/30 flex items-center justify-center">
-                    <div className="text-white/40 text-6xl">🌍</div>
-                  </div>
-                )}
-                
-                {/* Upload button for cover photo - only on hover */}
-                {isOwnProfile && (
-                  <button
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'cover');
-                      input.click();
-                    }}
-                    className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/70 transition-all duration-200 opacity-0 group-hover:opacity-100"
-                    aria-label="Upload cover photo"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {/* Profile Picture and Info */}
-              <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-b-2xl md:rounded-2xl p-6 md:-mt-16 relative z-10 shadow-glass">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
-                  {/* Profile Photo */}
-                  <div className="relative group mx-auto md:mx-0 md:-mt-12">
-                    <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-4 md:border-6 border-base overflow-hidden bg-gray-700 flex items-center justify-center shadow-2xl">
-                      {(localImages.profile || profile.profilePhotoUrl) ? (
-                        <img 
-                          src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
-                          alt={profile.fullName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error('Profile image failed to load:', e);
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                          <span className="text-white text-3xl md:text-4xl font-bold">
-                            {profile.fullName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Upload button for profile photo - only on hover */}
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*';
-                          input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
-                          input.click();
-                        }}
-                        className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm text-white rounded-full hover:bg-black/70 transition-all duration-200 opacity-0 group-hover:opacity-100"
-                        aria-label="Upload profile photo"
-                      >
-                        <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Profile Info */}
-                  <div className="flex-1 text-center md:text-left w-full">
-                    <div className="flex flex-col md:flex-row items-center md:items-center gap-3 mb-2">
-                      <h1 className="text-2xl md:text-3xl font-bold text-primary">
-                        {profile.fullName}
-                      </h1>
-                      {isOwnProfile && (
-                        <button
-                          onClick={handleEditProfile}
-                          className="bg-pulse text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-pulse/80 transition-all duration-200 shadow-md hover:shadow-lg"
-                        >
-                          Edit Profile
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-muted text-base md:text-lg mb-3">@{profile.username}</p>
-                    
-                    {/* Location Info */}
-                    {(profile.currentLocation || profile.hometown) && (
-                      <div className="flex flex-wrap items-center gap-4 mb-4">
-                        {profile.currentLocation && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <svg className="w-4 h-4 text-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span className="text-muted">Lives in</span>
-                            <span className="text-primary font-medium">{profile.currentLocation}</span>
-                          </div>
-                        )}
-                        {profile.hometown && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <svg className="w-4 h-4 text-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            <span className="text-muted">From</span>
-                            <span className="text-primary font-medium">{profile.hometown}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Cities Visited */}
-                    {profile.citiesVisited && profile.citiesVisited.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="text-muted text-sm font-medium mb-2">Cities Visited</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.citiesVisited.map((city, index) => (
-                            <span key={index} className="bg-gray-700/50 text-primary px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                              </svg>
-                              {city}
-                            </span>
-                          ))}
+                        <div className="text-center lg:text-left">
+                          <p className="text-xl lg:text-2xl font-bold text-primary">{profile.citiesVisited?.length || 0}</p>
+                          <p className="text-[10px] lg:text-xs text-muted font-medium">Cities</p>
                         </div>
                       </div>
-                    )}
-                    
-                    {/* Bio */}
-                    <div className="mb-4">
-                      {profile.bio ? (
-                        <p className="text-muted text-lg leading-relaxed">{profile.bio}</p>
-                      ) : (
-                        <p className="text-gray-500 text-lg leading-relaxed italic">
-                          Tell us about yourself... Share your travel experiences, interests, and what makes you unique!
-                        </p>
-                      )}
                     </div>
+                    
+                    {/* Recommendations */}
+                    <div className="flex-1 lg:flex-none p-4 lg:p-5 hover:bg-white/5 transition-all duration-300 cursor-pointer group">
+                      <div className="flex flex-col lg:flex-row items-center lg:items-center gap-2 lg:gap-4">
+                        <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/10 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-pink-500/20 transition-all duration-300">
+                          <Heart size={20} className="text-pink-500" />
+                        </div>
+                        <div className="text-center lg:text-left">
+                          <p className="text-xl lg:text-2xl font-bold text-primary">{stats?.recommendations || 0}</p>
+                          <p className="text-[10px] lg:text-xs text-muted font-medium">Recs</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Travel Buddies */}
+                    <div className="flex-1 lg:flex-none p-4 lg:p-5 hover:bg-white/5 transition-all duration-300 cursor-pointer group">
+                      <div className="flex flex-col lg:flex-row items-center lg:items-center gap-2 lg:gap-4">
+                        <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 flex items-center justify-center group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300">
+                          <Users size={20} className="text-blue-500" />
+                        </div>
+                        <div className="text-center lg:text-left">
+                          <p className="text-xl lg:text-2xl font-bold text-primary">{stats?.travelBuddies || 0}</p>
+                          <p className="text-[10px] lg:text-xs text-muted font-medium">Buddies</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Social Links */}
-                    <div className="flex gap-3">
+                {/* Member Since Card */}
+                <div className="bg-surface-glass backdrop-blur-glass rounded-2xl p-4 shadow-xl">
+                  <div className="flex items-center gap-3">
+                    <Calendar size={18} className="text-muted" />
+                    <span className="text-sm text-muted">{formatMemberSince(profile.createdAt)}</span>
+                  </div>
+                </div>
+
+                {/* Social Links Card - Only visible on desktop */}
+                {(isOwnProfile || isBuddyConnected) && (profile.instagramUrl || profile.facebookUrl || profile.email || profile.websiteUrl) && (
+                  <div className="hidden lg:block bg-surface-glass backdrop-blur-glass rounded-2xl p-4 shadow-xl">
+                    <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Connect</h3>
+                    <div className="flex flex-wrap gap-2">
                       {profile.instagramUrl && (
                         <a
                           href={profile.instagramUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center text-primary hover:bg-pulse hover:text-white transition-all duration-200"
+                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
                           title="Instagram"
                         >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                          </svg>
+                          <Instagram size={18} className="text-muted hover:text-white" />
                         </a>
                       )}
                       {profile.facebookUrl && (
@@ -561,36 +387,19 @@ export default function ProfilePage() {
                           href={profile.facebookUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center text-primary hover:bg-pulse hover:text-white transition-all duration-200"
+                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
                           title="Facebook"
                         >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                          </svg>
-                        </a>
-                      )}
-                      {profile.whatsappContact && (
-                        <a
-                          href={`https://wa.me/${profile.whatsappContact}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center text-primary hover:bg-pulse hover:text-white transition-all duration-200"
-                          title="WhatsApp"
-                        >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.893 3.488"/>
-                          </svg>
+                          <Facebook size={18} className="text-muted hover:text-white" />
                         </a>
                       )}
                       {profile.email && (
                         <a
                           href={`mailto:${profile.email}`}
-                          className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center text-primary hover:bg-pulse hover:text-white transition-all duration-200"
+                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
                           title="Email"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
+                          <Mail size={18} className="text-muted hover:text-white" />
                         </a>
                       )}
                       {profile.websiteUrl && (
@@ -598,206 +407,412 @@ export default function ProfilePage() {
                           href={profile.websiteUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center text-primary hover:bg-pulse hover:text-white transition-all duration-200"
+                          className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
                           title="Website"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                          </svg>
+                          <Globe size={18} className="text-muted hover:text-white" />
                         </a>
                       )}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
+            </div>
 
-              {/* Statistics Cards for Mobile View - Hidden on desktop */}
-              {stats && (
-                <div className="lg:hidden bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                  <h3 className="text-primary text-lg font-semibold mb-4">Statistics</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                      <div className="text-primary text-2xl font-bold">{profile.citiesVisited?.length || 0}</div>
-                      <div className="text-muted text-sm">Cities</div>
+            {/* Right Side - Main Profile Card */}
+            <div className="order-1 lg:order-2 flex-1">
+              <div className="bg-surface-glass backdrop-blur-glass rounded-3xl overflow-hidden shadow-2xl">
+                
+                {/* Cover Photo */}
+                <div className="relative w-full h-44 md:h-52 lg:h-56 bg-gradient-to-br from-gray-800/50 via-gray-700/30 to-gray-900/50">
+                  {(localImages.cover || profile.coverPhotoUrl) ? (
+                    <img 
+                      src={localImages.cover || getFullImageUrl(profile.coverPhotoUrl)} 
+                      alt="Cover" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pulse/10 via-purple-900/20 to-blue-900/20">
+                      <div className="text-white/5 text-8xl">🌍</div>
                     </div>
-                    <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                      <div className="text-primary text-2xl font-bold">{stats.recommendations || 0}</div>
-                      <div className="text-muted text-sm">Recommendations</div>
+                  )}
+                  
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                  
+                  {/* Cover Photo Upload */}
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'cover');
+                        input.click();
+                      }}
+                      className="absolute top-4 right-4 p-2.5 rounded-full text-white bg-black/40 backdrop-blur-md border border-white/20 hover:bg-pulse hover:border-pulse transition-all duration-300 shadow-lg"
+                      aria-label="Upload cover photo"
+                    >
+                      <Camera size={18} />
+                    </button>
+                  )}
+
+                  {/* Verified Badge - Top Left */}
+                  {(profile as { emailVerified?: boolean }).emailVerified && (
+                    <div className="absolute top-4 left-4">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/20 backdrop-blur-md border border-green-500/30 text-green-400 text-xs">
+                        <Shield size={12} />
+                        <span>Verified</span>
+                      </div>
                     </div>
-                    <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                      <div className="text-primary text-2xl font-bold">{stats.travelBuddies || 0}</div>
-                      <div className="text-muted text-sm">Travel Buddies</div>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {/* Tabs Section */}
-              <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-6">
-                {/* Mobile-optimized scrollable tabs */}
-                <div className="overflow-x-auto scrollbar-hide mb-6">
-                  <div className="flex space-x-1 min-w-max">
-                    {tabs.map((tab, index) => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(index)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                          activeTab === index
-                            ? 'bg-pulse text-white'
-                            : 'text-muted hover:text-primary hover:bg-gray-700/50'
-                        }`}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tab Content */}
-                <div className="min-h-[400px]">
-                  {activeTab === 0 && (
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-primary">My Recommendations</h3>
-                        {isOwnProfile && recommendationCount > 0 && (
-                          <button
-                            onClick={() => navigate('/create-recommendation')}
-                            className="bg-pulse hover:bg-pulse/80 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 hover-lift"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Add Recommendation
-                          </button>
+                {/* Profile Info Section - Relative container for absolute avatar */}
+                <div className="relative px-5 md:px-6 pb-6">
+                  {/* Avatar - Positioned absolutely to overlap cover */}
+                  <div className="absolute -top-14 left-5 md:left-6 z-10">
+                    <div className="relative group">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-base overflow-hidden border-[3px] border-gray-700/50 shadow-2xl">
+                        {(localImages.profile || profile.profilePhotoUrl) ? (
+                          <img 
+                            src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
+                            alt={profile.fullName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-pulse to-purple-600 flex items-center justify-center">
+                            <span className="text-white text-2xl sm:text-3xl font-bold">
+                              {profile.fullName.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
                         )}
                       </div>
                       
-                      {isOwnProfile ? (
-                        recommendationCount === 0 ? (
-                          <div className="text-center py-12">
-                            <div className="text-muted mb-4">
-                              <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.709A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
-                              </svg>
-                            </div>
-                            <h4 className="text-lg font-medium text-primary mb-2">No recommendations yet</h4>
-                            <p className="text-muted mb-4">Share your favorite places with the community</p>
-                            <button
-                              onClick={() => navigate('/create-recommendation')}
-                              className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                              </svg>
-                              Create Your First Recommendation
-                            </button>
-                          </div>
-                        ) : (
-                          <RecommendationsList 
-                            userId={profile?.id} 
-                            showUser={false}
-                            showActions={true}
-                            className="mt-4"
-                          />
-                        )
-                      ) : (
-                        <RecommendationsList 
-                          userId={profile?.id} 
-                          showUser={false}
-                          showActions={true}
-                          className="mt-4"
-                        />
+                      {/* Profile Photo Upload */}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
+                            input.click();
+                          }}
+                          className="absolute bottom-1 right-1 p-1.5 rounded-full text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                          aria-label="Upload profile photo"
+                        >
+                          <Camera size={12} />
+                        </button>
                       )}
                     </div>
-                  )}
-                  {activeTab === 1 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-primary mb-6">Travel History</h3>
-                      <TravelHistoryTimeline 
-                        userId={profile?.id} 
-                        username={username}
-                      />
-                    </div>
-                  )}
-                  {activeTab === 2 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-primary mb-6">Achievements</h3>
-                      <AchievementProgress username={isOwnProfile ? undefined : username} />
-                    </div>
-                  )}
-                  {activeTab === 3 && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-primary mb-4">Saved Recommendations</h3>
+                  </div>
+
+                  {/* Name, Username, Edit Button - With left padding for avatar space */}
+                  <div className="pt-4 pl-28 sm:pl-36">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <h1 className="text-xl sm:text-2xl font-bold text-primary truncate">
+                        {profile.fullName}
+                      </h1>
                       
-                      {loadingSaved && savedRecommendations.length === 0 ? (
-                        <div className="flex items-center justify-center py-12">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pulse"></div>
-                          <span className="ml-3 text-muted">Loading saved recommendations...</span>
-                        </div>
-                      ) : savedRecommendations.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="text-muted mb-4">
-                            <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                            </svg>
-                          </div>
-                          <h4 className="text-lg font-medium text-primary mb-2">No saved recommendations yet</h4>
-                          <p className="text-muted mb-4">Bookmark recommendations to save them</p>
+                      {/* Action Buttons - Inline on desktop */}
+                      <div className="flex gap-2 sm:ml-auto flex-shrink-0">
+                        {isOwnProfile ? (
                           <button
-                            onClick={() => navigate('/feed')}
-                            className="bg-pulse hover:bg-pulse/80 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 mx-auto hover-lift"
+                            onClick={handleEditProfile}
+                            className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 shadow-md shadow-pulse/20"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            Explore Recommendations
+                            Edit Profile
                           </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {savedRecommendations.map((post) => (
-                              <FeedPostCard 
-                                key={post.id} 
-                                post={post}
-                                onUpdate={(postId, updates) => {
-                                  // Update the post in the list if bookmarked status changes
-                                  if (updates.is_bookmarked === false) {
-                                    // Remove from saved list if unbookmarked
-                                    setSavedRecommendations(prev => prev.filter(p => p.id !== postId));
-                                  } else {
-                                    // Update the post data
-                                    setSavedRecommendations(prev => prev.map(p => 
-                                      p.id === postId ? { ...p, ...updates } : p
-                                    ));
-                                  }
-                                }}
-                              />
-                            ))}
-                          </div>
-                          
-                          {/* Load More Button */}
-                          {hasMoreSaved && (
-                            <div className="flex justify-center mt-8">
-                              <button
-                                onClick={() => setSavedPage(prev => prev + 1)}
-                                disabled={loadingSaved}
-                                className="bg-surface-glass backdrop-blur-glass border border-subtle hover:border-pulse text-primary px-6 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {loadingSaved ? 'Loading...' : 'Load More'}
+                        ) : (
+                          <>
+                            {isBuddyConnected ? (
+                              <>
+                                <button className="px-4 py-2 rounded-full text-white text-sm font-semibold bg-green-600 border border-green-500 flex items-center gap-1.5">
+                                  <Check size={14} />
+                                  Connected
+                                </button>
+                                <button className="p-2.5 rounded-full text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all">
+                                  <MessageCircle size={16} />
+                                </button>
+                              </>
+                            ) : isPendingBuddy ? (
+                              <button className="px-5 py-2 rounded-full text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default">
+                                Pending
                               </button>
-                            </div>
-                          )}
-                        </>
+                            ) : (
+                              <button className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20">
+                                <UserPlus size={14} />
+                                Add Buddy
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <p className="text-muted text-sm mt-1">@{profile.username}</p>
+                  </div>
+
+                  {/* Location Info */}
+                  {(profile.currentLocation || profile.hometown) && (
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-sm text-muted">
+                      {profile.currentLocation && (
+                        <span className="flex items-center gap-1.5">
+                          <MapPin size={14} className="text-pulse" />
+                          Lives in <span className="text-primary font-medium ml-1">{profile.currentLocation}</span>
+                        </span>
                       )}
+                      {profile.hometown && (
+                        <span className="flex items-center gap-1.5">
+                          <Home size={14} className="text-pulse" />
+                          From <span className="text-primary font-medium ml-1">{profile.hometown}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cities Visited Chips */}
+                  {profile.citiesVisited && profile.citiesVisited.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs text-muted mb-2.5 font-medium uppercase tracking-wide">Cities Visited</p>
+                      <div className="flex flex-wrap gap-2">
+                        {displayedCities?.map((city, index) => (
+                          <span 
+                            key={index} 
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-primary hover:border-pulse/40 hover:bg-pulse/10 transition-all duration-300 cursor-pointer"
+                            onClick={() => navigate(`/city/${city}`)}
+                          >
+                            <MapPin size={10} className="text-pulse" />
+                            {city}
+                          </span>
+                        ))}
+                        {profile.citiesVisited.length > 8 && (
+                          <button
+                            onClick={() => setShowAllCities(!showAllCities)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-pulse/10 border border-pulse/30 text-pulse hover:bg-pulse/20 transition-all"
+                          >
+                            {showAllCities ? (
+                              <>Show less <ChevronUp size={12} /></>
+                            ) : (
+                              <>+{profile.citiesVisited.length - 8} more <ChevronDown size={12} /></>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bio */}
+                  {profile.bio && (
+                    <p className="text-primary text-sm leading-relaxed mt-4">
+                      {profile.bio}
+                    </p>
+                  )}
+
+                  {/* Mobile Social Links */}
+                  {(isOwnProfile || isBuddyConnected) && (profile.instagramUrl || profile.facebookUrl || profile.email || profile.websiteUrl) && (
+                    <div className="lg:hidden mt-4 pt-4 border-t border-white/10">
+                      <div className="flex gap-2">
+                        {profile.email && (
+                          <a
+                            href={`mailto:${profile.email}`}
+                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
+                            title="Email"
+                          >
+                            <Mail size={18} className="text-muted" />
+                          </a>
+                        )}
+                        {profile.instagramUrl && (
+                          <a
+                            href={profile.instagramUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
+                            title="Instagram"
+                          >
+                            <Instagram size={18} className="text-muted" />
+                          </a>
+                        )}
+                        {profile.facebookUrl && (
+                          <a
+                            href={profile.facebookUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
+                            title="Facebook"
+                          >
+                            <Facebook size={18} className="text-muted" />
+                          </a>
+                        )}
+                        {profile.websiteUrl && (
+                          <a
+                            href={profile.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
+                            title="Website"
+                          >
+                            <Globe size={18} className="text-muted" />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            </section>
+            </div>
+          </div>
+
+          {/* Tabs Section - Full Width Below Two-Column */}
+          <div className="mt-6 bg-surface-glass backdrop-blur-glass rounded-3xl overflow-hidden shadow-2xl">
+            {/* Tab Headers - Fixed width tabs that don't wrap */}
+            <div className="border-b border-white/5 bg-white/[0.02]">
+              <div className="flex w-full">
+                {tabsData.map((tab, index) => (
+                  <button
+                    key={tab.full}
+                    onClick={() => setActiveTab(index)}
+                    className={`flex-1 px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-semibold transition-all relative whitespace-nowrap ${
+                      activeTab === index
+                        ? 'text-pulse'
+                        : 'text-muted hover:text-primary'
+                    }`}
+                  >
+                    {/* Short label on mobile, full label on larger screens */}
+                    <span className="sm:hidden">{tab.short}</span>
+                    <span className="hidden sm:inline">{tab.full}</span>
+                    {activeTab === index && (
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-pulse rounded-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-4 md:p-6 lg:p-8 min-h-[400px]">
+              {activeTab === 0 && (
+                <div className="animate-in fade-in duration-500">
+                  {isOwnProfile && recommendationCount === 0 ? (
+                    <div className="text-center py-12">
+                      {/* Travel Illustration */}
+                      <div className="mb-6 opacity-60">
+                        <svg className="w-32 h-32 mx-auto text-pulse" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <circle cx="50" cy="50" r="45" strokeDasharray="5 3" />
+                          <path d="M50 5 C50 5, 95 50, 50 95 C5 50, 50 5, 50 5" fill="none" />
+                          <path d="M5 50 H95" strokeDasharray="3 2" />
+                          <circle cx="30" cy="35" r="3" fill="currentColor" />
+                          <circle cx="70" cy="45" r="3" fill="currentColor" />
+                          <circle cx="45" cy="65" r="3" fill="currentColor" />
+                          <path d="M30 35 L45 28 L70 45" strokeWidth="1" strokeDasharray="2 2" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-bold text-primary mb-2">No recommendations yet</h3>
+                      <p className="text-muted text-sm mb-6 max-w-sm mx-auto">Share your favorite places with the travel community</p>
+                      <button
+                        onClick={() => navigate('/create-recommendation')}
+                        className="bg-pulse hover:bg-pulse/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg shadow-pulse/30"
+                      >
+                        Add Your First Recommendation
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <RecommendationsList userId={profile.id} />
+                      
+                      {/* Add Recommendation Button - Below content */}
+                      {isOwnProfile && (
+                        <div className="mt-6 flex justify-center">
+                          <button
+                            onClick={() => navigate('/create-recommendation')}
+                            className="w-12 h-12 bg-pulse hover:bg-pulse/90 text-white rounded-full shadow-lg shadow-pulse/30 flex items-center justify-center text-2xl font-bold transition-all duration-300 hover:scale-110"
+                            title="Add Recommendation"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 1 && (
+                <div className="animate-in fade-in duration-500">
+                  <TravelHistoryTimeline username={profile.username} />
+                </div>
+              )}
+
+              {activeTab === 2 && (
+                <div className="animate-in fade-in duration-500">
+                  <AchievementProgress username={profile.username} />
+                </div>
+              )}
+
+              {activeTab === 3 && isOwnProfile && (
+                <div className="animate-in fade-in duration-500">
+                  {savedRecommendations.length === 0 && !loadingSaved ? (
+                    <div className="text-center py-12">
+                      {/* Bookmark Illustration */}
+                      <div className="mb-6 opacity-60">
+                        <svg className="w-28 h-28 mx-auto text-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                          <circle cx="12" cy="10" r="2" strokeDasharray="2 1" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-bold text-primary mb-2">No saved recommendations</h3>
+                      <p className="text-muted text-sm mb-6 max-w-sm mx-auto">Save recommendations from other travelers to plan your next adventure!</p>
+                      <button
+                        onClick={() => navigate('/explore')}
+                        className="bg-pulse hover:bg-pulse/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg shadow-pulse/30"
+                      >
+                        Explore Recommendations
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {savedRecommendations.map((post) => (
+                        <FeedPostCard 
+                          key={post.id}
+                          post={post} 
+                          onUpdate={handlePostUpdate}
+                          onRemove={handlePostRemove}
+                        />
+                      ))}
+                      {hasMoreSaved && (
+                        <button
+                          onClick={() => setSavedPage(prev => prev + 1)}
+                          disabled={loadingSaved}
+                          className="w-full py-4 bg-white/5 hover:bg-pulse/10 border border-white/10 hover:border-pulse/30 rounded-xl text-pulse font-semibold transition-all duration-300 disabled:opacity-50"
+                        >
+                          {loadingSaved ? 'Loading...' : 'Load More'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Image Cropper Modal */}
+      {croppingImage && (
+        <ImageCropper
+          imageSrc={croppingImage.src}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setCroppingImage(null)}
+          aspect={croppingImage.type === 'cover' ? 16 / 9 : 1}
+        />
+      )}
 
       {/* Achievement Unlock Modal */}
       {newlyUnlockedAchievements.length > 0 && (
@@ -806,18 +821,6 @@ export default function ProfilePage() {
           onClose={handleCloseAchievementModal}
         />
       )}
-
-      {/* Image Cropper Modal */}
-      {croppingImage && (
-        <ImageCropper
-          imageSrc={croppingImage.src}
-          aspect={croppingImage.type === 'profile' ? 1 : 3} // Square for profile, 3:1 for cover
-          onCropComplete={handleCropComplete}
-          onCancel={() => setCroppingImage(null)}
-        />
-      )}
-
-      <BottomNavigation />
     </div>
   );
 }
