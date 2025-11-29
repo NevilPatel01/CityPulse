@@ -270,10 +270,14 @@ export function RecommendationCard({
           <img
                 src={(() => {
                   const photo = recommendation.photos[0];
-                  const photoUrl = typeof photo === 'string' ? photo : (photo as any)?.photo_url || photo;
-                  return photoUrl && photoUrl.startsWith('http') 
+                  const photoUrl = typeof photo === 'string' 
+                    ? photo 
+                    : typeof photo === 'object' && photo !== null && 'photo_url' in photo
+                      ? photo.photo_url
+                      : photo;
+                  return photoUrl && typeof photoUrl === 'string' && photoUrl.startsWith('http') 
                     ? photoUrl 
-                    : photoUrl 
+                    : photoUrl && typeof photoUrl === 'string'
                       ? `${apiConfig.baseUrl}${photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`}`
                       : 'https://via.placeholder.com/400x300?text=No+Image';
                 })()}
