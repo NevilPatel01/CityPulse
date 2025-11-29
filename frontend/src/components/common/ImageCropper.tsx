@@ -14,13 +14,17 @@ interface ImageCropperProps {
   onCropComplete: (croppedImage: Blob) => void;
   onCancel: () => void;
   aspect?: number;
+  targetWidth?: number;
+  targetHeight?: number;
 }
 
 export const ImageCropper = ({ 
   imageSrc, 
   onCropComplete, 
   onCancel,
-  aspect = 1 
+  aspect = 1,
+  targetWidth,
+  targetHeight
 }: ImageCropperProps) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -59,9 +63,14 @@ export const ImageCropper = ({
       throw new Error('No 2d context');
     }
 
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
+    // Use target dimensions if provided, otherwise use crop dimensions
+    const outputWidth = targetWidth || pixelCrop.width;
+    const outputHeight = targetHeight || pixelCrop.height;
 
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+
+    // Draw the cropped area, scaled to target dimensions
     ctx.drawImage(
       image,
       pixelCrop.x,
@@ -70,8 +79,8 @@ export const ImageCropper = ({
       pixelCrop.height,
       0,
       0,
-      pixelCrop.width,
-      pixelCrop.height
+      outputWidth,
+      outputHeight
     );
 
     return new Promise((resolve, reject) => {
@@ -81,7 +90,7 @@ export const ImageCropper = ({
           return;
         }
         resolve(blob);
-      }, 'image/jpeg');
+      }, 'image/jpeg', 0.95);
     });
   };
 
@@ -113,7 +122,7 @@ export const ImageCropper = ({
           </button>
         </div>
         
-        <div className="relative h-80 w-full bg-black">
+        <div className={`relative w-full bg-black ${aspect >= 2 ? 'h-96' : 'h-80'}`}>
           <Cropper
             image={imageSrc}
             crop={crop}

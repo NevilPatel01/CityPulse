@@ -367,29 +367,29 @@ const ModeratorDashboard: React.FC = () => {
                 <div className="flex flex-wrap gap-3 items-center">
                   <Filter className="w-4 h-4 text-muted" />
                   <span className="text-sm text-gray-300">Filters:</span>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
                     className="px-4 py-2 bg-base border border-subtle rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-pulse transition-all"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="under_review">Under Review</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="dismissed">Dismissed</option>
-                  </select>
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="dismissed">Dismissed</option>
+                </select>
 
-                  <select
-                    value={filterContentType}
-                    onChange={(e) => setFilterContentType(e.target.value)}
+                <select
+                  value={filterContentType}
+                  onChange={(e) => setFilterContentType(e.target.value)}
                     className="px-4 py-2 bg-base border border-subtle rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-pulse transition-all"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="recommendation">Recommendations</option>
-                    <option value="profile">Profiles</option>
-                    <option value="trip">Trips</option>
-                    <option value="comment">Comments</option>
-                  </select>
+                >
+                  <option value="all">All Types</option>
+                  <option value="recommendation">Recommendations</option>
+                  <option value="profile">Profiles</option>
+                  <option value="trip">Trips</option>
+                  <option value="comment">Comments</option>
+                </select>
                 </div>
                 <div className="text-sm text-gray-400 px-3 py-1.5 bg-surface-glass rounded-lg border border-subtle">
                   Showing {reports.length} {reports.length === 1 ? 'report' : 'reports'}
@@ -408,7 +408,7 @@ const ModeratorDashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
-                  {reports.map((report) => (
+                    {reports.map((report) => (
                     <div key={report.id} className="border border-subtle rounded-xl p-4 hover:bg-surface-glass/70 transition-all shadow-lg hover:shadow-xl flex flex-col">
                         {/* Report Header */}
                         <div className="flex flex-col gap-2 mb-3">
@@ -421,7 +421,7 @@ const ModeratorDashboard: React.FC = () => {
                                   report.status === 'resolved' ? 'bg-green-500' :
                                   'bg-gray-500'
                                 }`}></div>
-                                <div className="flex-1">
+                          <div className="flex-1">
                                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                                     <User className="w-3.5 h-3.5 text-muted" />
                                     <span className="text-xs font-semibold text-primary truncate">
@@ -432,7 +432,7 @@ const ModeratorDashboard: React.FC = () => {
                                         <span className="text-xs text-gray-300">•</span>
                                         <span className="text-xs text-gray-300 truncate">
                                           Content by @{report.content_owner_username}
-                                        </span>
+                              </span>
                                       </>
                                     )}
                                   </div>
@@ -445,18 +445,18 @@ const ModeratorDashboard: React.FC = () => {
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${getStatusBadge(report.status)}`}>
                                       {report.status.replace('_', ' ').toUpperCase()}
-                                    </span>
+                              </span>
                                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
                                       report.reported_content_type === 'recommendation' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' :
                                       report.reported_content_type === 'profile' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                                       'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                                    }`}>
-                                      {report.reported_content_type}
-                                    </span>
-                                  </div>
+                              }`}>
+                                {report.reported_content_type}
+                              </span>
+                            </div>
                                 </div>
                               </div>
-                            </div>
+                          </div>
                             <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
                             {report.status === 'pending' && (
                               <>
@@ -528,11 +528,11 @@ const ModeratorDashboard: React.FC = () => {
                         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2.5 mb-2.5">
                           <p className="text-xs font-semibold text-red-400 mb-1">Report Reason:</p>
                           <p className="text-xs text-red-300 capitalize">{report.report_reason}</p>
-                              {report.description && (
+                          {report.description && (
                                 <p className="text-xs text-red-300/90 mt-1 italic line-clamp-2">
                                   {report.description}
                                 </p>
-                              )}
+                          )}
                         </div>
 
                         {/* Reported Content - Clickable */}
@@ -606,7 +606,7 @@ const ModeratorDashboard: React.FC = () => {
                   {reportedUsers.map((user) => (
                     <div key={user.id} className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-xl p-4 hover:bg-surface-glass/70 transition-all shadow-lg hover:shadow-xl">
                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4">
                           <img
                             src={getFullImageUrl(user.profile_photo_url) || '/default-avatar.png'}
                             alt={user.username}
@@ -772,7 +772,7 @@ const ModeratorDashboard: React.FC = () => {
                                     {/* Content */}
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start justify-between gap-3 mb-2">
-                                        <div className="flex-1">
+                        <div className="flex-1">
                                           <h4 className="text-sm font-semibold text-primary mb-1">
                                             {actionDetails.title}
                                           </h4>
@@ -852,7 +852,7 @@ const ModeratorDashboard: React.FC = () => {
                                             <FileText className="w-3 h-3 text-muted flex-shrink-0" />
                                             <span className="text-xs text-gray-400 truncate">
                                               Title: <span className="text-gray-300 truncate">{action.target_title}</span>
-                                            </span>
+                            </span>
                                           </div>
                                         )}
                                       </div>
@@ -862,14 +862,14 @@ const ModeratorDashboard: React.FC = () => {
                                         <div className="flex items-start gap-2">
                                           <span className="text-xs font-medium text-gray-400 mt-0.5">Reason:</span>
                                           <p className="text-xs text-gray-300 flex-1">{action.reason}</p>
-                                        </div>
-                                        {action.notes && (
+                          </div>
+                          {action.notes && (
                                           <div className="bg-surface-glass/50 rounded p-2 border border-subtle/30">
                                             <p className="text-xs text-gray-400 italic">
                                               {action.notes}
                                             </p>
                                           </div>
-                                        )}
+                          )}
                                       </div>
 
                                       {/* Footer */}

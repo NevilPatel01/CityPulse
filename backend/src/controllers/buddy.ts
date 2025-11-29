@@ -810,9 +810,9 @@ export const findBuddies = async (req: Request, res: Response) => {
                 tp.activity_level,
                 tp.preferred_difficulty,
                 (
-                    SELECT json_agg(json_build_object('id', ic.id, 'name', ic.name))
+                    SELECT json_agg(json_build_object('id', rc.id, 'name', rc.name))
                     FROM user_interests ui
-                    INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                    INNER JOIN recommendation_categories rc ON ui.category_id = rc.id
                     WHERE ui.user_id = u.id
                 ) as interests,
                 (
@@ -872,8 +872,8 @@ export const findBuddies = async (req: Request, res: Response) => {
             const interestsArray = typeof interests === 'string' ? [interests] : interests;
             queryText += ` AND EXISTS (
                 SELECT 1 FROM user_interests ui
-                INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
-                WHERE ui.user_id = u.id AND ic.name = ANY($${paramIndex})
+                INNER JOIN recommendation_categories rc ON ui.category_id = rc.id
+                WHERE ui.user_id = u.id AND rc.name = ANY($${paramIndex})
             )`;
             queryParams.push(interestsArray);
             paramIndex++;
@@ -937,8 +937,8 @@ export const findBuddies = async (req: Request, res: Response) => {
             const interestsArray = typeof interests === 'string' ? [interests] : interests;
             countQuery += ` AND EXISTS (
                 SELECT 1 FROM user_interests ui
-                INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
-                WHERE ui.user_id = u.id AND ic.name = ANY($${countParamIndex})
+                INNER JOIN recommendation_categories rc ON ui.category_id = rc.id
+                WHERE ui.user_id = u.id AND rc.name = ANY($${countParamIndex})
             )`;
             countParams.push(interestsArray);
             countParamIndex++;
@@ -1166,9 +1166,9 @@ export const discoverBuddies = async (req: Request, res: Response) => {
         const usersWithInterests = await Promise.all(
             result.rows.map(async (user) => {
                 const interestsResult = await pool.query(
-                    `SELECT json_agg(json_build_object('id', ic.id, 'name', ic.name)) as interests
+                    `SELECT json_agg(json_build_object('id', rc.id, 'name', rc.name)) as interests
                      FROM user_interests ui
-                     INNER JOIN interest_categories ic ON ui.interest_category_id = ic.id
+                     INNER JOIN recommendation_categories rc ON ui.category_id = rc.id
                      WHERE ui.user_id = $1`,
                     [user.id]
                 );

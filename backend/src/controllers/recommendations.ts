@@ -184,6 +184,7 @@ export const getRecommendationById = async (req: Request, res: Response) => {
         }
 
         const recommendation = result.rows[0];
+        const recommendationUserId = recommendation.user_id;
 
         // Get user's rating if authenticated
         if (userId) {
@@ -204,13 +205,70 @@ export const getRecommendationById = async (req: Request, res: Response) => {
             );
 
             recommendation.user_has_liked = userLikeResult.rows.length > 0;
-        }
 
-        // Increment view count
-        await query(
-            'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
-            [id]
-        );
+            // Track view: Only increment if user is NOT the owner and hasn't viewed this recently
+            // Don't increment views for the owner viewing their own recommendation
+            if (userId !== recommendationUserId) {
+                // Check if this user has already viewed this recommendation in the last 24 hours
+                const recentViewResult = await query(
+                    `SELECT id FROM recommendation_views 
+                     WHERE recommendation_id = $1 AND user_id = $2 
+                     AND viewed_at > NOW() - INTERVAL '24 hours'`,
+                    [id, userId]
+                );
+
+                // Only record new view if user hasn't viewed in last 24 hours
+                if (recentViewResult.rows.length === 0) {
+                    try {
+                        // Insert view record
+                        await query(
+                            'INSERT INTO recommendation_views (recommendation_id, user_id, viewed_at) VALUES ($1, $2, NOW())',
+                            [id, userId]
+                        );
+                        
+                        // Increment view count only when a new view is recorded
+                        await query(
+                            'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
+                            [id]
+                        );
+                    } catch (error: any) {
+                        // Ignore duplicate key errors (in case of race condition)
+                        if (error.code !== '23505') {
+                            console.error('Error tracking view:', error);
+                        }
+                    }
+                }
+            }
+        } else {
+            // For anonymous users, we can still track but limit duplicate views
+            // Check for recent anonymous view (no user_id) within last hour
+            const recentAnonymousViewResult = await query(
+                `SELECT id FROM recommendation_views 
+                 WHERE recommendation_id = $1 AND user_id IS NULL 
+                 AND viewed_at > NOW() - INTERVAL '1 hour'`,
+                [id]
+            );
+
+            if (recentAnonymousViewResult.rows.length === 0) {
+                try {
+                    // Insert anonymous view
+                    await query(
+                        'INSERT INTO recommendation_views (recommendation_id, user_id, viewed_at) VALUES ($1, NULL, NOW())',
+                        [id]
+                    );
+                    
+                    // Increment view count
+                    await query(
+                        'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
+                        [id]
+                    );
+                } catch (error: any) {
+                    if (error.code !== '23505') {
+                        console.error('Error tracking anonymous view:', error);
+                    }
+                }
+            }
+        }
 
         res.json({
             success: true,
@@ -233,6 +291,16 @@ export const createRecommendation = async (req: Request, res: Response) => {
     console.log('[CREATE_REC] Request body:', JSON.stringify(req.body, null, 2));
 
     try {
+        // Check if photos are provided (required)
+        const files = req.files as Express.Multer.File[] | undefined;
+        if (!files || files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'At least one image is required when creating a recommendation',
+                errors: [{ field: 'photos', message: 'At least one image is required' }]
+            });
+        }
+
         const {
             place_name,
             description,
@@ -400,6 +468,28 @@ export const createRecommendation = async (req: Request, res: Response) => {
                 console.log('[CREATE_REC] Successfully linked to city');
             }
 
+            // Upload photos (required - already validated above)
+            console.log('[CREATE_REC] Uploading photos...');
+            const uploadedPhotos = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const filename = generateFilename(file.originalname, 'recommendation');
+                const photoUrl = await processImage(file.buffer, userId, 'recommendation', filename, recommendationId);
+                const isPrimary = i === 0; // First photo is primary
+
+                const photoResult = await query(
+                    'INSERT INTO recommendation_photos (recommendation_id, photo_url, is_primary) VALUES ($1, $2, $3) RETURNING id',
+                    [recommendationId, photoUrl, isPrimary]
+                );
+
+                uploadedPhotos.push({
+                    id: photoResult.rows[0].id,
+                    photo_url: photoUrl,
+                    is_primary: isPrimary
+                });
+            }
+            console.log(`[CREATE_REC] Uploaded ${uploadedPhotos.length} photos`);
+
             console.log('[CREATE_REC] Recommendation created successfully');
 
             // Check and award achievements
@@ -413,7 +503,10 @@ export const createRecommendation = async (req: Request, res: Response) => {
             res.status(201).json({
                 success: true,
                 message: 'Recommendation created successfully',
-                data: { id: recommendationId }
+                data: { 
+                    id: recommendationId,
+                    photos: uploadedPhotos
+                }
             });
         } catch (error: any) {
             console.error('[CREATE_REC] Database error:', error);
@@ -1604,30 +1697,102 @@ export const trackView = async (req: Request, res: Response) => {
         const { id } = req.params;
         const userId = (req as any).user?.userId || null;
 
-        // Check if recommendation exists
-        const recommendationResult = await query(
-            'SELECT id FROM recommendations WHERE id = $1 AND status = \'active\'',
+        // Check if recommendation exists and get owner
+        const recResult = await query(
+            'SELECT user_id FROM recommendations WHERE id = $1 AND status = \'active\'',
             [id]
         );
 
-        if (recommendationResult.rows.length === 0) {
+        if (recResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Recommendation not found'
             });
         }
 
-        // Add view record
-        await query(
-            'INSERT INTO recommendation_views (recommendation_id, user_id) VALUES ($1, $2)',
-            [id, userId]
-        );
+        const recommendationUserId = recResult.rows[0].user_id;
 
-        // Update views count
-        await query(
-            'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
-            [id]
-        );
+        // Don't track views for the owner viewing their own recommendation
+        if (userId && userId === recommendationUserId) {
+            // Just return current count without incrementing
+            const countResult = await query(
+                'SELECT views_count FROM recommendations WHERE id = $1',
+                [id]
+            );
+            return res.json({
+                success: true,
+                message: 'View not tracked for owner',
+                data: {
+                    views_count: countResult.rows[0]?.views_count || 0
+                }
+            });
+        }
+
+        // Check if user has already viewed this recommendation in the last 24 hours
+        if (userId) {
+            const recentViewResult = await query(
+                `SELECT id FROM recommendation_views 
+                 WHERE recommendation_id = $1 AND user_id = $2 
+                 AND viewed_at > NOW() - INTERVAL '24 hours'`,
+                [id, userId]
+            );
+
+            if (recentViewResult.rows.length > 0) {
+                // Already viewed recently, return current count
+                const countResult = await query(
+                    'SELECT views_count FROM recommendations WHERE id = $1',
+                    [id]
+                );
+                return res.json({
+                    success: true,
+                    message: 'View already tracked',
+                    data: {
+                        views_count: countResult.rows[0]?.views_count || 0
+                    }
+                });
+            }
+        } else {
+            // For anonymous users, check for recent view within last hour
+            const recentAnonymousViewResult = await query(
+                `SELECT id FROM recommendation_views 
+                 WHERE recommendation_id = $1 AND user_id IS NULL 
+                 AND viewed_at > NOW() - INTERVAL '1 hour'`,
+                [id]
+            );
+
+            if (recentAnonymousViewResult.rows.length > 0) {
+                const countResult = await query(
+                    'SELECT views_count FROM recommendations WHERE id = $1',
+                    [id]
+                );
+                return res.json({
+                    success: true,
+                    message: 'View already tracked',
+                    data: {
+                        views_count: countResult.rows[0]?.views_count || 0
+                    }
+                });
+            }
+        }
+
+        // Add view record (with ON CONFLICT handling for safety)
+        try {
+            await query(
+                'INSERT INTO recommendation_views (recommendation_id, user_id, viewed_at) VALUES ($1, $2, NOW())',
+                [id, userId]
+            );
+
+            // Update views count only if view was successfully recorded
+            await query(
+                'UPDATE recommendations SET views_count = views_count + 1 WHERE id = $1',
+                [id]
+            );
+        } catch (error: any) {
+            // Ignore duplicate key errors (race condition)
+            if (error.code !== '23505') {
+                throw error;
+            }
+        }
 
         // Get updated count
         const countResult = await query(

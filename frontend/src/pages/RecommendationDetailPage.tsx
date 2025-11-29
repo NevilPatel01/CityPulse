@@ -148,30 +148,38 @@ export function RecommendationDetailPage() {
         if (data.data.user_rating_value) {
           setUserRating(data.data.user_rating_value);
         }
-        
-        // Check if user has saved this recommendation
-        if (user) {
-          await checkSaveStatus();
-        }
-        
-        // Fetch all user ratings
-        fetchUserRatings();
       } else {
         showError(data.message || 'Recommendation not found');
         navigate('/dashboard');
+        return;
       }
     } catch (error) {
       console.error('Error loading recommendation:', error);
       showError(error instanceof Error ? error.message : 'An error occurred while loading the recommendation');
       navigate('/dashboard');
+      return;
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, showError, user, checkSaveStatus, fetchUserRatings]);
+  }, [id, navigate, showError, user?.id]);
 
+  // Load recommendation when id changes
   useEffect(() => {
     void loadRecommendation();
   }, [loadRecommendation]);
+
+  // Fetch additional data separately to avoid causing loadRecommendation to re-run
+  useEffect(() => {
+    if (id && user) {
+      void checkSaveStatus();
+    }
+  }, [id, user, checkSaveStatus]);
+
+  useEffect(() => {
+    if (id) {
+      void fetchUserRatings();
+    }
+  }, [id, fetchUserRatings]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -287,7 +295,7 @@ export function RecommendationDetailPage() {
       // Only show error if it's not a toggle-related error
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (!errorMessage.includes('Already liked') && !errorMessage.includes('not liked yet')) {
-        console.error('Error updating like:', error);
+      console.error('Error updating like:', error);
       }
     } finally {
       setIsLiking(false);
@@ -640,7 +648,7 @@ export function RecommendationDetailPage() {
                 <div className="flex flex-col items-center gap-1">
                   <Eye className="w-6 h-6 text-primary" />
                   <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
-                </div>
+              </div>
               </div>
             </div>
 
@@ -865,14 +873,14 @@ export function RecommendationDetailPage() {
                 <p className="text-sm text-muted mb-4">
                   If you find this recommendation inappropriate or misleading, please report it.
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowReportModal(true)}
-                  className="w-full flex items-center justify-center gap-2 text-muted hover:text-red-400 hover:border-red-400"
-                >
-                  <AlertTriangle className="w-4 h-4" />
-                  Report this recommendation
-                </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowReportModal(true)}
+                className="w-full flex items-center justify-center gap-2 text-muted hover:text-red-400 hover:border-red-400"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                  Report
+              </Button>
               </div>
             )}
           </div>

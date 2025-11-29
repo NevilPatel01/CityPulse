@@ -3,6 +3,7 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs/promises';
 import { Request } from 'express';
+import { getUploadsBaseDir } from './paths';
 
 // Supported image formats
 const SUPPORTED_FORMATS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff'];
@@ -59,7 +60,7 @@ const getUploadPath = (
     type: 'profile' | 'cover' | 'recommendation' | 'city',
     id?: number
 ): string => {
-    const baseDir = path.join(process.cwd(), 'uploads', userId.toString());
+    const baseDir = path.join(getUploadsBaseDir(), userId.toString());
     
     switch (type) {
         case 'profile':
@@ -196,7 +197,11 @@ export const deleteOldImage = async (imagePath: string): Promise<void> => {
     if (!imagePath) return;
     
     try {
-        const fullPath = path.join(process.cwd(), imagePath);
+        // Remove leading /uploads/ prefix if present, then join with base dir
+        const relativePath = imagePath.startsWith('/uploads/') 
+            ? imagePath.substring('/uploads/'.length) 
+            : imagePath;
+        const fullPath = path.join(getUploadsBaseDir(), relativePath);
         await fs.unlink(fullPath);
         console.log(`Deleted old image: ${imagePath}`);
     } catch (error) {

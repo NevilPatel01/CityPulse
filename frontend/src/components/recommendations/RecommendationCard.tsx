@@ -266,66 +266,71 @@ export function RecommendationCard({
         <Link to={`/${recommendation.username}/recommendation/${recommendation.id}`} className="block">
           {/* Image */}
           <div className="relative h-56 bg-gradient-to-br from-gray-800/30 to-gray-700/20 overflow-hidden">
-            {recommendation.photos && recommendation.photos.length > 0 ? (
-              <img
-                src={recommendation.photos[0].startsWith('http') 
-                  ? recommendation.photos[0] 
-                  : `${apiConfig.baseUrl}${recommendation.photos[0]}`
-                }
-                alt={recommendation.title}
+        {recommendation.photos && recommendation.photos.length > 0 ? (
+          <img
+                src={(() => {
+                  const photo = recommendation.photos[0];
+                  const photoUrl = typeof photo === 'string' ? photo : (photo as any)?.photo_url || photo;
+                  return photoUrl && photoUrl.startsWith('http') 
+                    ? photoUrl 
+                    : photoUrl 
+                      ? `${apiConfig.baseUrl}${photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`}`
+                      : 'https://via.placeholder.com/400x300?text=No+Image';
+                })()}
+            alt={recommendation.title}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted">
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted">
                 <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-            )}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
             
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            {/* Category Badge */}
+        
+        {/* Category Badge */}
             <div className="absolute top-3 left-3">
               <span className="bg-pulse text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm">
-                {recommendation.category_name}
-              </span>
-            </div>
+            {recommendation.category_name}
+          </span>
+        </div>
 
-            {/* Difficulty Badge */}
-            {recommendation.difficulty_level && (
+        {/* Difficulty Badge */}
+        {recommendation.difficulty_level && (
               <div className="absolute bottom-3 left-3">
-                {formatDifficulty(recommendation.difficulty_level)}
-              </div>
-            )}
+            {formatDifficulty(recommendation.difficulty_level)}
           </div>
+        )}
+      </div>
 
-          {/* Content */}
+      {/* Content */}
           <div className="p-5 space-y-3">
-            {/* Title and Location */}
-            <div>
+        {/* Title and Location */}
+        <div>
               <h3 className="text-lg font-bold text-pulse group-hover:text-pulse/80 transition-colors duration-300 line-clamp-1 mb-2">
-                {recommendation.title}
-              </h3>
-              <span 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  navigate(`/city/${recommendation.city_name}`);
-                }}
+            {recommendation.title}
+          </h3>
+          <span 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(`/city/${recommendation.city_name}`);
+            }}
                 className="text-sm text-white hover:text-pulse transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              >
+          >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {recommendation.city_name}, {recommendation.country}
-              </span>
-            </div>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {recommendation.city_name}, {recommendation.country}
+          </span>
+        </div>
 
             {/* Stats: Like, Views, Save, Star Rating - Social Media Style */}
             <div className="pt-3 border-t border-subtle/50">
@@ -346,8 +351,8 @@ export function RecommendationCard({
                 <div className="flex flex-col items-center gap-1">
                   <Eye className="w-6 h-6 text-primary" />
                   <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
-                </div>
-                
+          </div>
+          
                 <button
                   onClick={handleBookmark}
                   className="flex flex-col items-center gap-1 disabled:opacity-50 group"
@@ -365,13 +370,13 @@ export function RecommendationCard({
                   <div className="flex flex-col items-center gap-1" title={`Average rating: ${recommendation.average_rating.toFixed(1)}/5 (${recommendation.rating_count || 0} ${recommendation.rating_count === 1 ? 'rating' : 'ratings'})`}>
                     <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                     <span className="text-xs font-medium text-primary">{recommendation.average_rating.toFixed(1)}</span>
-                  </div>
+              </div>
                 )}
               </div>
             </div>
-          </div>
-        </Link>
       </div>
+        </Link>
+    </div>
     </>
   );
 }

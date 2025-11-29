@@ -14,6 +14,9 @@ RUN pnpm install --frozen-lockfile
 COPY --chown=node:node shared ./shared
 COPY --chown=node:node backend ./backend
 
+# Create uploads directory with proper permissions before switching to node user
+RUN mkdir -p /workspace/backend/uploads && chown -R node:node /workspace/backend/uploads
+
 USER node
 
 WORKDIR /workspace/backend

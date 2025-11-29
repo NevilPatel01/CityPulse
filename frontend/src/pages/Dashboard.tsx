@@ -359,15 +359,15 @@ export default function Dashboard() {
                                     </div>
                                 ) : (
                                     <>
-                                        {filteredPosts.map((post) => (
+                                        {filteredPosts.map((post, index) => (
                                             post.content_type === 'trip' ? (
                                                 <TripFeedCard 
-                                                    key={`trip-${post.id}`} 
+                                                    key={`trip-${post.id}-${index}`} 
                                                     trip={post as unknown as Trip}
                                                 />
                                             ) : (
                                                 <FeedPostCard 
-                                                    key={`rec-${post.id}`} 
+                                                    key={`rec-${post.id}-${index}`} 
                                                     post={post} 
                                                     onUpdate={updatePost}
                                                     onRemove={removePost}
@@ -444,15 +444,15 @@ export default function Dashboard() {
                                 ) : (
                                     <>
                                         <div className="space-y-4">
-                                            {filteredPosts.map((post) => (
+                                            {filteredPosts.map((post, index) => (
                                                 post.content_type === 'trip' ? (
                                                     <TripFeedCard 
-                                                        key={`trip-${post.id}`} 
+                                                        key={`trip-${post.id}-${index}`} 
                                                         trip={post as unknown as Trip}
                                                     />
                                                 ) : (
                                                     <FeedPostCard 
-                                                        key={`rec-${post.id}`} 
+                                                        key={`rec-${post.id}-${index}`} 
                                                         post={post} 
                                                         onUpdate={updatePost}
                                                         onRemove={removePost}

@@ -105,15 +105,15 @@ const AboutPage = () => {
                     key={index}
                     className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300'
                   >
-                    <CardContent className='p-8'>
-                      <h3 className='text-2xl font-bold text-primary mb-4'>
+                <CardContent className='p-8'>
+                  <h3 className='text-2xl font-bold text-primary mb-4'>
                         {item.title}
-                      </h3>
-                      <p className='text-muted leading-relaxed text-lg'>
+                  </h3>
+                  <p className='text-muted leading-relaxed text-lg'>
                         {item.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  </p>
+                </CardContent>
+              </Card>
                 );
               })}
             </div>
@@ -137,22 +137,22 @@ const AboutPage = () => {
                 const IconComponent = value.icon;
                 
                 return (
-                  <Card
-                    key={index}
+                <Card
+                  key={index}
                     className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]'
-                  >
-                    <CardContent className='p-6'>
+                >
+                  <CardContent className='p-6'>
                       <div className={`inline-flex p-3 rounded-xl ${value.bgColor} mb-4`}>
                         <IconComponent className={`w-6 h-6 ${value.color}`} />
                       </div>
-                      <h3 className='text-xl font-semibold text-primary mb-3'>
-                        {value.title}
-                      </h3>
-                      <p className='text-muted leading-relaxed'>
-                        {value.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                    <h3 className='text-xl font-semibold text-primary mb-3'>
+                      {value.title}
+                    </h3>
+                    <p className='text-muted leading-relaxed'>
+                      {value.description}
+                    </p>
+                  </CardContent>
+                </Card>
                 );
               })}
             </div>

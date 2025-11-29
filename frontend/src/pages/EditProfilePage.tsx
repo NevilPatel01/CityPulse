@@ -8,7 +8,7 @@ import { buildApiUrl } from '../config/api';
 
 export function EditProfilePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser, checkAuthStatus } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -133,6 +133,14 @@ export function EditProfilePage() {
 
       console.log('[EditProfile] Sending update with cities:', formData.citiesVisited);
       await profileService.updateProfile(updateData);
+      
+      // Update auth context if username changed
+      if (formData.username !== user?.username) {
+        updateUser({ username: formData.username });
+      }
+      
+      // Refresh auth status to get updated user data
+      await checkAuthStatus();
       
       // Navigate back to profile page
       navigate(`/profile/${formData.username}`);

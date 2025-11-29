@@ -36,7 +36,7 @@ export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, checkAuthStatus } = useAuth();
   const [showBuddyModal, setShowBuddyModal] = useState(false);
   const [showBuddyRequestModal, setShowBuddyRequestModal] = useState(false);
   const [buddyRequestMessage, setBuddyRequestMessage] = useState('');
@@ -70,6 +70,16 @@ export default function ProfilePage() {
   const [showAllCities, setShowAllCities] = useState(false);
 
   const isOwnProfile = Boolean(currentUser && currentUser.username === username);
+
+  // Refresh auth status when username changes to ensure currentUser is up-to-date
+  useEffect(() => {
+    if (username && currentUser && currentUser.username !== username) {
+      // Username in URL doesn't match current user - refresh auth status
+      // This ensures auth context is updated if username was changed in profile edit
+      checkAuthStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username]); // Only depend on username param
 
   useEffect(() => {
     const maxTab = isOwnProfile ? 3 : 2;
@@ -508,42 +518,42 @@ export default function ProfilePage() {
             <div className="order-1 lg:order-2 flex-1">
               <div className="bg-surface-glass backdrop-blur-glass rounded-3xl overflow-hidden shadow-2xl">
                 
-                {/* Cover Photo */}
+          {/* Cover Photo */}
                 <div className="relative w-full h-44 md:h-52 lg:h-56 bg-gradient-to-br from-gray-800/50 via-gray-700/30 to-gray-900/50">
-                  {(localImages.cover || profile.coverPhotoUrl) ? (
-                    <img 
-                      src={localImages.cover || getFullImageUrl(profile.coverPhotoUrl)} 
-                      alt="Cover" 
+            {(localImages.cover || profile.coverPhotoUrl) ? (
+              <img 
+                src={localImages.cover || getFullImageUrl(profile.coverPhotoUrl)} 
+                alt="Cover" 
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pulse/10 via-purple-900/20 to-blue-900/20">
                       <div className="text-white/5 text-8xl">🌍</div>
-                    </div>
-                  )}
-                  
-                  {/* Gradient Overlay */}
+              </div>
+            )}
+            
+            {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                  
+            
                   {/* Cover Photo Upload */}
-                  {isOwnProfile && (
-                    <button
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*';
-                        input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'cover');
-                        input.click();
-                      }}
+            {isOwnProfile && (
+              <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'cover');
+                  input.click();
+                }}
                       className="absolute top-4 right-4 p-2.5 rounded-full text-white bg-black/40 backdrop-blur-md border border-white/20 hover:bg-pulse hover:border-pulse transition-all duration-300 shadow-lg"
-                      aria-label="Upload cover photo"
-                    >
+                aria-label="Upload cover photo"
+              >
                       <Camera size={18} />
-                    </button>
-                  )}
+              </button>
+            )}
 
                   {/* Verified Badge - Top Left */}
                   {(profile as { emailVerified?: boolean }).emailVerified && (
@@ -554,50 +564,50 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   )}
-                </div>
+          </div>
 
                 {/* Profile Info Section - Relative container for absolute avatar */}
                 <div className="relative px-5 md:px-6 pb-6">
                   {/* Avatar - Positioned absolutely to overlap cover */}
                   <div className="absolute -top-14 left-5 md:left-6 z-10">
-                    <div className="relative group">
+                <div className="relative group">
                       <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-base overflow-hidden border-[3px] border-gray-700/50 shadow-2xl">
-                        {(localImages.profile || profile.profilePhotoUrl) ? (
-                          <img 
-                            src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
-                            alt={profile.fullName}
+                    {(localImages.profile || profile.profilePhotoUrl) ? (
+                      <img 
+                        src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
+                        alt={profile.fullName}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        ) : (
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
                           <div className="w-full h-full bg-gradient-to-br from-pulse to-purple-600 flex items-center justify-center">
                             <span className="text-white text-2xl sm:text-3xl font-bold">
-                              {profile.fullName.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
+                          {profile.fullName.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-                      
-                      {/* Profile Photo Upload */}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
-                            input.click();
-                          }}
-                          className="absolute bottom-1 right-1 p-1.5 rounded-xl text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
-                          aria-label="Upload profile photo"
-                        >
-                          <Camera size={12} />
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
+                  
+                      {/* Profile Photo Upload */}
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
+                        input.click();
+                      }}
+                          className="absolute bottom-1 right-1 p-1.5 rounded-xl text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
+                      aria-label="Upload profile photo"
+                    >
+                          <Camera size={12} />
+                    </button>
+                  )}
+                    </div>
+                </div>
 
                   {/* Name, Username, Edit Button - With left padding for avatar space */}
                   <div className="pt-4 pl-28 sm:pl-36">
@@ -609,11 +619,11 @@ export default function ProfilePage() {
                       {/* Action Buttons - Inline on desktop */}
                       <div className="flex gap-2 sm:ml-auto flex-shrink-0">
                         {isOwnProfile ? (
-                          <button
-                            onClick={handleEditProfile}
+                    <button
+                      onClick={handleEditProfile}
                             className="px-5 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 shadow-md shadow-pulse/20 hover:scale-105 active:scale-95"
-                          >
-                            Edit Profile
+                    >
+                      Edit Profile
                           </button>
                         ) : (
                           <>
@@ -654,64 +664,64 @@ export default function ProfilePage() {
                               >
                                 <UserPlus size={14} />
                                 Add Buddy
-                              </button>
+                    </button>
                             )}
                           </>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <p className="text-muted text-sm mt-1">@{profile.username}</p>
-                  </div>
+                  )}
+                </div>
+              </div>
 
-                  {/* Location Info */}
-                  {(profile.currentLocation || profile.hometown) && (
+                    <p className="text-muted text-sm mt-1">@{profile.username}</p>
+              </div>
+
+              {/* Location Info */}
+              {(profile.currentLocation || profile.hometown) && (
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-sm text-muted">
-                      {profile.currentLocation && (
+                  {profile.currentLocation && (
                         <span className="flex items-center gap-1.5">
                           <MapPin size={14} className="text-pulse" />
                           Lives in <span className="text-primary font-medium ml-1">{profile.currentLocation}</span>
                         </span>
-                      )}
-                      {profile.hometown && (
+                  )}
+                  {profile.hometown && (
                         <span className="flex items-center gap-1.5">
                           <Home size={14} className="text-pulse" />
                           From <span className="text-primary font-medium ml-1">{profile.hometown}</span>
                         </span>
-                      )}
-                    </div>
                   )}
+                </div>
+              )}
 
                   {/* Cities Visited Chips */}
-                  {profile.citiesVisited && profile.citiesVisited.length > 0 && (
+              {profile.citiesVisited && profile.citiesVisited.length > 0 && (
                     <div className="mt-4">
                       <p className="text-xs text-muted mb-2.5 font-medium uppercase tracking-wide">Cities Visited</p>
-                      <div className="flex flex-wrap gap-2">
-                        {displayedCities?.map((city, index) => (
-                          <span 
-                            key={index} 
+                  <div className="flex flex-wrap gap-2">
+                    {displayedCities?.map((city, index) => (
+                      <span 
+                        key={index} 
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-primary hover:border-pulse/40 hover:bg-pulse/10 transition-all duration-300 cursor-pointer"
                             onClick={() => navigate(`/city/${city}`)}
-                          >
+                      >
                             <MapPin size={10} className="text-pulse" />
-                            {city}
-                          </span>
-                        ))}
+                        {city}
+                      </span>
+                    ))}
                         {profile.citiesVisited.length > 8 && (
-                          <button
-                            onClick={() => setShowAllCities(!showAllCities)}
+                      <button
+                        onClick={() => setShowAllCities(!showAllCities)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-pulse/10 border border-pulse/30 text-pulse hover:bg-pulse/20 transition-all"
-                          >
-                            {showAllCities ? (
+                      >
+                        {showAllCities ? (
                               <>Show less <ChevronUp size={12} /></>
-                            ) : (
+                        ) : (
                               <>+{profile.citiesVisited.length - 8} more <ChevronDown size={12} /></>
-                            )}
-                          </button>
                         )}
-                      </div>
-                    </div>
-                  )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
                   {/* Bio */}
                   {profile.bio && (
@@ -734,60 +744,60 @@ export default function ProfilePage() {
                             <Mail size={18} className="text-muted hover:text-white transition-colors" />
                           </a>
                           )}
-                          {profile.instagramUrl && (
-                            <a
-                              href={profile.instagramUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                  {profile.instagramUrl && (
+                    <a
+                      href={profile.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                               className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-white hover:shadow-lg transition-all"
-                              title="Instagram"
-                            >
+                      title="Instagram"
+                    >
                               <Instagram size={18} className="text-muted hover:text-white transition-colors" />
-                            </a>
-                          )}
-                          {profile.facebookUrl && (
-                            <a
-                              href={profile.facebookUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                    </a>
+                  )}
+                  {profile.facebookUrl && (
+                    <a
+                      href={profile.facebookUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                               className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-white hover:shadow-lg transition-all"
-                              title="Facebook"
-                            >
+                      title="Facebook"
+                    >
                               <Facebook size={18} className="text-muted hover:text-white transition-colors" />
-                            </a>
-                          )}
+                    </a>
+                  )}
                           {profile.websiteUrl && (
-                            <a
+                    <a
                               href={profile.websiteUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-white hover:shadow-lg transition-all"
                               title="Website"
-                            >
+                    >
                               <Globe size={18} className="text-muted hover:text-white" />
-                            </a>
-                          )}
+                    </a>
+                  )}
                           {profile.whatsappContact && (
-                            <a
+                    <a
                               href={`https://wa.me/${profile.whatsappContact.replace(/[^0-9]/g, '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                      target="_blank"
+                      rel="noopener noreferrer"
                               className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-500 hover:border-transparent transition-all"
                               title="WhatsApp"
-                            >
+                    >
                               <MessageCircle size={18} className="text-muted" />
-                            </a>
-                          )}
-                        </div>
+                    </a>
+                  )}
+                </div>
                       ) : (
                         <p className="text-sm text-muted italic">No social networks available</p>
                       )}
                     </div>
-                  )}
+                )}
                 </div>
               </div>
+              </div>
             </div>
-          </div>
 
           {/* Tabs Section - Full Width Below Two-Column */}
           <div className="mt-6 bg-surface-glass backdrop-blur-glass rounded-3xl overflow-hidden shadow-2xl">
@@ -795,29 +805,29 @@ export default function ProfilePage() {
             <div className="border-b border-white/5 bg-white/[0.02]">
               <div className="flex w-full">
                 {tabsData.map((tab, index) => (
-                  <button
+                    <button
                     key={tab.full}
-                    onClick={() => setActiveTab(index)}
+                      onClick={() => setActiveTab(index)}
                     className={`flex-1 px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-semibold transition-all relative whitespace-nowrap ${
-                      activeTab === index
+                        activeTab === index
                         ? 'text-pulse'
-                        : 'text-muted hover:text-primary'
-                    }`}
-                  >
+                          : 'text-muted hover:text-primary'
+                      }`}
+                    >
                     {/* Short label on mobile, full label on larger screens */}
                     <span className="sm:hidden">{tab.short}</span>
                     <span className="hidden sm:inline">{tab.full}</span>
-                    {activeTab === index && (
+                      {activeTab === index && (
                       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-pulse rounded-full" />
-                    )}
-                  </button>
-                ))}
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Tab Content */}
+              {/* Tab Content */}
             <div className="p-4 md:p-6 lg:p-8 min-h-[400px]">
-              {activeTab === 0 && (
+                {activeTab === 0 && (
                 <div className="animate-in fade-in duration-500">
                   {isOwnProfile && recommendationCount === 0 ? (
                     <div className="text-center py-12">
@@ -835,13 +845,13 @@ export default function ProfilePage() {
                       </div>
                       <h3 className="text-xl font-bold text-primary mb-2">No recommendations yet</h3>
                       <p className="text-muted text-sm mb-6 max-w-sm mx-auto">Share your favorite places with the travel community</p>
-                      <button
-                        onClick={() => navigate('/create-recommendation')}
+                        <button
+                          onClick={() => navigate('/create-recommendation')}
                         className="bg-pulse hover:bg-pulse/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg shadow-pulse/30"
-                      >
+                        >
                         Add Your First Recommendation
-                      </button>
-                    </div>
+                        </button>
+                      </div>
                   ) : (
                     <div>
                       <RecommendationsList userId={profile.id} />
@@ -849,35 +859,35 @@ export default function ProfilePage() {
                       {/* Add Recommendation Button - Below content */}
                       {isOwnProfile && (
                         <div className="mt-6 flex justify-center">
-                          <button
-                            onClick={() => navigate('/create-recommendation')}
+                        <button
+                          onClick={() => navigate('/create-recommendation')}
                             className="w-12 h-12 bg-pulse hover:bg-pulse/90 text-white rounded-full shadow-lg shadow-pulse/30 flex items-center justify-center text-2xl font-bold transition-all duration-300 hover:scale-110"
                             title="Add Recommendation"
-                          >
+                        >
                             +
-                          </button>
-                        </div>
+                        </button>
+                      </div>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
-              {activeTab === 1 && (
+                {activeTab === 1 && (
                 <div className="animate-in fade-in duration-500">
-                  <TravelHistoryTimeline username={profile.username} />
-                </div>
-              )}
+                    <TravelHistoryTimeline username={profile.username} />
+                  </div>
+                )}
 
-              {activeTab === 2 && (
+                {activeTab === 2 && (
                 <div className="animate-in fade-in duration-500">
-                  <AchievementProgress username={profile.username} />
-                </div>
-              )}
+                    <AchievementProgress username={profile.username} />
+                  </div>
+                )}
 
-              {activeTab === 3 && isOwnProfile && (
+                {activeTab === 3 && isOwnProfile && (
                 <div className="animate-in fade-in duration-500">
-                  {savedRecommendations.length === 0 && !loadingSaved ? (
+                    {savedRecommendations.length === 0 && !loadingSaved ? (
                     <div className="text-center py-12">
                       {/* Bookmark Illustration */}
                       <div className="mb-6 opacity-60">
@@ -888,18 +898,18 @@ export default function ProfilePage() {
                       </div>
                       <h3 className="text-xl font-bold text-primary mb-2">No saved recommendations</h3>
                       <p className="text-muted text-sm mb-6 max-w-sm mx-auto">Save recommendations from other travelers to plan your next adventure!</p>
-                      <button
-                        onClick={() => navigate('/explore')}
+                        <button
+                          onClick={() => navigate('/explore')}
                         className="bg-pulse hover:bg-pulse/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg shadow-pulse/30"
-                      >
-                        Explore Recommendations
-                      </button>
-                    </div>
-                  ) : (
+                        >
+                          Explore Recommendations
+                        </button>
+                      </div>
+                    ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {savedRecommendations.map((post) => (
                         <RecommendationCard
-                          key={post.id}
+                            key={post.id}
                           recommendation={{
                             id: post.id,
                             title: post.title,
@@ -923,21 +933,21 @@ export default function ProfilePage() {
                             );
                             setSavedRecommendations(updated);
                           }}
-                        />
-                      ))}
-                      {hasMoreSaved && (
-                        <button
-                          onClick={() => setSavedPage(prev => prev + 1)}
-                          disabled={loadingSaved}
+                            />
+                        ))}
+                        {hasMoreSaved && (
+                          <button
+                            onClick={() => setSavedPage(prev => prev + 1)}
+                            disabled={loadingSaved}
                           className="w-full py-4 bg-white/5 hover:bg-pulse/10 border border-white/10 hover:border-pulse/30 rounded-xl text-pulse font-semibold transition-all duration-300 disabled:opacity-50"
-                        >
+                          >
                           {loadingSaved ? 'Loading...' : 'Load More'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
           </div>
         </div>
@@ -949,7 +959,9 @@ export default function ProfilePage() {
           imageSrc={croppingImage.src}
           onCropComplete={handleCropComplete}
           onCancel={() => setCroppingImage(null)}
-          aspect={croppingImage.type === 'cover' ? 16 / 9 : 1}
+          aspect={croppingImage.type === 'cover' ? 3 : 1}
+          targetWidth={croppingImage.type === 'cover' ? 1200 : 400}
+          targetHeight={croppingImage.type === 'cover' ? 400 : 400}
         />
       )}
 

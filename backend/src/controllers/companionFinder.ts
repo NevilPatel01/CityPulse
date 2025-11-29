@@ -293,7 +293,7 @@ export const getSuggestedTrips = async (req: Request, res: Response) => {
         // Get user's interests and visited cities
         const userDataQuery = `
             SELECT 
-                (SELECT json_agg(interest_category_id) FROM user_interests WHERE user_id = $1) as interests,
+                (SELECT json_agg(category_id) FROM user_interests WHERE user_id = $1) as interests,
                 (SELECT cities_visited FROM user_profiles WHERE user_id = $1) as cities_visited
         `;
         const userData = await pool.query(userDataQuery, [userId]);

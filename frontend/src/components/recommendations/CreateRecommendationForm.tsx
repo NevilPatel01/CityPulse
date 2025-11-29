@@ -218,6 +218,11 @@ export function CreateRecommendationForm({
       newErrors.user_rating = 'Rating is required';
     }
 
+    // Photo validation - now required (for new recommendations)
+    if (!isEditing && selectedFiles.length === 0) {
+      newErrors.general = 'At least one image is required when creating a recommendation';
+    }
+
     // Price range validation
     if (formData.price_range_min && formData.price_range_max) {
       const min = parseFloat(formData.price_range_min);
@@ -341,11 +346,38 @@ export function CreateRecommendationForm({
         : '/api/recommendations';
       const method = isEditing ? 'PUT' : 'POST';
 
-      console.log(`[FRONTEND] ${isEditing ? 'Updating' : 'Creating'} recommendation:`, requestData);
-      const data = await apiRequest(endpoint, {
-        method,
-        body: JSON.stringify(requestData),
-      }) as { success: boolean; data?: { id: number }; message?: string; errors?: Array<{ field: string; message: string }> };
+      let data: { success: boolean; data?: { id: number }; message?: string; errors?: Array<{ field: string; message: string }> };
+
+      if (isEditing) {
+        // For editing, use JSON body (photos uploaded separately if needed)
+        console.log(`[FRONTEND] Updating recommendation:`, requestData);
+        data = await apiRequest(endpoint, {
+          method,
+          body: JSON.stringify(requestData),
+        }) as { success: boolean; data?: { id: number }; message?: string; errors?: Array<{ field: string; message: string }> };
+      } else {
+        // For creating, use multipart/form-data with photos
+        const formDataToSend = new FormData();
+        
+        // Append all fields
+        Object.entries(requestData).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== '') {
+            formDataToSend.append(key, value.toString());
+          }
+        });
+        
+        // Append photos (required for new recommendations)
+        selectedFiles.forEach((file) => {
+          formDataToSend.append('photos', file);
+        });
+
+        console.log(`[FRONTEND] Creating recommendation with ${selectedFiles.length} photos`);
+        data = await apiRequest(endpoint, {
+          method,
+          body: formDataToSend,
+          isFormData: true
+        }) as { success: boolean; data?: { id: number }; message?: string; errors?: Array<{ field: string; message: string }> };
+      }
 
       console.log(`[FRONTEND] ${isEditing ? 'Update' : 'Create'} recommendation response:`, data);
       if (data.success) {
@@ -353,8 +385,8 @@ export function CreateRecommendationForm({
           ? (recommendationId ? parseInt(recommendationId) : 0) 
           : (data.data?.id || 0);
 
-        // Upload photos if any are selected
-        if (selectedFiles.length > 0 && targetId) {
+        // For editing, upload photos separately if any are selected
+        if (isEditing && selectedFiles.length > 0 && targetId) {
           try {
             const formData = new FormData();
             selectedFiles.forEach((file) => {
@@ -369,7 +401,7 @@ export function CreateRecommendationForm({
             console.log('[FRONTEND] Photos uploaded successfully');
           } catch (photoError) {
             console.error('[FRONTEND] Failed to upload photos:', photoError);
-            showSuccess(`Recommendation ${isEditing ? 'updated' : 'created'} but failed to upload some photos`);
+            showSuccess(`Recommendation updated but failed to upload some photos`);
           }
         }
 
@@ -623,7 +655,7 @@ export function CreateRecommendationForm({
 
           {/* Photos Section */}
           <CollapsibleSection
-            title="Photos"
+            title={isEditing ? "Photos" : "Photos (Required)"}
             isOpen={openSections.photos}
             onToggle={() => toggleSection('photos')}
           >
@@ -694,8 +726,13 @@ export function CreateRecommendationForm({
               </div>
             )}
             
+            {!isEditing && (
+              <p className="text-sm text-muted mb-2">
+                <span className="text-red-400">*</span> At least one image is required when creating a recommendation
+              </p>
+            )}
             <FileUpload
-              label={isEditing ? "Add More Photos" : "Upload Photos"}
+              label={isEditing ? "Add More Photos" : "Upload Photos (Required)"}
               onFilesSelected={handleFilesSelected}
               maxFiles={5}
               maxFileSize={5}

@@ -118,11 +118,34 @@ export const getCitiesSchema = z.object({
     search: z.string().max(100, 'Search term must not exceed 100 characters').optional()
 });
 
+// Preprocess form data to convert string numbers to actual numbers
+const preprocessFormData = (body: any): any => {
+    const processed = { ...body };
+    
+    // Fields that should be numbers
+    const numberFields = ['category_id', 'city_id', 'price_range_min', 'price_range_max', 'user_rating', 'latitude', 'longitude'];
+    
+    for (const field of numberFields) {
+        if (processed[field] !== undefined && processed[field] !== null && processed[field] !== '') {
+            const num = Number(processed[field]);
+            if (!isNaN(num)) {
+                processed[field] = num;
+            }
+        }
+    }
+    
+    return processed;
+};
+
 // Validation middleware
 export const validate = (schema: z.ZodSchema) => {
     return (req: any, res: any, next: any) => {
         try {
-            schema.parse(req.body);
+            // Preprocess form data if needed
+            const processedBody = preprocessFormData(req.body);
+            schema.parse(processedBody);
+            // Update req.body with processed values
+            req.body = processedBody;
             next();
         } catch (error: any) {
             if (error instanceof z.ZodError) {

@@ -9,7 +9,7 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     max: 20, 
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000, 
+    connectionTimeoutMillis: 10000, // Increased to 10 seconds to allow time for postgres to be ready
 });
 
 // Handle pool errors

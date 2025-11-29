@@ -141,38 +141,38 @@ const FeaturesPage = () => {
                 const IconComponent = feature.icon;
                 
                 return (
-                  <Card
-                    key={index}
+                <Card
+                  key={index}
                     className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300'
-                  >
-                    <CardContent className='p-8'>
-                      <div className='flex items-start gap-4 mb-6'>
+                >
+                  <CardContent className='p-8'>
+                    <div className='flex items-start gap-4 mb-6'>
                         <div className={`p-3 rounded-xl ${feature.bgColor} flex-shrink-0 transition-transform duration-300 hover:scale-110`}>
                           <IconComponent className={`w-8 h-8 ${feature.color}`} />
                         </div>
                         <div className='flex-1'>
-                          <h3 className='text-2xl font-semibold text-primary mb-2'>
-                            {feature.title}
-                          </h3>
-                          <p className='text-muted text-lg leading-relaxed'>
-                            {feature.description}
-                          </p>
-                        </div>
+                        <h3 className='text-2xl font-semibold text-primary mb-2'>
+                          {feature.title}
+                        </h3>
+                        <p className='text-muted text-lg leading-relaxed'>
+                          {feature.description}
+                        </p>
                       </div>
+                    </div>
 
-                      <div className='space-y-3'>
-                        {feature.details.map((detail, detailIndex) => (
-                          <div
-                            key={detailIndex}
-                            className='flex items-start gap-3'
-                          >
+                    <div className='space-y-3'>
+                      {feature.details.map((detail, detailIndex) => (
+                        <div
+                          key={detailIndex}
+                          className='flex items-start gap-3'
+                        >
                             <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${feature.color.replace('text-', 'bg-')}`}></div>
-                            <p className='text-muted'>{detail}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                          <p className='text-muted'>{detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
                 );
               })}
             </div>
@@ -260,11 +260,11 @@ const FeaturesPage = () => {
                 const isPrivacyControl = feature.title === 'Privacy Controls';
                 
                 return (
-                  <Card
-                    key={index}
+                <Card
+                  key={index}
                     className={`bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] ${isLastInRow && index === 9 ? 'md:col-start-2 lg:col-start-auto' : ''}`}
-                  >
-                    <CardContent className='p-6'>
+                >
+                  <CardContent className='p-6'>
                       <div className={`inline-flex p-3 rounded-lg mb-4 ${
                         isPrivacyControl 
                           ? 'bg-pulse text-pulse' 
@@ -275,13 +275,13 @@ const FeaturesPage = () => {
                         }`} />
                       </div>
                       <h3 className='text-lg font-semibold text-primary mb-2'>
-                        {feature.title}
-                      </h3>
+                      {feature.title}
+                    </h3>
                       <p className='text-muted leading-relaxed text-sm'>
-                        {feature.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      {feature.description}
+                    </p>
+                  </CardContent>
+                </Card>
                 );
               })}
             </div>
@@ -328,22 +328,22 @@ const FeaturesPage = () => {
                 },
               ].map((step, index) => {
                 return (
-                  <Card
-                    key={index}
+                <Card
+                  key={index}
                     className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl text-center transition-all duration-300 hover:scale-[1.02]'
-                  >
-                    <CardContent className='p-6'>
+                >
+                  <CardContent className='p-6'>
                       <div className='w-16 h-16 rounded-full bg-pulse text-white flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg transition-transform duration-300 hover:scale-110'>
-                        {step.step}
-                      </div>
-                      <h3 className='text-lg font-semibold text-primary mb-3'>
-                        {step.title}
-                      </h3>
+                      {step.step}
+                    </div>
+                    <h3 className='text-lg font-semibold text-primary mb-3'>
+                      {step.title}
+                    </h3>
                       <p className='text-muted leading-relaxed text-sm'>
-                        {step.description}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      {step.description}
+                    </p>
+                  </CardContent>
+                </Card>
                 );
               })}
             </div>

@@ -164,11 +164,11 @@ export const updateReportStatus = async (req: Request, res: Response) => {
                 RETURNING *
             `
             : `
-                UPDATE content_reports
-                SET status = $1, reviewed_by = $2, reviewed_at = NOW()
-                WHERE id = $3
-                RETURNING *
-            `;
+        UPDATE content_reports
+        SET status = $1, reviewed_by = $2, reviewed_at = NOW()
+        WHERE id = $3
+      RETURNING *
+    `;
 
         const result = status === 'pending'
             ? await pool.query(updateQuery, [status, reportId])
@@ -183,11 +183,11 @@ export const updateReportStatus = async (req: Request, res: Response) => {
 
         // Log moderator action (skip if reopening to pending)
         if (status !== 'pending') {
-            await pool.query(
-                `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
-            VALUES ($1, $2, $3, $4, $5, $6)`,
-                [moderatorId, 'report_status_update', 'content_report', reportId, `Status changed to ${status}`, notes || null]
-            );
+        await pool.query(
+            `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
+        VALUES ($1, $2, $3, $4, $5, $6)`,
+            [moderatorId, 'report_status_update', 'content_report', reportId, `Status changed to ${status}`, notes || null]
+        );
         } else {
             // Log as report reopened
             await pool.query(

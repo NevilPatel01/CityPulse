@@ -84,15 +84,6 @@ CREATE TABLE IF NOT EXISTS travel_preferences (
 -- 3. INTERESTS & CATEGORIES
 -- =====================================================
 
--- Interest Categories
-CREATE TABLE IF NOT EXISTS interest_categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    icon_url VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- User Interests (links users to recommendation categories they're interested in)
 CREATE TABLE IF NOT EXISTS user_interests (
     id SERIAL PRIMARY KEY,
@@ -673,27 +664,29 @@ CREATE TRIGGER update_saved_searches_updated_at
 -- =====================================================
 
 -- Insert default achievement categories
+-- Insert all achievements with correct badge image URLs
 INSERT INTO achievements (name, description, achievement_type, target_value, badge_icon_url) VALUES
-('First Steps', 'Create your first recommendation', 'recommendations_created', 1, '/icons/first-steps.svg'),
-('City Explorer', 'Visit 5 different cities', 'cities_visited', 5, '/icons/city-explorer.svg'),
-('Social Butterfly', 'Connect with 10 travel buddies', 'travel_buddies_connected', 10, '/icons/social-butterfly.svg'),
-('Review Master', 'Write 20 helpful reviews', 'ratings_received', 20, '/icons/review-master.svg'),
-('Globe Trotter', 'Visit 25 different cities', 'cities_visited', 25, '/icons/globe-trotter.svg'),
-('Recommendation Pro', 'Create 50 recommendations', 'recommendations_created', 50, '/icons/recommendation-pro.svg')
-ON CONFLICT (name) DO NOTHING;
+-- Main achievements
+('First Steps', 'Create your first recommendation', 'recommendations_created', 1, '/badges/firststep.webp'),
+('City Explorer', 'Visit 5 different cities', 'cities_visited', 5, '/badges/CityExplorer.webp'),
+('Social Butterfly', 'Connect with 10 travel buddies', 'travel_buddies_connected', 10, '/badges/SocialButterfly.webp'),
+('Review Master', 'Write 20 helpful reviews', 'ratings_received', 20, '/badges/ReviewMaster.webp'),
+('Globe Trotter', 'Visit 25 different cities', 'cities_visited', 25, '/badges/GlobeTrotter.webp'),
+('Recommendation Pro', 'Create 50 recommendations', 'recommendations_created', 50, '/badges/RecommendationPro.webp'),
+-- Additional achievements
+('Rising Star', 'Receive 25 likes on your recommendations', 'likes_received', 25, '/badges/RisingStar.webp'),
+('Crowd Favorite', 'Receive 100 likes on your recommendations', 'likes_received', 100, '/badges/CrowdFavorite.webp'),
+('Travel Network Elite', 'Connect with 50 travel buddies', 'travel_buddies_connected', 50, '/badges/TravelNetworkElite.webp'),
+('Trusted Advisor', 'Receive 100 ratings on your recommendations', 'ratings_received', 100, '/badges/TrustedAdvisor.webp'),
+-- Tier-based badges
+('Bronze Achiever', 'Complete your first bronze tier achievement', 'special', 1, '/badges/Bronze.webp'),
+('Silver Achiever', 'Complete your first silver tier achievement', 'special', 1, '/badges/silver.webp'),
+('Gold Achiever', 'Complete your first gold tier achievement', 'special', 1, '/badges/gold.webp'),
+('Platinum Achiever', 'Complete your first platinum tier achievement', 'special', 1, '/badges/Platinum.webp')
+ON CONFLICT (name) DO UPDATE 
+SET badge_icon_url = EXCLUDED.badge_icon_url;
 
 -- Insert default interest categories
-INSERT INTO interest_categories (name, description, icon_url) VALUES
-('Adventure', 'Outdoor activities and adventure sports', '/icons/adventure.svg'),
-('Culture', 'Museums, historical sites, and cultural experiences', '/icons/culture.svg'),
-('Food & Dining', 'Restaurants, cafes, and culinary experiences', '/icons/food.svg'),
-('Nightlife', 'Bars, clubs, and evening entertainment', '/icons/nightlife.svg'),
-('Nature', 'Parks, beaches, and natural attractions', '/icons/nature.svg'),
-('Shopping', 'Markets, malls, and shopping districts', '/icons/shopping.svg'),
-('Photography', 'Scenic spots and photo opportunities', '/icons/photography.svg'),
-('Relaxation', 'Spas, wellness, and peaceful activities', '/icons/relaxation.svg')
-ON CONFLICT (name) DO NOTHING;
-
 -- Insert default recommendation categories
 INSERT INTO recommendation_categories (name, description, icon_url) VALUES
 ('Restaurant', 'Places to eat and drink', '/icons/restaurant.svg'),
@@ -712,9 +705,9 @@ ON CONFLICT (name) DO NOTHING;
 
 -- Grant all privileges to the user
 -- Final database grants
-GRANT ALL PRIVILEGES ON DATABASE citypulse_dev TO "user";
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "user";
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "user";
+GRANT ALL PRIVILEGES ON DATABASE citypulse_dev TO "citypulse_user";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "citypulse_user";
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "citypulse_user";
 
 -- =====================================================
 -- 19.TRIP PLANNING SYSTEM

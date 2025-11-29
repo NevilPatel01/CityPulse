@@ -150,8 +150,28 @@ export function ImageCarousel({
             alt={`${title} - Image ${currentIndex + 1}`}
             className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
             onClick={() => setIsFullscreen(true)}
-            onError={() => {
-              console.error('Image failed to load:', images[currentIndex]);
+            onError={(e) => {
+              const imgSrc = images[currentIndex];
+              console.error('Image failed to load:', imgSrc);
+              
+              // Try to fix common path issues
+              const target = e.target as HTMLImageElement;
+              if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('blob:')) {
+                // If relative path, try with API base URL
+                const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+                const fixedSrc = imgSrc.startsWith('/') 
+                  ? `${apiBaseUrl}${imgSrc}` 
+                  : `${apiBaseUrl}/${imgSrc}`;
+                
+                // Only retry once to avoid infinite loop
+                if (target.src !== fixedSrc && !target.dataset.retried) {
+                  target.dataset.retried = 'true';
+                  target.src = fixedSrc;
+                  return;
+                }
+              }
+              
+              // Mark as error and show placeholder
               setImageError(prev => {
                 const newErrors = [...prev];
                 newErrors[currentIndex] = true;

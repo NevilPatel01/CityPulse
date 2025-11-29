@@ -337,7 +337,7 @@ export const setUserInterests = async (req: Request, res: Response) => {
         // Insert new interests
         for (const categoryId of categoryIds) {
             await client.query(
-                'INSERT INTO user_interests (user_id, interest_category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                'INSERT INTO user_interests (user_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                 [userId, categoryId]
             );
         }
@@ -379,13 +379,13 @@ export const getUserInterests = async (req: Request, res: Response) => {
         const result = await pool.query(
             `SELECT 
                 ui.id,
-                ui.interest_category_id as category_id,
-                ic.name as category_name,
-                ic.description as category_description
+                ui.category_id,
+                rc.name as category_name,
+                rc.description as category_description
             FROM user_interests ui
-            JOIN interest_categories ic ON ui.interest_category_id = ic.id
+            JOIN recommendation_categories rc ON ui.category_id = rc.id
             WHERE ui.user_id = $1
-            ORDER BY ic.name`,
+            ORDER BY rc.name`,
             [userId]
         );
 

@@ -101,6 +101,7 @@ router.post(
     '/',
     recommendationLimiter,
     authenticateToken,
+    uploadMultiple.array('photos', 10), // Accept photos in create request
     validate(createRecommendationSchema),
     createRecommendation
 );

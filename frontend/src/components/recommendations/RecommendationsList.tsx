@@ -172,7 +172,7 @@ export function RecommendationsList({ userId, showActions = false, className = '
       setSearchDebounce(timeout);
     } else if (!filters.search && filters.category_id === '' && filters.city_id === '') {
       // If search is cleared and no other filters, load immediately
-      void loadRecommendations(1, true);
+    void loadRecommendations(1, true);
     }
 
     return () => {

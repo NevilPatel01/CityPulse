@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import fs from 'fs';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import recommendationRoutes from './routes/recommendations';
@@ -18,6 +19,7 @@ import tripsRoutes from './routes/trips';
 import achievementRoutes from './routes/achievements';
 import moderationRoutes from './routes/moderation';
 import { healthCheck, schemaCheck } from './controllers/health';
+import { getUploadsBaseDir } from './utils/paths';
 
 export const createApp = (): express.Express => {
     console.log('[APP] Creating Express application...');
@@ -186,6 +188,15 @@ export const createApp = (): express.Express => {
     app.use('/api/moderator', moderationRoutes);
 
     console.log('[APP] Setting up static file serving for uploads...');
+    const uploadsDir = getUploadsBaseDir();
+    console.log(`[APP] Serving uploads from: ${uploadsDir}`);
+    
+    // Ensure uploads directory exists
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log(`[APP] Created uploads directory: ${uploadsDir}`);
+    }
+    
     // Serve uploaded images statically with proper CORS headers
     app.use('/uploads', (req, res, next) => {
         // Set CORS headers to allow cross-origin image requests
@@ -202,7 +213,21 @@ export const createApp = (): express.Express => {
         }
 
         next();
-    }, express.static(path.join(process.cwd(), 'uploads')));
+    }, express.static(uploadsDir, {
+        setHeaders: (res, filePath) => {
+            const relativePath = path.relative(uploadsDir, filePath);
+            console.log(`[STATIC] Serving: ${relativePath}`);
+        }
+    }));
+    
+    // Handle 404s for uploads
+    app.use('/uploads', (req, res) => {
+        console.error(`[STATIC] 404 - File not found: ${req.path}`);
+        res.status(404).json({ 
+            error: 'File not found', 
+            path: req.path
+        });
+    });
 
     console.log('[APP] Setting up error handlers...');
     // Global error handler - it catches all unhandled errors and formats responses
