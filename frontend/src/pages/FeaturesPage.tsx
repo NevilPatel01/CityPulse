@@ -228,6 +228,7 @@ const FeaturesPage = () => {
                   title: 'Privacy Controls',
                   description: 'Control your profile visibility and content sharing preferences.',
                   color: 'text-pulse',
+                  bgColor: 'bg-pulse/10',
                 },
                 {
                   icon: Lock,
@@ -255,15 +256,23 @@ const FeaturesPage = () => {
                 },
               ].map((feature, index) => {
                 const IconComponent = feature.icon;
+                const isLastInRow = (index + 1) % 3 === 0 || index === 9; // Last item (Photo Management) should be centered
+                const isPrivacyControl = feature.title === 'Privacy Controls';
                 
                 return (
                   <Card
                     key={index}
-                    className='bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]'
+                    className={`bg-surface-glass backdrop-blur-glass border border-subtle shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] ${isLastInRow && index === 9 ? 'md:col-start-2 lg:col-start-auto' : ''}`}
                   >
                     <CardContent className='p-6'>
-                      <div className={`inline-flex p-3 rounded-lg ${feature.color.replace('text-', 'bg-').replace('-500', '-500/10')} mb-4`}>
-                        <IconComponent className={`w-6 h-6 ${feature.color}`} />
+                      <div className={`inline-flex p-3 rounded-lg mb-4 ${
+                        isPrivacyControl 
+                          ? 'bg-pulse text-pulse' 
+                          : feature.bgColor || feature.color.replace('text-', 'bg-').replace('-500', '-500/10')
+                      }`}>
+                        <IconComponent className={`w-6 h-6 ${
+                          isPrivacyControl ? 'text-pulse' : feature.color
+                        }`} />
                       </div>
                       <h3 className='text-lg font-semibold text-primary mb-2'>
                         {feature.title}

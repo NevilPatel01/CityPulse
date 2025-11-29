@@ -212,7 +212,27 @@ export const TravelHistoryTimeline: React.FC<TravelHistoryTimelineProps> = ({ us
         </div>
         <div className="bg-surface-glass/50 backdrop-blur-glass rounded-xl p-4 text-center">
           <p className="text-sm text-text-secondary">
-            {history.length} {history.length === 1 ? 'destination' : 'destinations'} explored
+            {(() => {
+              // Calculate unique countries and cities
+              const countriesSet = new Set<string>();
+              const citiesSet = new Set<string>();
+              
+              history.forEach(item => {
+                if (item.country) countriesSet.add(item.country);
+                if (item.city_name) citiesSet.add(`${item.city_name}, ${item.country}`);
+              });
+              
+              const countries = countriesSet.size;
+              const cities = citiesSet.size;
+              
+              if (countries > 0 && cities > 0) {
+                return `${countries} ${countries === 1 ? 'country' : 'countries'} & ${cities} ${cities === 1 ? 'city' : 'cities'} explored`;
+              } else if (cities > 0) {
+                return `${cities} ${cities === 1 ? 'city' : 'cities'} explored`;
+              } else {
+                return `${history.length} ${history.length === 1 ? 'destination' : 'destinations'} explored`;
+              }
+            })()}
           </p>
         </div>
       </div>

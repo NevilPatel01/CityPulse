@@ -75,6 +75,7 @@ export function RecommendationsList({ userId, showActions = false, className = '
     category_id: '',
     city_id: ''
   });
+  const [searchDebounce, setSearchDebounce] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -148,10 +149,39 @@ export function RecommendationsList({ userId, showActions = false, className = '
     void loadData();
   }, [loadData]);
 
-  // Load recommendations when filters change
+  // Load recommendations when filters change (with debounce for search)
   useEffect(() => {
-    void loadRecommendations(1, true);
-  }, [loadRecommendations]);
+    // For category/city filters, load immediately (no debounce needed)
+    if (filters.category_id || filters.city_id) {
+      void loadRecommendations(1, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.category_id, filters.city_id]); // Only reload immediately for category/city changes
+
+  // Separate effect for search debounce
+  useEffect(() => {
+    // Clear existing timeout
+    if (searchDebounce) {
+      clearTimeout(searchDebounce);
+    }
+
+    if (filters.search) {
+      const timeout = setTimeout(() => {
+        void loadRecommendations(1, true);
+      }, 500);
+      setSearchDebounce(timeout);
+    } else if (!filters.search && filters.category_id === '' && filters.city_id === '') {
+      // If search is cleared and no other filters, load immediately
+      void loadRecommendations(1, true);
+    }
+
+    return () => {
+      if (searchDebounce) {
+        clearTimeout(searchDebounce);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.search]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({
@@ -168,6 +198,11 @@ export function RecommendationsList({ userId, showActions = false, className = '
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // Clear any pending debounce and search immediately
+    if (searchDebounce) {
+      clearTimeout(searchDebounce);
+      setSearchDebounce(null);
+    }
     void loadRecommendations(1, true);
   };
 
@@ -268,6 +303,14 @@ export function RecommendationsList({ userId, showActions = false, className = '
                 recommendation={recommendation}
                 showActions={showActions}
                 onDelete={handleDelete}
+                onUpdate={(id, updates) => {
+                  // Update local state when like/bookmark changes
+                  setRecommendations(prev => 
+                    prev.map(rec => 
+                      rec.id === id ? { ...rec, ...updates } : rec
+                    )
+                  );
+                }}
               />
             ))}
           </div>

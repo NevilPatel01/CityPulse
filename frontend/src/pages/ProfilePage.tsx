@@ -20,7 +20,7 @@ import { useSafeToast } from '../hooks/useSafeToast';
 import { AchievementProgress } from '../components/achievements/AchievementProgress';
 import { TravelHistoryTimeline } from '../components/profile/TravelHistoryTimeline';
 import { BadgeUnlockModal } from '../components/achievements/BadgeUnlockModal';
-import { FeedPostCard } from '../components/feed/FeedPostCard';
+import { RecommendationCard } from '../components/recommendations/RecommendationCard';
 import { ImageCropper } from '../components/common/ImageCropper';
 import { PrivateProfileView } from '../components/profile/PrivateProfileView';
 import type { UserAchievement } from '../types/achievement';
@@ -248,15 +248,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePostUpdate = (postId: number, updates: Partial<FeedPost>) => {
-    setSavedRecommendations(prev =>
-      prev.map(post => post.id === postId ? { ...post, ...updates } : post)
-    );
-  };
-
-  const handlePostRemove = (postId: number) => {
-    setSavedRecommendations(prev => prev.filter(post => post.id !== postId));
-  };
 
   if (loading) {
     return (
@@ -456,10 +447,10 @@ export default function ProfilePage() {
                             href={profile.instagramUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-white hover:shadow-lg transition-all"
                             title="Instagram"
                           >
-                            <Instagram size={18} className="text-muted hover:text-white" />
+                            <Instagram size={18} className="text-muted hover:text-white transition-colors" />
                           </a>
                         )}
                         {profile.facebookUrl && (
@@ -467,19 +458,19 @@ export default function ProfilePage() {
                             href={profile.facebookUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-white hover:shadow-lg transition-all"
                             title="Facebook"
                           >
-                            <Facebook size={18} className="text-muted hover:text-white" />
+                            <Facebook size={18} className="text-muted hover:text-white transition-colors" />
                           </a>
                         )}
                         {profile.email && (
                           <a
                             href={`mailto:${profile.email}`}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-white hover:shadow-lg transition-all"
                             title="Email"
                           >
-                            <Mail size={18} className="text-muted hover:text-white" />
+                            <Mail size={18} className="text-muted hover:text-white transition-colors" />
                           </a>
                         )}
                         {profile.websiteUrl && (
@@ -487,7 +478,7 @@ export default function ProfilePage() {
                             href={profile.websiteUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-white hover:shadow-lg transition-all"
                             title="Website"
                           >
                             <Globe size={18} className="text-muted hover:text-white" />
@@ -599,7 +590,7 @@ export default function ProfilePage() {
                             input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
                             input.click();
                           }}
-                          className="absolute bottom-1 right-1 p-1.5 rounded-full text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                          className="absolute bottom-1 right-1 p-1.5 rounded-xl text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
                           aria-label="Upload profile photo"
                         >
                           <Camera size={12} />
@@ -620,7 +611,7 @@ export default function ProfilePage() {
                         {isOwnProfile ? (
                           <button
                             onClick={handleEditProfile}
-                            className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 shadow-md shadow-pulse/20"
+                            className="px-5 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 shadow-md shadow-pulse/20 hover:scale-105 active:scale-95"
                           >
                             Edit Profile
                           </button>
@@ -737,21 +728,21 @@ export default function ProfilePage() {
                           {profile.email && (
                             <a
                               href={`mailto:${profile.email}`}
-                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-transparent transition-all"
-                              title="Email"
-                            >
-                              <Mail size={18} className="text-muted" />
-                            </a>
+                            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-pulse hover:border-white hover:shadow-lg transition-all"
+                            title="Email"
+                          >
+                            <Mail size={18} className="text-muted hover:text-white transition-colors" />
+                          </a>
                           )}
                           {profile.instagramUrl && (
                             <a
                               href={profile.instagramUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500 hover:border-white hover:shadow-lg transition-all"
                               title="Instagram"
                             >
-                              <Instagram size={18} className="text-muted" />
+                              <Instagram size={18} className="text-muted hover:text-white transition-colors" />
                             </a>
                           )}
                           {profile.facebookUrl && (
@@ -759,10 +750,10 @@ export default function ProfilePage() {
                               href={profile.facebookUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-transparent transition-all"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-600 hover:border-white hover:shadow-lg transition-all"
                               title="Facebook"
                             >
-                              <Facebook size={18} className="text-muted" />
+                              <Facebook size={18} className="text-muted hover:text-white transition-colors" />
                             </a>
                           )}
                           {profile.websiteUrl && (
@@ -770,10 +761,10 @@ export default function ProfilePage() {
                               href={profile.websiteUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-transparent transition-all"
+                              className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-green-600 hover:border-white hover:shadow-lg transition-all"
                               title="Website"
                             >
-                              <Globe size={18} className="text-muted" />
+                              <Globe size={18} className="text-muted hover:text-white" />
                             </a>
                           )}
                           {profile.whatsappContact && (
@@ -905,13 +896,33 @@ export default function ProfilePage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {savedRecommendations.map((post) => (
-                        <FeedPostCard 
+                        <RecommendationCard
                           key={post.id}
-                          post={post} 
-                          onUpdate={handlePostUpdate}
-                          onRemove={handlePostRemove}
+                          recommendation={{
+                            id: post.id,
+                            title: post.title,
+                            description: post.description,
+                            views_count: post.views_count || 0,
+                            likes_count: post.likes_count || 0,
+                            created_at: post.created_at,
+                            username: post.username,
+                            full_name: post.full_name,
+                            category_name: post.category_name || '',
+                            city_name: post.city_name || '',
+                            country: post.country || '',
+                            photos: post.photos,
+                            user_id: post.user_id,
+                            is_liked: post.is_liked,
+                            is_bookmarked: post.is_bookmarked
+                          }}
+                          onUpdate={(id, updates) => {
+                            const updated = savedRecommendations.map(p => 
+                              p.id === id ? { ...p, ...updates } : p
+                            );
+                            setSavedRecommendations(updated);
+                          }}
                         />
                       ))}
                       {hasMoreSaved && (
