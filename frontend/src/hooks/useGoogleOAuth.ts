@@ -93,14 +93,14 @@ export const useGoogleOAuth = () => {
             updateUser(authResponse.data.user);
             console.log('✅ Auth context updated with user data');
 
-            // Get the stored redirect path or default to dashboard
-            const redirectPath = sessionStorage.getItem('oauth_redirect_path') || '/dashboard';
+            // Get the stored redirect path or default to explore
+            const redirectPath = sessionStorage.getItem('oauth_redirect_path') || '/explore';
             sessionStorage.removeItem('oauth_redirect_path');
             console.log('Redirecting to:', redirectPath);
 
             // Add a small delay to ensure context update propagates
             setTimeout(() => {
-                // Navigate to dashboard
+                // Navigate to explore
                 navigate(redirectPath);
                 setState({ isLoading: false, error: null });
                 console.log('OAuth flow completed successfully!');

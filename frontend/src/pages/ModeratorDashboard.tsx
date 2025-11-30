@@ -268,7 +268,7 @@ const ModeratorDashboard: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/explore')}
               className="p-2 hover:bg-surface-glass rounded-lg transition-colors"
               title="Back to Dashboard"
             >

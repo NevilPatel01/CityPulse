@@ -116,7 +116,7 @@ export const searchApi = {
             
             // Skip default values that haven't been changed by user
             if (key === 'priceMin' && value === 0) return;
-            if (key === 'priceMax' && value === 50000) return;
+            if (key === 'priceMax' && value === 1000) return;
             if (key === 'minRating' && value === 0) return;
             if (key === 'difficulty' && value === 'any') return;
             if (key === 'dateType' && value === 'both') return;

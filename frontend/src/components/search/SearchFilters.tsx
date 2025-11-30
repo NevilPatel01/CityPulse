@@ -75,7 +75,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                             filters.location.length > 0 ||
                             filters.tags.length > 0 ||
                             filters.priceMin > 0 ||
-                            filters.priceMax < 50000 ||
+                            filters.priceMax < 1000 ||
                             filters.minRating > 0 ||
                             (filters.difficulty && filters.difficulty !== 'any') ||
                             filters.dateFrom || 
@@ -269,13 +269,13 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                                 <input
                                     type="range"
                                     min="0"
-                                    max="50000"
-                                    step="500"
+                                    max="1000"
+                                    step="50"
                                     value={filters.priceMin}
                                     onChange={(e) => handlePriceMinChange(parseInt(e.target.value))}
                                     className="w-full h-2 bg-surface-glass rounded-lg appearance-none cursor-pointer accent-pulse"
                                     style={{
-                                        background: `linear-gradient(to right, var(--pulse) 0%, var(--pulse) ${(filters.priceMin / 50000) * 100}%, rgba(255,255,255,0.1) ${(filters.priceMin / 50000) * 100}%, rgba(255,255,255,0.1) 100%)`
+                                        background: `linear-gradient(to right, var(--pulse) 0%, var(--pulse) ${(filters.priceMin / 1000) * 100}%, rgba(255,255,255,0.1) ${(filters.priceMin / 1000) * 100}%, rgba(255,255,255,0.1) 100%)`
                                     }}
                                 />
                             </div>
@@ -284,13 +284,13 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                                 <input
                                     type="range"
                                     min="0"
-                                    max="50000"
-                                    step="500"
+                                    max="1000"
+                                    step="50"
                                     value={filters.priceMax}
                                     onChange={(e) => handlePriceMaxChange(parseInt(e.target.value))}
                                     className="w-full h-2 bg-surface-glass rounded-lg appearance-none cursor-pointer accent-pulse"
                                     style={{
-                                        background: `linear-gradient(to right, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.1) ${(filters.priceMax / 50000) * 100}%, var(--pulse) ${(filters.priceMax / 50000) * 100}%, var(--pulse) 100%)`
+                                        background: `linear-gradient(to right, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.1) ${(filters.priceMax / 1000) * 100}%, var(--pulse) ${(filters.priceMax / 1000) * 100}%, var(--pulse) 100%)`
                                     }}
                                 />
                             </div>

@@ -132,17 +132,17 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className = '' }) =>
           {/* Menu Items */}
           <div className="py-1">
             <Link
-              to="/dashboard"
+              to="/explore"
               className={`flex items-center px-4 py-2 text-sm transition-colors ${
-                isActivePath('/dashboard') 
+                isActivePath('/explore') 
                   ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
                   : 'text-primary hover:bg-surface-glass'
               }`}
               onClick={() => setIsOpen(false)}
             >
               <span className="mr-3 text-base">📊</span>
-              Dashboard
-              {isActivePath('/dashboard') && (
+              Explore
+              {isActivePath('/explore') && (
                 <span className="ml-auto text-pulse" aria-hidden="true">●</span>
               )}
             </Link>

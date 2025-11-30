@@ -17,6 +17,7 @@ interface CreateRecommendationFormProps {
       is_primary: boolean;
       display_order: number;
     }>;
+    tags?: string[];
   };
 }
 
@@ -144,8 +145,11 @@ export function CreateRecommendationForm({
     // Geographic
     latitude: initialData?.latitude || '',
     longitude: initialData?.longitude || '',
-  });  const [customCategory, setCustomCategory] = useState('');
+  });  
+  const [customCategory, setCustomCategory] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [tags, setTags] = useState<string[]>(initialData?.tags || []);
+  const [tagInput, setTagInput] = useState('');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -339,6 +343,7 @@ export function CreateRecommendationForm({
         best_time_to_visit: formData.best_time_to_visit.trim() || undefined,
         duration_suggestion: formData.duration_suggestion.trim() || undefined,
         user_rating: formData.user_rating,
+        tags: tags.length > 0 ? tags : undefined,
       };
 
       const endpoint = isEditing 
@@ -651,6 +656,78 @@ export function CreateRecommendationForm({
               <option value='hard'>Hard</option>
               <option value='expert'>Expert</option>
             </Select>
+
+            {/* Tags Section */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-primary">
+                Tags (Optional)
+              </label>
+              <p className="text-xs text-muted mb-2">
+                Add tags to help others find your recommendation. Press Enter to add a tag (max 10 tags).
+              </p>
+              
+              {/* Tag Input */}
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="e.g., family-friendly, budget-friendly, scenic"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const trimmedTag = tagInput.trim().toLowerCase();
+                      if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
+                        setTags([...tags, trimmedTag]);
+                        setTagInput('');
+                      }
+                    }
+                  }}
+                  disabled={isLoading || tags.length >= 10}
+                  className='bg-surface-glass border-subtle text-primary flex-1'
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmedTag = tagInput.trim().toLowerCase();
+                    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
+                      setTags([...tags, trimmedTag]);
+                      setTagInput('');
+                    }
+                  }}
+                  disabled={isLoading || tags.length >= 10 || !tagInput.trim()}
+                  className="px-4 py-2 bg-pulse text-white rounded-lg hover:bg-pulse/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+
+              {/* Tags Display */}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-pulse/20 text-pulse rounded-full text-sm"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => setTags(tags.filter((_, i) => i !== index))}
+                        disabled={isLoading}
+                        className="hover:text-red-400 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {tags.length >= 10 && (
+                <p className="text-xs text-warning mt-1">Maximum 10 tags reached</p>
+              )}
+            </div>
           </CollapsibleSection>
 
           {/* Photos Section */}

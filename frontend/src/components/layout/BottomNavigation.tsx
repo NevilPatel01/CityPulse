@@ -49,8 +49,8 @@ export const BottomNavigation: React.FC = () => {
     const navItems = [
         { 
             label: "Home", 
-            path: "/dashboard",
-            active: location.pathname === "/dashboard" 
+            path: "/explore",
+            active: location.pathname === "/explore" 
         },
         { 
             label: "Search", 

@@ -7,7 +7,7 @@ interface PublicRouteProps {
   redirectTo?: string;
 }
 
-export function PublicRoute({ children, redirectTo = '/dashboard' }: PublicRouteProps) {
+export function PublicRoute({ children, redirectTo = '/explore' }: PublicRouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
   // Show loading spinner while checking authentication
@@ -15,7 +15,7 @@ export function PublicRoute({ children, redirectTo = '/dashboard' }: PublicRoute
     return <LoadingPage message="Loading..." />;
   }
 
-  // Redirect to dashboard if already authenticated
+  // Redirect to explore if already authenticated
   if (isAuthenticated) {
     return <Navigate to={redirectTo} replace />;
   }

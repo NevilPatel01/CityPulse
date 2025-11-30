@@ -14,7 +14,6 @@ import {
     requestDataDeletion,
     deactivateAccount
 } from '../controllers/profile';
-import { getTravelPreferences, updateTravelPreferences } from '../controllers/profile_travel_preferences';
 import {
     updateProfileSchema,
     usernameParamSchema,
@@ -154,19 +153,5 @@ router.put(
     updateEmailPreferences
 );
 
-// Travel preferences routes
-router.get(
-    '/travel-preferences',
-    profileLimiter,
-    authenticateToken,
-    getTravelPreferences
-);
-
-router.put(
-    '/travel-preferences',
-    profileLimiter,
-    authenticateToken,
-    updateTravelPreferences
-);
 
 export default router;

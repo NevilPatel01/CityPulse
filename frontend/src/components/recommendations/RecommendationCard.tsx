@@ -138,13 +138,32 @@ export function RecommendationCard({
     
     if (!user) return;
 
+    const previousBookmarked = isBookmarked;
+    
+    // Optimistic update
+    setIsBookmarked(!previousBookmarked);
+    onUpdate?.(recommendation.id, { is_bookmarked: !previousBookmarked });
+
     try {
-      const result = await toggleBookmark(recommendation.id) as { data: { isBookmarked: boolean } };
-      setIsBookmarked(result.data.isBookmarked);
-      onUpdate?.(recommendation.id, { is_bookmarked: result.data.isBookmarked });
-      showSuccess(result.data.isBookmarked ? 'Saved' : 'Unsaved');
+      const result = await toggleBookmark(recommendation.id) as { success?: boolean; data?: { isBookmarked: boolean } };
+      
+      // Determine actual state from response
+      let actualBookmarked = !previousBookmarked;
+      if (result.success && result.data && typeof result.data.isBookmarked === 'boolean') {
+        actualBookmarked = result.data.isBookmarked;
+      } else if (result.data && typeof result.data.isBookmarked === 'boolean') {
+        actualBookmarked = result.data.isBookmarked;
+      }
+      
+      // Update with actual state
+      setIsBookmarked(actualBookmarked);
+      onUpdate?.(recommendation.id, { is_bookmarked: actualBookmarked });
+      showSuccess(actualBookmarked ? 'Saved' : 'Unsaved');
     } catch (error) {
       console.error('Error toggling bookmark:', error);
+      // Revert optimistic update on error
+      setIsBookmarked(previousBookmarked);
+      onUpdate?.(recommendation.id, { is_bookmarked: previousBookmarked });
       showError('Failed to update bookmark');
     }
   };
@@ -269,12 +288,13 @@ export function RecommendationCard({
         {recommendation.photos && recommendation.photos.length > 0 ? (
           <img
                 src={(() => {
-                  const photo = recommendation.photos[0];
-                  const photoUrl = typeof photo === 'string' 
-                    ? photo 
-                    : typeof photo === 'object' && photo !== null && 'photo_url' in photo
-                      ? photo.photo_url
-                      : photo;
+                  const photo = recommendation.photos?.[0];
+                  let photoUrl: string | undefined;
+                  if (typeof photo === 'string') {
+                    photoUrl = photo;
+                  } else if (photo && typeof photo === 'object' && 'photo_url' in photo) {
+                    photoUrl = (photo as { photo_url: string }).photo_url;
+                  }
                   return photoUrl && typeof photoUrl === 'string' && photoUrl.startsWith('http') 
                     ? photoUrl 
                     : photoUrl && typeof photoUrl === 'string'
@@ -362,11 +382,15 @@ export function RecommendationCard({
                   className="flex flex-col items-center gap-1 disabled:opacity-50 group"
                   title={isBookmarked ? 'Unsave' : 'Save recommendation'}
                 >
-                  {isBookmarked ? (
-                    <Bookmark className="w-6 h-6 fill-pulse text-pulse transition-all hover:scale-110" />
-                  ) : (
-                    <Bookmark className="w-6 h-6 text-pulse hover:text-pulse/80 hover:scale-110 transition-all" style={{ strokeWidth: 2.5 }} />
-                  )}
+                  <Bookmark 
+                    className={`w-6 h-6 transition-all hover:scale-110 ${
+                      isBookmarked 
+                        ? 'fill-pulse text-pulse' 
+                        : 'text-pulse hover:text-pulse/80'
+                    }`}
+                    fill={isBookmarked ? 'currentColor' : 'none'}
+                    style={isBookmarked ? {} : { strokeWidth: 2.5 }}
+                  />
                   <span className="text-xs font-medium text-primary">{isBookmarked ? 'Saved' : 'Save'}</span>
                 </button>
                 

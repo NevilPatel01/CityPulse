@@ -928,10 +928,16 @@ export default function ProfilePage() {
                             is_bookmarked: post.is_bookmarked
                           }}
                           onUpdate={(id, updates) => {
-                            const updated = savedRecommendations.map(p => 
-                              p.id === id ? { ...p, ...updates } : p
-                            );
-                            setSavedRecommendations(updated);
+                            // If bookmark is removed, remove from list immediately
+                            if (updates.is_bookmarked === false) {
+                              setSavedRecommendations(prev => prev.filter(p => p.id !== id));
+                            } else {
+                              // Otherwise, update the item
+                              const updated = savedRecommendations.map(p => 
+                                p.id === id ? { ...p, ...updates } : p
+                              );
+                              setSavedRecommendations(updated);
+                            }
                           }}
                             />
                         ))}

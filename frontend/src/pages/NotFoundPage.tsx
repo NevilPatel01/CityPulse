@@ -61,10 +61,10 @@ export default function NotFoundPage() {
               <p className="text-sm text-muted">
                 Need help? 
                 <button 
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate('/explore')}
                   className="text-pulse hover:underline ml-1"
                 >
-                  Visit your dashboard
+                  Go to Explore
                 </button>
                 {' '}or{' '}
                 <button 

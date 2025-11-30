@@ -15,7 +15,7 @@ import SignupPage from './pages/auth/SignupPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import EmailVerificationPage from './pages/auth/EmailVerificationPage';
 import GoogleOAuthCallback from './pages/auth/GoogleOAuthCallback';
-import Dashboard from './pages/Dashboard.tsx';
+import Explore from './pages/Explore.tsx';
 import ProfilePage from './pages/ProfilePage';
 import { EditProfilePage } from './pages/EditProfilePage';
 import SettingsPage from './pages/SettingsPage';
@@ -85,14 +85,14 @@ function App() {
           <Route path="/verify-email" element={<EmailVerificationPage />} />
           
           {/* Protected routes - require authentication */}
-          <Route path="/dashboard" element={
+          <Route path="/explore" element={
             <ProtectedRoute>
-              <Dashboard />
+              <Explore />
             </ProtectedRoute>
           } />
-          <Route path="/dashboard/*" element={
+          <Route path="/explore/*" element={
             <ProtectedRoute>
-              <Dashboard />
+              <Explore />
             </ProtectedRoute>
           } />
           <Route path="/profile/:username" element={

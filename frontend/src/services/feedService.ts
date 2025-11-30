@@ -212,3 +212,39 @@ export const unlikeRecommendation = async (recommendationId: number) => {
     const url = buildApiUrl(`api/recommendations/${recommendationId}/unlike`);
     return await apiRequest(url, { method: 'DELETE' });
 };
+
+/**
+ * Get top places this month (last 30 days)
+ */
+export const getTopPlacesThisMonth = async (page: number = 1, limit: number = 6): Promise<{ success: boolean; data: FeedPost[] }> => {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+    });
+    const url = buildApiUrl(`api/feed/top-places-month?${params.toString()}`);
+    return await apiRequest<{ success: boolean; data: FeedPost[] }>(url);
+};
+
+/**
+ * Get popular recommendations in user's current country
+ */
+export const getPopularInCountry = async (page: number = 1, limit: number = 6): Promise<{ success: boolean; data: FeedPost[]; meta?: { country: string } }> => {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+    });
+    const url = buildApiUrl(`api/feed/popular-country?${params.toString()}`);
+    return await apiRequest<{ success: boolean; data: FeedPost[]; meta?: { country: string } }>(url);
+};
+
+/**
+ * Get mixed activity from travel buddies (recommendations + trips)
+ */
+export const getBuddiesActivity = async (page: number = 1, limit: number = 10): Promise<{ success: boolean; data: FeedPost[] }> => {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+    });
+    const url = buildApiUrl(`api/feed/buddies-activity?${params.toString()}`);
+    return await apiRequest<{ success: boolean; data: FeedPost[] }>(url);
+};

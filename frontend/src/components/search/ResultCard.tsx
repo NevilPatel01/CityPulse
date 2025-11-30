@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { SearchResult } from '../../services/searchService';
 import { useSearchOverlay } from '../../context/SearchOverlayContext';
 import { apiConfig } from '../../config/api';
+import { toggleBookmark, checkBookmarkStatus, recordShare } from '../../services/feedService';
+import { useSafeToast } from '../../hooks/useSafeToast';
+import { Bookmark, Share2 } from 'lucide-react';
 
 interface ResultCardProps {
     item: SearchResult;
@@ -83,6 +86,123 @@ interface CardHelpersProps {
 }
 
 const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSearch }) => {
+    const { showSuccess, showError } = useSafeToast();
+    const [isBookmarked, setIsBookmarked] = useState(false);
+    const [isBookmarking, setIsBookmarking] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
+
+    // Check bookmark status on mount (only for recommendations)
+    useEffect(() => {
+        if (item.type === 'recommendation') {
+            checkBookmarkStatus(item.id)
+                .then((response) => {
+                    if (response.success) {
+                        setIsBookmarked(response.data.isBookmarked);
+                    }
+                })
+                .catch(() => {
+                    // Silently fail - user might not be logged in
+                });
+        }
+    }, [item.id, item.type]);
+
+    const handleBookmark = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        if (item.type !== 'recommendation' || isBookmarking) return;
+
+        try {
+            setIsBookmarking(true);
+            const result = await toggleBookmark(item.id) as { success?: boolean; data?: { isBookmarked: boolean } };
+            
+            // Handle different response formats
+            if (result.success && result.data && typeof result.data.isBookmarked === 'boolean') {
+                setIsBookmarked(result.data.isBookmarked);
+                showSuccess(result.data.isBookmarked ? 'Saved recommendation' : 'Removed from saved');
+            } else if (result.data && typeof result.data.isBookmarked === 'boolean') {
+                // Fallback if success field is missing
+                setIsBookmarked(result.data.isBookmarked);
+                showSuccess(result.data.isBookmarked ? 'Saved recommendation' : 'Removed from saved');
+            } else {
+                // If response format is unexpected, refresh status
+                const statusResponse = await checkBookmarkStatus(item.id);
+                if (statusResponse.success) {
+                    setIsBookmarked(statusResponse.data.isBookmarked);
+                }
+                showSuccess(isBookmarked ? 'Removed from saved' : 'Saved recommendation');
+            }
+        } catch (error) {
+            console.error('Bookmark error:', error);
+            showError('Failed to update bookmark. Please try again.');
+            // Refresh status on error
+            try {
+                const statusResponse = await checkBookmarkStatus(item.id);
+                if (statusResponse.success) {
+                    setIsBookmarked(statusResponse.data.isBookmarked);
+                }
+            } catch {
+                // Ignore refresh errors
+            }
+        } finally {
+            setIsBookmarking(false);
+        }
+    };
+
+    const handleShare = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        if (item.type !== 'recommendation') {
+            showError('Can only share recommendations');
+            return;
+        }
+
+        const url = `${window.location.origin}/recommendations/${item.id}`;
+        
+        // Always copy URL to clipboard (no navigator.share with title/text)
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(url);
+                setLinkCopied(true);
+                try {
+                    await recordShare(item.id, 'link');
+                } catch {
+                    // Ignore share tracking errors
+                }
+                showSuccess('Link copied to clipboard');
+                setTimeout(() => setLinkCopied(false), 2000);
+            } else {
+                // Fallback: select text and show message
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setLinkCopied(true);
+                    try {
+                        await recordShare(item.id, 'link');
+                    } catch {
+                        // Ignore share tracking errors
+                    }
+                    showSuccess('Link copied to clipboard');
+                    setTimeout(() => setLinkCopied(false), 2000);
+                } catch {
+                    showError('Failed to copy link. Please copy manually.');
+                }
+                document.body.removeChild(textArea);
+            }
+        } catch (error) {
+            console.error('Share error:', error);
+            showError('Failed to copy link. Please try again.');
+        }
+    };
+
     const getDefaultImage = () => {
         if (item.type === 'city') {
             return 'https://via.placeholder.com/400x300?text=City';
@@ -182,31 +302,66 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2 pt-3 border-t border-subtle">
-                    <button
-                        className="p-2 text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors"
-                        aria-label="Save"
-                        title="Save"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                        </svg>
-                    </button>
-                    <button
-                        className="p-2 text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors"
-                        aria-label="Share"
-                        title="Share"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
-                    </button>
+                <div 
+                    className="flex items-center gap-2 pt-3 border-t border-subtle relative z-10"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.nativeEvent.stopImmediatePropagation();
+                    }}
+                >
+                    {item.type === 'recommendation' && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.nativeEvent.stopImmediatePropagation();
+                                    handleBookmark(e);
+                                }}
+                                disabled={isBookmarking}
+                                style={{ pointerEvents: 'auto', zIndex: 20 }}
+                                className={`relative z-20 p-2 text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                                    isBookmarked ? 'text-accent-amber border-accent-amber/50' : ''
+                                }`}
+                                aria-label={isBookmarked ? 'Remove bookmark' : 'Save'}
+                                title={isBookmarked ? 'Remove bookmark' : 'Save'}
+                            >
+                                <Bookmark 
+                                    size={16} 
+                                    fill={isBookmarked ? 'currentColor' : 'none'}
+                                    className={isBookmarked ? '' : 'stroke-2'}
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    e.nativeEvent.stopImmediatePropagation();
+                                    handleShare(e);
+                                }}
+                                style={{ pointerEvents: 'auto', zIndex: 20 }}
+                                className={`relative z-20 p-2 bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors cursor-pointer ${
+                                    linkCopied ? 'text-green-500' : 'text-primary'
+                                }`}
+                                aria-label="Share"
+                                title="Share"
+                            >
+                                <Share2 size={16} />
+                            </button>
+                        </>
+                    )}
                     <Link
                         to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
                             item.type === 'city' ? `/city/${item.title}` : 
                             `/profile/${item.author?.username}`}
-                        onClick={closeSearch}
-                        className="ml-auto px-4 py-2 text-sm font-medium text-white bg-pulse hover:bg-pulse/80 rounded-lg transition-all shadow-md hover:shadow-lg"
+                        onClick={(e) => {
+                            closeSearch();
+                            e.stopPropagation();
+                        }}
+                        className="ml-auto relative z-20 px-4 py-2 text-sm font-medium text-white bg-pulse hover:bg-pulse/80 rounded-lg transition-all shadow-md hover:shadow-lg"
+                        style={{ pointerEvents: 'auto' }}
                     >
                         View Details
                     </Link>
@@ -218,6 +373,123 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
 
 // List View Card - Matching image design
 const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSearch }) => {
+    const { showSuccess, showError } = useSafeToast();
+    const [isBookmarked, setIsBookmarked] = useState(false);
+    const [isBookmarking, setIsBookmarking] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
+
+    // Check bookmark status on mount (only for recommendations)
+    useEffect(() => {
+        if (item.type === 'recommendation') {
+            checkBookmarkStatus(item.id)
+                .then((response) => {
+                    if (response.success) {
+                        setIsBookmarked(response.data.isBookmarked);
+                    }
+                })
+                .catch(() => {
+                    // Silently fail - user might not be logged in
+                });
+        }
+    }, [item.id, item.type]);
+
+    const handleBookmark = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        if (item.type !== 'recommendation' || isBookmarking) return;
+
+        try {
+            setIsBookmarking(true);
+            const result = await toggleBookmark(item.id) as { success?: boolean; data?: { isBookmarked: boolean } };
+            
+            // Handle different response formats
+            if (result.success && result.data && typeof result.data.isBookmarked === 'boolean') {
+                setIsBookmarked(result.data.isBookmarked);
+                showSuccess(result.data.isBookmarked ? 'Saved recommendation' : 'Removed from saved');
+            } else if (result.data && typeof result.data.isBookmarked === 'boolean') {
+                // Fallback if success field is missing
+                setIsBookmarked(result.data.isBookmarked);
+                showSuccess(result.data.isBookmarked ? 'Saved recommendation' : 'Removed from saved');
+            } else {
+                // If response format is unexpected, refresh status
+                const statusResponse = await checkBookmarkStatus(item.id);
+                if (statusResponse.success) {
+                    setIsBookmarked(statusResponse.data.isBookmarked);
+                }
+                showSuccess(isBookmarked ? 'Removed from saved' : 'Saved recommendation');
+            }
+        } catch (error) {
+            console.error('Bookmark error:', error);
+            showError('Failed to update bookmark. Please try again.');
+            // Refresh status on error
+            try {
+                const statusResponse = await checkBookmarkStatus(item.id);
+                if (statusResponse.success) {
+                    setIsBookmarked(statusResponse.data.isBookmarked);
+                }
+            } catch {
+                // Ignore refresh errors
+            }
+        } finally {
+            setIsBookmarking(false);
+        }
+    };
+
+    const handleShare = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
+
+        if (item.type !== 'recommendation') {
+            showError('Can only share recommendations');
+            return;
+        }
+
+        const url = `${window.location.origin}/recommendations/${item.id}`;
+        
+        // Always copy URL to clipboard (no navigator.share with title/text)
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(url);
+                setLinkCopied(true);
+                try {
+                    await recordShare(item.id, 'link');
+                } catch {
+                    // Ignore share tracking errors
+                }
+                showSuccess('Link copied to clipboard');
+                setTimeout(() => setLinkCopied(false), 2000);
+            } else {
+                // Fallback: select text and show message
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setLinkCopied(true);
+                    try {
+                        await recordShare(item.id, 'link');
+                    } catch {
+                        // Ignore share tracking errors
+                    }
+                    showSuccess('Link copied to clipboard');
+                    setTimeout(() => setLinkCopied(false), 2000);
+                } catch {
+                    showError('Failed to copy link. Please copy manually.');
+                }
+                document.body.removeChild(textArea);
+            }
+        } catch (error) {
+            console.error('Share error:', error);
+            showError('Failed to copy link. Please try again.');
+        }
+    };
+
     const getDefaultImage = () => {
         if (item.type === 'city') {
             return 'https://via.placeholder.com/400x300?text=City';
@@ -235,7 +507,16 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
     };
 
     return (
-        <div className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-shadow border border-subtle">
+        <div 
+            className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-shadow border border-subtle"
+            onClick={(e) => {
+                // Prevent card clicks from interfering with buttons
+                const target = e.target as HTMLElement;
+                if (target.closest('button[type="button"]') || target.closest('a')) {
+                    return;
+                }
+            }}
+        >
             <div className="flex flex-col sm:flex-row gap-0">
                 {/* Image */}
                 <div className="relative w-full sm:w-72 h-56 bg-surface-glass flex-shrink-0">
@@ -320,31 +601,68 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-subtle">
-                        <button
-                            className="px-4 py-2 text-sm font-medium text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors inline-flex items-center gap-2"
-                            aria-label="Save"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                            </svg>
-                            Save
-                        </button>
-                        <button
-                            className="px-4 py-2 text-sm font-medium text-primary bg-surface-glass hover:bg-subtle border border-subtle rounded-lg transition-colors inline-flex items-center gap-2"
-                            aria-label="Share"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                            </svg>
-                            Share
-                        </button>
+                    <div 
+                        className="flex items-center gap-2 mt-4 pt-4 border-t border-subtle relative z-10" 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            e.nativeEvent.stopImmediatePropagation();
+                        }}
+                    >
+                        {item.type === 'recommendation' && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.nativeEvent.stopImmediatePropagation();
+                                        handleBookmark(e);
+                                    }}
+                                    disabled={isBookmarking}
+                                    style={{ pointerEvents: 'auto', zIndex: 20 }}
+                                    className={`relative z-20 px-4 py-2 text-sm font-medium border border-subtle rounded-lg transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                                        isBookmarked
+                                            ? 'bg-accent-amber/20 text-accent-amber border-accent-amber/30 hover:bg-accent-amber/30'
+                                            : 'bg-surface-glass text-primary hover:bg-subtle'
+                                    }`}
+                                    aria-label={isBookmarked ? 'Remove bookmark' : 'Save'}
+                                >
+                                    <Bookmark 
+                                        size={16} 
+                                        fill={isBookmarked ? 'currentColor' : 'none'}
+                                        className={isBookmarked ? '' : 'stroke-2'}
+                                    />
+                                    {isBookmarked ? 'Saved' : 'Save'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.nativeEvent.stopImmediatePropagation();
+                                        handleShare(e);
+                                    }}
+                                    style={{ pointerEvents: 'auto', zIndex: 20 }}
+                                    className={`relative z-20 px-4 py-2 text-sm font-medium bg-surface-glass border border-subtle rounded-lg transition-colors inline-flex items-center gap-2 hover:bg-subtle cursor-pointer ${
+                                        linkCopied ? 'text-green-500' : 'text-primary'
+                                    }`}
+                                    aria-label="Share"
+                                >
+                                    <Share2 size={16} />
+                                    {linkCopied ? 'Copied!' : 'Share'}
+                                </button>
+                            </>
+                        )}
                         <Link
                             to={item.type === 'recommendation' ? `/recommendations/${item.id}` : 
                                 item.type === 'city' ? `/city/${item.title}` : 
                                 `/profile/${item.author?.username}`}
-                            onClick={closeSearch}
-                            className="ml-auto px-6 py-2 text-sm font-medium text-white bg-pulse hover:bg-pulse/80 rounded-lg transition-all shadow-md hover:shadow-lg"
+                            onClick={(e) => {
+                                closeSearch();
+                                e.stopPropagation();
+                            }}
+                            className="ml-auto relative z-20 px-6 py-2 text-sm font-medium text-white bg-pulse hover:bg-pulse/80 rounded-lg transition-all shadow-md hover:shadow-lg"
+                            style={{ pointerEvents: 'auto' }}
                         >
                             View Details
                         </Link>

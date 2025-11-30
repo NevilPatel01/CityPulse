@@ -316,7 +316,8 @@ export const createRecommendation = async (req: Request, res: Response) => {
             longitude,
             best_time_to_visit,
             duration_suggestion,
-            user_rating
+            user_rating,
+            tags
         } = req.body;
         // Ensure description is a non-null string for DB insertion
         const safeDescription = description ?? '';
@@ -489,6 +490,45 @@ export const createRecommendation = async (req: Request, res: Response) => {
                 });
             }
             console.log(`[CREATE_REC] Uploaded ${uploadedPhotos.length} photos`);
+
+            // Handle tags
+            if (tags && Array.isArray(tags) && tags.length > 0) {
+                console.log('[CREATE_REC] Processing tags...');
+                // Delete any existing tag links (shouldn't exist for new recommendation, but safety first)
+                await query(
+                    'DELETE FROM recommendation_tag_links WHERE recommendation_id = $1',
+                    [recommendationId]
+                );
+
+                for (const tagName of tags) {
+                    if (typeof tagName !== 'string' || !tagName.trim()) continue;
+                    
+                    const trimmedTagName = tagName.trim();
+                    let tagResult = await query(
+                        'SELECT id FROM recommendation_tags WHERE name = $1',
+                        [trimmedTagName]
+                    );
+
+                    let tagId: number;
+                    if (tagResult.rows.length === 0) {
+                        // Create new tag
+                        const newTagResult = await query(
+                            'INSERT INTO recommendation_tags (name) VALUES ($1) RETURNING id',
+                            [trimmedTagName]
+                        );
+                        tagId = newTagResult.rows[0].id;
+                    } else {
+                        tagId = tagResult.rows[0].id;
+                    }
+
+                    // Link tag to recommendation
+                    await query(
+                        'INSERT INTO recommendation_tag_links (recommendation_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [recommendationId, tagId]
+                    );
+                }
+                console.log(`[CREATE_REC] Processed ${tags.length} tags`);
+            }
 
             console.log('[CREATE_REC] Recommendation created successfully');
 

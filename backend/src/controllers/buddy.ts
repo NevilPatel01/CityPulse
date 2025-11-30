@@ -780,7 +780,6 @@ export const findBuddies = async (req: Request, res: Response) => {
             search, 
             city, 
             interests, 
-            travelStyle, 
             activityLevel,
             page = 1, 
             limit = 20 
@@ -806,7 +805,6 @@ export const findBuddies = async (req: Request, res: Response) => {
                 u.hometown,
                 up.profile_photo_url,
                 up.cities_visited,
-                tp.travel_style,
                 tp.activity_level,
                 tp.preferred_difficulty,
                 (
@@ -879,13 +877,6 @@ export const findBuddies = async (req: Request, res: Response) => {
             paramIndex++;
         }
 
-        // Add travel style filter
-        if (travelStyle) {
-            queryText += ` AND tp.travel_style = $${paramIndex}`;
-            queryParams.push(travelStyle);
-            paramIndex++;
-        }
-
         // Add activity level filter
         if (activityLevel) {
             queryText += ` AND tp.activity_level = $${paramIndex}`;
@@ -941,12 +932,6 @@ export const findBuddies = async (req: Request, res: Response) => {
                 WHERE ui.user_id = u.id AND rc.name = ANY($${countParamIndex})
             )`;
             countParams.push(interestsArray);
-            countParamIndex++;
-        }
-
-        if (travelStyle) {
-            countQuery += ` AND tp.travel_style = $${countParamIndex}`;
-            countParams.push(travelStyle);
             countParamIndex++;
         }
 

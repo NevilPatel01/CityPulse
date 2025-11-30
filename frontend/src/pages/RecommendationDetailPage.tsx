@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Star, MapPin, Calendar, Clock, Eye, Heart, AlertTriangle, Edit, Trash2, ArrowLeft, Bookmark, Share2, Check } from 'lucide-react';
+import { Star, MapPin, Calendar, Clock, Eye, Heart, AlertTriangle, Edit, Trash2, ArrowLeft, Bookmark, Share2, Check, Flag } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ImageCarousel } from '../components/recommendations/ImageCarousel';
 import { PhotoUpload } from '../components/recommendations/PhotoUpload';
@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSafeToast } from '../hooks/useSafeToast';
 import { apiRequest, apiConfig } from '../config/api';
 import { ReportModal } from '../components/modals/ReportModal';
-import { reportPost } from '../services/feedService';
+import { reportPost, toggleBookmark, checkBookmarkStatus } from '../services/feedService';
 
 interface Recommendation {
   id: number;
@@ -89,12 +89,10 @@ export function RecommendationDetailPage() {
     if (!id || !user) return;
     
     try {
-      const data = await apiRequest<{ success: boolean; data: { isSaved: boolean } }>(
-        `/api/recommendations/${id}/save/status`
-      );
+      const data = await checkBookmarkStatus(Number(id));
       
       if (data.success) {
-        setIsSaved(data.data.isSaved);
+        setIsSaved(data.data.isBookmarked);
       }
     } catch (error) {
       console.error('Error checking save status:', error);
@@ -150,7 +148,7 @@ export function RecommendationDetailPage() {
         }
       } else {
         showError(data.message || 'Recommendation not found');
-        navigate('/dashboard');
+        navigate('/explore');
         return;
       }
     } catch (error) {
@@ -303,42 +301,72 @@ export function RecommendationDetailPage() {
   };
 
   const handleSave = async () => {
-    if (!id || isSaving || !user) return;
-    
-    // Store the current state before making the request
-    const wasSaved = isSaved;
+    if (!id || isSaving || !user) {
+      if (!user) {
+        showError('Please login to save recommendations');
+      }
+      return;
+    }
     
     try {
       setIsSaving(true);
       
-      const endpoint = `/api/recommendations/${id}/save`;
-      const method = isSaved ? 'DELETE' : 'POST';
+      // Call toggle bookmark API
+      const result = await toggleBookmark(Number(id)) as { success?: boolean; data?: { isBookmarked: boolean } };
       
-      const data = await apiRequest<{ success: boolean; data: { saves_count: number }; message?: string }>(
-        endpoint,
-        { method }
-      );
-
-      if (data.success) {
-        // Optimistically update state immediately - we know what it should be
-        setIsSaved(!wasSaved);
-        setSavesCount(data.data.saves_count);
-        showSuccess(!wasSaved ? 'Saved recommendation' : 'Removed from saved recommendations');
+      // Determine new bookmark state
+      let newBookmarkState = !isSaved; // Optimistic update
+      
+      if (result.success && result.data && typeof result.data.isBookmarked === 'boolean') {
+        // Use API response
+        newBookmarkState = result.data.isBookmarked;
+      } else if (result.data && typeof result.data.isBookmarked === 'boolean') {
+        // Fallback if success field is missing
+        newBookmarkState = result.data.isBookmarked;
       } else {
-        // If backend says it failed, refresh status to get accurate state
-        await checkSaveStatus();
-        showError(data.message || 'Failed to update save status');
+        // If response format is unexpected, refresh status from API
+        const statusResponse = await checkBookmarkStatus(Number(id));
+        if (statusResponse.success) {
+          newBookmarkState = statusResponse.data.isBookmarked;
+        }
       }
+      
+      // Update state immediately for responsive UI
+      setIsSaved(newBookmarkState);
+      
+      // Update saves count optimistically
+      if (newBookmarkState) {
+        // Bookmarked - increase count
+        setSavesCount(prev => prev + 1);
+      } else {
+        // Unbookmarked - decrease count (but don't go below 0)
+        setSavesCount(prev => Math.max(0, prev - 1));
+      }
+      
+      // Optionally refresh saves count from API to ensure accuracy
+      try {
+        const updatedData = await apiRequest<{ success: boolean; data: { saves_count: number } }>(
+          `/api/recommendations/${id}`
+        );
+        if (updatedData.success && updatedData.data) {
+          setSavesCount(updatedData.data.saves_count);
+        }
+      } catch {
+        // Silently fail - we already updated optimistically
+      }
+      
+      showSuccess(newBookmarkState ? 'Saved recommendation' : 'Removed from saved recommendations');
+      
     } catch (error) {
       console.error('Error updating save:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      showError('Failed to update bookmark. Please try again.');
       
       // Always refresh status on error to ensure UI matches backend
-      await checkSaveStatus();
-      
-      // Only show error if it's not a state sync issue
-      if (!errorMessage.includes('Already saved') && !errorMessage.includes('not saved yet')) {
-        showError(errorMessage);
+      try {
+        await checkSaveStatus();
+      } catch {
+        // If refresh fails, revert optimistic update
+        setIsSaved(!isSaved);
       }
     } finally {
       setIsSaving(false);
@@ -438,7 +466,7 @@ export function RecommendationDetailPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-primary mb-4">Recommendation not found</h1>
           <Button 
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/explore')}
             className="bg-pulse hover:bg-pulse/80 text-white"
           >
             Go to Dashboard
@@ -561,94 +589,118 @@ export function RecommendationDetailPage() {
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Image Carousel */}
-            {recommendation.photos && recommendation.photos.length > 0 ? (
-              <ImageCarousel 
-                images={recommendation.photos.map(photo => {
-                  const photoUrl = typeof photo === 'string' ? photo : photo.photo_url;
-                  return photoUrl.startsWith('http') ? photoUrl : `${apiConfig.baseUrl}${photoUrl}`;
-                })}
-                title={recommendation.title}
-                autoPlay={true}
-                autoPlayInterval={5000}
-              />
-            ) : (
-              <div className="relative w-full h-[500px] bg-surface-glass backdrop-blur-glass rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <svg 
-                    className="mx-auto h-16 w-16 text-muted mb-4" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                    />
-                  </svg>
-                  <p className="text-muted text-lg mb-4">No photos available</p>
-                  {isOwner && (
-                    <Button
-                      onClick={() => setShowPhotoUpload(true)}
-                      className="bg-pulse hover:bg-pulse/80 text-white"
+            <div className="relative">
+              {recommendation.photos && recommendation.photos.length > 0 ? (
+                <ImageCarousel 
+                  images={recommendation.photos.map(photo => {
+                    const photoUrl = typeof photo === 'string' ? photo : photo.photo_url;
+                    return photoUrl.startsWith('http') ? photoUrl : `${apiConfig.baseUrl}${photoUrl}`;
+                  })}
+                  title={recommendation.title}
+                  autoPlay={true}
+                  autoPlayInterval={5000}
+                />
+              ) : (
+                <div className="relative w-full h-[500px] bg-surface-glass backdrop-blur-glass rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <svg 
+                      className="mx-auto h-16 w-16 text-muted mb-4" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
                     >
-                      Add Photos
-                    </Button>
-                  )}
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                      />
+                    </svg>
+                    <p className="text-muted text-lg mb-4">No photos available</p>
+                    {isOwner && (
+                      <Button
+                        onClick={() => setShowPhotoUpload(true)}
+                        className="bg-pulse hover:bg-pulse/80 text-white"
+                      >
+                        Add Photos
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              
+            </div>
 
             {/* Social Media Style Action Buttons with Counts Below */}
             <div className="py-4 border-b border-subtle">
-              <div className="flex items-center gap-6 mb-3">
-                {user && (
-                  <>
-                    <button
-                      onClick={handleLike}
-                      disabled={isLiking}
-                      className="flex flex-col items-center gap-1 disabled:opacity-50 group"
-                      title={isLiked ? 'Unlike' : 'Like'}
-                    >
-                      <Heart className={`w-6 h-6 transition-all ${
-                        isLiked 
-                          ? 'fill-red-500 text-red-500' 
-                          : 'text-red-500 hover:text-red-600 hover:scale-110'
-                      }`} style={!isLiked ? { strokeWidth: 2.5 } : {}} />
-                      <span className="text-xs font-medium text-primary">{likesCount}</span>
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="flex flex-col items-center gap-1 disabled:opacity-50 group"
-                      title={isSaved ? 'Unsave' : 'Save'}
-                    >
-                      {isSaved ? (
-                        <Bookmark className="w-6 h-6 fill-pulse text-pulse transition-all hover:scale-110" />
-                      ) : (
-                        <Bookmark className="w-6 h-6 text-pulse hover:text-pulse/80 hover:scale-110 transition-all" style={{ strokeWidth: 2.5 }} />
-                      )}
-                      <span className="text-xs font-medium text-primary">{savesCount}</span>
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={handleShare}
-                  className="flex flex-col items-center gap-1 group"
-                  title="Share"
-                >
-                  {linkCopied ? (
-                    <Check className="w-6 h-6 text-green-500" />
-                  ) : (
-                    <Share2 className="w-6 h-6 text-primary hover:text-pulse hover:scale-110 transition-all" />
+              <div className="flex items-center justify-between gap-6 mb-3">
+                <div className="flex items-center gap-6">
+                  {user && (
+                    <>
+                      <button
+                        onClick={handleLike}
+                        disabled={isLiking}
+                        className="flex flex-col items-center gap-1 disabled:opacity-50 group"
+                        title={isLiked ? 'Unlike' : 'Like'}
+                      >
+                        <Heart className={`w-6 h-6 transition-all ${
+                          isLiked 
+                            ? 'fill-red-500 text-red-500' 
+                            : 'text-red-500 hover:text-red-600 hover:scale-110'
+                        }`} style={!isLiked ? { strokeWidth: 2.5 } : {}} />
+                        <span className="text-xs font-medium text-primary">{likesCount}</span>
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="flex flex-col items-center gap-1 disabled:opacity-50 group"
+                        title={isSaved ? 'Unsave' : 'Save'}
+                      >
+                        <Bookmark 
+                          className={`w-6 h-6 transition-all hover:scale-110 ${
+                            isSaved 
+                              ? 'fill-pulse text-pulse' 
+                              : 'text-pulse hover:text-pulse/80'
+                          }`}
+                          fill={isSaved ? 'currentColor' : 'none'}
+                          style={isSaved ? {} : { strokeWidth: 2.5 }}
+                        />
+                        <span className="text-xs font-medium text-primary">{savesCount}</span>
+                      </button>
+                    </>
                   )}
-                  <span className="text-xs font-medium text-primary">{recommendation.shares_count || 0}</span>
-                </button>
-                <div className="flex flex-col items-center gap-1">
-                  <Eye className="w-6 h-6 text-primary" />
-                  <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
-              </div>
+                  <button
+                    onClick={handleShare}
+                    className="flex flex-col items-center gap-1 group"
+                    title="Share"
+                  >
+                    {linkCopied ? (
+                      <Check className="w-6 h-6 text-green-500" />
+                    ) : (
+                      <Share2 className="w-6 h-6 text-primary hover:text-pulse hover:scale-110 transition-all" />
+                    )}
+                    <span className="text-xs font-medium text-primary">{recommendation.shares_count || 0}</span>
+                  </button>
+                  <div className="flex flex-col items-center gap-1">
+                    <Eye className="w-6 h-6 text-primary" />
+                    <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
+                  </div>
+                </div>
+                
+                {/* Report Button - Right side of action row */}
+                {!isOwner && user && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowReportModal(true);
+                    }}
+                    className="flex flex-col items-center gap-1 group"
+                    title="Report this recommendation"
+                  >
+                    <Flag className="w-6 h-6 text-primary hover:text-red-400 hover:scale-110 transition-all" />
+                    <span className="text-xs font-medium text-primary">Report</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -662,7 +714,7 @@ export function RecommendationDetailPage() {
 
             {/* Rating Section */}
             <div className="bg-surface-glass backdrop-blur-glass rounded-lg p-6 shadow-glass border border-subtle">
-              <h2 className="text-xl font-semibold text-primary mb-4">Rate this place</h2>
+              <h2 className="text-xl font-semibold text-primary mb-4">Rate this recommendation</h2>
               {isOwner ? (
                 <p className="text-muted">You cannot rate your own recommendation</p>
               ) : !user ? (
@@ -866,23 +918,6 @@ export function RecommendationDetailPage() {
               </div>
             </div>
 
-            {/* Report Recommendation Card */}
-            {!isOwner && (
-              <div className="bg-surface-glass backdrop-blur-glass rounded-lg p-6 shadow-glass border border-subtle">
-                <h3 className="text-lg font-semibold text-primary mb-3">Report</h3>
-                <p className="text-sm text-muted mb-4">
-                  If you find this recommendation inappropriate or misleading, please report it.
-                </p>
-              <Button
-                variant="outline"
-                onClick={() => setShowReportModal(true)}
-                className="w-full flex items-center justify-center gap-2 text-muted hover:text-red-400 hover:border-red-400"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                  Report
-              </Button>
-              </div>
-            )}
           </div>
         </div>
       </div>

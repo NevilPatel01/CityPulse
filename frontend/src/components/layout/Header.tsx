@@ -79,7 +79,7 @@ export const Header: React.FC = () => {
             <div className="flex items-center gap-4">
               {/* Logo */}
               <Link 
-                to="/dashboard"
+                to="/explore"
                 className='flex items-center gap-2 hover:opacity-80 transition-all duration-200 active:scale-95 flex-shrink-0'
                 aria-label="CityPulse Dashboard"
               >

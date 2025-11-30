@@ -16,7 +16,7 @@ import { apiConfig } from '../../config/api';
 
 interface FeedPostCardProps {
     post: FeedPost;
-    onUpdate: (postId: number, updates: Partial<FeedPost>) => void;
+    onUpdate?: (postId: number, updates: Partial<FeedPost>) => void;
     onRemove?: (postId: number) => void;
 }
 
@@ -25,6 +25,7 @@ interface FeedPostCardProps {
  * Displays recommendation with like, bookmark, share, and report functionality
  */
 export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) => {
+    const handleUpdate = onUpdate || (() => {});
     const navigate = useNavigate();
     const { showSuccess, showError } = useToast();
     const [showShareMenu, setShowShareMenu] = useState(false);
@@ -36,13 +37,13 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
         try {
             if (post.is_liked) {
                 await unlikeRecommendation(post.id);
-                onUpdate(post.id, {
+                handleUpdate(post.id, {
                     is_liked: false,
                     likes_count: post.likes_count - 1
                 });
             } else {
                 await likeRecommendation(post.id);
-                onUpdate(post.id, {
+                handleUpdate(post.id, {
                     is_liked: true,
                     likes_count: post.likes_count + 1
                 });
@@ -57,7 +58,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
         
         try {
             const result = await toggleBookmark(post.id) as { data: { isBookmarked: boolean } };
-            onUpdate(post.id, {
+            handleUpdate(post.id, {
                 is_bookmarked: result.data.isBookmarked
             });
             showSuccess(result.data.isBookmarked ? 'Post saved' : 'Post unsaved');
@@ -69,7 +70,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
     const handleShare = async (platform: string) => {
         try {
             await recordShare(post.id, platform);
-            onUpdate(post.id, {
+            handleUpdate(post.id, {
                 shares_count: post.shares_count + 1
             });
 

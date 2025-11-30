@@ -27,7 +27,7 @@ const AdvancedSearch: React.FC = () => {
         categories: [],
         tags: [],
         priceMin: 0,
-        priceMax: 50000, // Increased from 500 to 50000
+        priceMax: 1000,
         minRating: 0,
         difficulty: 'any',
         dateFrom: '',
@@ -93,9 +93,18 @@ const AdvancedSearch: React.FC = () => {
     useEffect(() => {
         // Only debounce the search query, not other filters
         const timer = setTimeout(() => {
-            // Search if there's query text OR any filters selected
-            if (filters.q || filters.categories.length > 0 || filters.location.length > 0 || 
-                filters.tags.length > 0 || filters.priceMin > 0 || filters.minRating > 0 || filters.difficulty !== 'any') {
+            // Search if there's query text OR any filters selected (including location, price range, etc.)
+            const hasFilters = filters.categories.length > 0 || 
+                             filters.location.length > 0 || 
+                             filters.tags.length > 0 || 
+                             filters.priceMin > 0 || 
+                             filters.priceMax < 1000 ||
+                             filters.minRating > 0 || 
+                             filters.difficulty !== 'any' ||
+                             filters.dateFrom || 
+                             filters.dateTo;
+            
+            if (filters.q || hasFilters) {
                 performSearch();
             } else {
                 // Clear results if no search criteria
@@ -104,14 +113,26 @@ const AdvancedSearch: React.FC = () => {
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timer);
-    }, [filters.q, filters.categories.length, filters.location.length, filters.tags.length, filters.priceMin, filters.minRating, filters.difficulty, performSearch]);
+    }, [filters.q, filters.categories.length, filters.location.length, filters.tags.length, filters.priceMin, filters.priceMax, filters.minRating, filters.difficulty, filters.dateFrom, filters.dateTo, performSearch]);
 
     // Immediate search when other filters change
     useEffect(() => {
-        // Search if there's any criteria selected
-        if (filters.q || filters.categories.length > 0 || filters.location.length > 0 ||
-            filters.tags.length > 0 || filters.priceMin > 0 || filters.minRating > 0 || filters.difficulty !== 'any') {
+        // Search if there's any criteria selected (including filters without query)
+        const hasFilters = filters.categories.length > 0 || 
+                         filters.location.length > 0 ||
+                         filters.tags.length > 0 || 
+                         filters.priceMin > 0 || 
+                         filters.priceMax < 1000 ||
+                         filters.minRating > 0 || 
+                         filters.difficulty !== 'any' ||
+                         filters.dateFrom || 
+                         filters.dateTo;
+        
+        if (filters.q || hasFilters) {
             performSearch();
+        } else {
+            // Clear results if no search criteria
+            setResults(null);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
@@ -140,7 +161,7 @@ const AdvancedSearch: React.FC = () => {
             categories: [],
             tags: [],
             priceMin: 0,
-            priceMax: 50000, // Increased from 500 to 50000
+            priceMax: 1000,
             minRating: 0,
             difficulty: 'any',
             dateFrom: '',
@@ -157,7 +178,7 @@ const AdvancedSearch: React.FC = () => {
                             filters.location.length > 0 ||
                             filters.tags.length > 0 ||
                             filters.priceMin > 0 ||
-                            filters.priceMax < 50000 ||
+                            filters.priceMax < 1000 ||
                             filters.minRating > 0 ||
                             (filters.difficulty && filters.difficulty !== 'any') ||
                             filters.dateFrom || 

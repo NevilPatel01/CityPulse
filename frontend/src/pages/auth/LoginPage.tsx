@@ -131,8 +131,8 @@ const LoginPage = () => {
         document.body.removeChild(announcement);
       }, 2000);
       
-      // Redirect to dashboard after successful login
-      navigate('/dashboard');
+      // Redirect to explore after successful login
+      navigate('/explore');
     } catch (error: unknown) {
       // Check if error is due to unverified email
       if (error instanceof Error && (error as Error & { code?: string }).code === 'EMAIL_NOT_VERIFIED') {

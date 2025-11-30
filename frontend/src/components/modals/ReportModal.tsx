@@ -98,7 +98,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                         </button>
                         <button 
                             type="submit"
-                            className="flex-1 px-4 py-2 bg-error hover:bg-error/90 rounded-lg transition-colors font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                             disabled={!reason || isSubmitting}
                         >
                             {isSubmitting ? 'Submitting...' : 'Submit Report'}

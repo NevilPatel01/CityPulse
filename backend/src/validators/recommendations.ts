@@ -77,6 +77,11 @@ export const createRecommendationSchema = z.object({
     longitude: z.number()
         .min(-180, 'Longitude must be between -180 and 180')
         .max(180, 'Longitude must be between -180 and 180')
+        .optional(),
+
+    // Tags
+    tags: z.array(z.string().min(1).max(50))
+        .max(10, 'Maximum 10 tags allowed')
         .optional()
 }).refine(
     (data) => {

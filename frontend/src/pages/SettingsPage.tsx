@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { ChangePasswordModal } from '../components/settings/ChangePasswordModal';
 import { EmailNotificationsModal } from '../components/settings/EmailNotificationsModal';
 import { AccountDeactivation } from '../components/settings/AccountDeactivation';
-import { TravelPreferences } from '../components/profile/TravelPreferences';
 import { apiRequest, buildApiUrl } from '../config/api';
 
 interface PrivacySettings {
@@ -138,8 +137,6 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {/* Travel Preferences */}
-            <TravelPreferences />
 
             {/* Privacy Settings */}
             <Card className="bg-surface-glass border-subtle">
