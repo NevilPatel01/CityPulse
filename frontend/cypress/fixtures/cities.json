@@ -1,0 +1,34 @@
+{
+  "sampleCity": {
+    "id": 1,
+    "name": "New York",
+    "country": "USA",
+    "state_province": "NY",
+    "description": "The Big Apple",
+    "stats": {
+      "total_recommendations": 150,
+      "contributors": 45,
+      "visitors": 1200
+    }
+  },
+  "cities": [
+    {
+      "id": 1,
+      "name": "New York",
+      "country": "USA",
+      "state_province": "NY"
+    },
+    {
+      "id": 2,
+      "name": "San Francisco",
+      "country": "USA",
+      "state_province": "CA"
+    },
+    {
+      "id": 3,
+      "name": "London",
+      "country": "United Kingdom"
+    }
+  ]
+}
+

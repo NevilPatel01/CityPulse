@@ -5,9 +5,23 @@
 
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 // Load test environment variables
-dotenv.config({ path: path.resolve(__dirname, '../../.env.test') });
+// Try to load .env.test, fallback to .env if not found
+const testEnvPath = path.resolve(__dirname, '../../.env.test');
+const envPath = fs.existsSync(testEnvPath) ? testEnvPath : path.resolve(__dirname, '../../.env');
+dotenv.config({ path: envPath });
+
+// Override with test-specific environment variables
+process.env.NODE_ENV = 'test';
+if (!process.env.TEST_DATABASE_URL && process.env.DATABASE_URL) {
+    // Derive test database URL from DATABASE_URL by replacing database name
+    process.env.TEST_DATABASE_URL = process.env.DATABASE_URL.replace(/\/([^\/]+)$/, '/citypulse_test');
+}
+if (process.env.TEST_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+}
 
 import { verifyDatabaseConnection, cleanupTestDataByPattern } from './helpers/test-helpers';
 

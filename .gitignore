@@ -23,6 +23,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Cypress
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+frontend/cypress/results/
+frontend/cypress/report/
+.cypress
+
 # Runtime data
 pids
 *.pid

@@ -1,0 +1,20 @@
+{
+  "testUser": {
+    "id": 1,
+    "email": "test@example.com",
+    "username": "testuser",
+    "full_name": "Test User",
+    "profile_photo": null,
+    "email_verified": true
+  },
+  "adminUser": {
+    "id": 2,
+    "email": "admin@example.com",
+    "username": "admin",
+    "full_name": "Admin User",
+    "profile_photo": null,
+    "email_verified": true,
+    "role": "admin"
+  }
+}
+

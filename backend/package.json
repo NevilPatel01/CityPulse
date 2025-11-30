@@ -39,6 +39,7 @@
     "test:trips": "jest src/tests/trips/ --testTimeout=600000",
     "test:all": "jest src/tests/",
     "test:clean": "psql $DATABASE_URL -c \"DELETE FROM users WHERE email LIKE '%test_%';\"",
+    "test:db:create": "tsx src/scripts/create-test-database.ts",
     "security:audit": "pnpm audit --audit-level=high",
     "security:check": "bash src/scripts/security-audit.sh"
   },

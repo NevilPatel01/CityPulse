@@ -67,9 +67,10 @@ const TripDetailPage = () => {
       setLoading(true);
       const data = await tripService.getTripById(Number(id));
       setTrip(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check if it's a 404 (not found) vs actual error
-      const statusCode = error?.response?.status || error?.status;
+      const statusCode = (error as { response?: { status?: number }; status?: number })?.response?.status || 
+                         (error as { status?: number })?.status;
       if (statusCode === 404) {
         // Trip not found - just set trip to null, UI handles the "not found" state
         setTrip(null);
@@ -91,9 +92,10 @@ const TripDetailPage = () => {
       const data = await tripService.getTripComments(Number(id));
       // Always set comments to array (empty array if no comments)
       setComments(Array.isArray(data) ? data : []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check if it's a 404 (not found) or empty response - both are fine
-      const statusCode = error?.response?.status || error?.status;
+      const statusCode = (error as { response?: { status?: number }; status?: number })?.response?.status || 
+                         (error as { status?: number })?.status;
       if (statusCode === 404 || statusCode === 200) {
         // No comments exist yet or empty response - this is fine, just set empty array
         setComments([]);

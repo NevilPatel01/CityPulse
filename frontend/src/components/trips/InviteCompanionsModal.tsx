@@ -41,9 +41,10 @@ export const InviteCompanionsModal: React.FC<InviteCompanionsModalProps> = ({
         setBuddies([]);
         setFilteredBuddies([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check if it's a 404 or empty response vs actual error
-      const statusCode = error?.response?.status || error?.status;
+      const statusCode = (error as { response?: { status?: number }; status?: number })?.response?.status || 
+                         (error as { status?: number })?.status;
       if (statusCode === 404 || statusCode === 200) {
         // No buddies exist or empty response - this is fine, just set empty array
         setBuddies([]);

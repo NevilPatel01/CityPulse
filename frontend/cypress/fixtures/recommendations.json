@@ -1,0 +1,38 @@
+{
+  "sampleRecommendation": {
+    "id": 1,
+    "title": "Beautiful Park in Downtown",
+    "description": "A lovely park perfect for a morning walk",
+    "place_name": "Central Park",
+    "category_name": "Places",
+    "city_name": "New York",
+    "country": "USA",
+    "price_range_min": 0,
+    "price_range_max": 0,
+    "difficulty_level": "easy",
+    "user_rating": 4.5,
+    "views_count": 150,
+    "likes_count": 25,
+    "created_at": "2025-01-15T10:00:00Z",
+    "username": "testuser",
+    "full_name": "Test User",
+    "photos": ["/uploads/recommendations/photo1.jpg"]
+  },
+  "recommendations": [
+    {
+      "id": 1,
+      "title": "Beautiful Park in Downtown",
+      "category_name": "Places",
+      "city_name": "New York",
+      "likes_count": 25
+    },
+    {
+      "id": 2,
+      "title": "Amazing Restaurant",
+      "category_name": "Food",
+      "city_name": "San Francisco",
+      "likes_count": 42
+    }
+  ]
+}
+

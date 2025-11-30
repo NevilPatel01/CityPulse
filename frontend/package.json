@@ -9,7 +9,12 @@
     "lint": "pnpm exec eslint .",
     "lint:fix": "pnpm exec eslint . --fix",
     "preview": "vite preview",
-    "a11y:check": "bash src/scripts/accessibility-check.sh"
+    "a11y:check": "bash src/scripts/accessibility-check.sh",
+    "test": "cypress run",
+    "test:open": "cypress open",
+    "test:component": "cypress run --component",
+    "test:e2e": "cypress run --e2e",
+    "test:ci": "cypress run --headless"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",
@@ -24,11 +29,14 @@
     "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
+    "@cypress/react": "^6.1.0",
+    "@cypress/vite-dev-server": "^7.0.1",
     "@eslint/js": "^9.33.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "cypress": "^13.7.3",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

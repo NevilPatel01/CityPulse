@@ -4,9 +4,28 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+// Determine which database to use based on NODE_ENV
+const getDatabaseUrl = (): string => {
+    // For tests, use a separate test database
+    if (process.env.NODE_ENV === 'test') {
+        const testDbUrl = process.env.TEST_DATABASE_URL || 
+            process.env.DATABASE_URL?.replace(/\/([^\/]+)$/, '/citypulse_test');
+        if (!testDbUrl) {
+            throw new Error('TEST_DATABASE_URL or DATABASE_URL must be set for test environment');
+        }
+        return testDbUrl;
+    }
+    
+    // For development and production, use the regular database
+    if (!process.env.DATABASE_URL) {
+        throw new Error('DATABASE_URL must be set');
+    }
+    return process.env.DATABASE_URL;
+};
+
 // Database connection configuration
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: getDatabaseUrl(),
     max: 20, 
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000, // Increased to 10 seconds to allow time for postgres to be ready
