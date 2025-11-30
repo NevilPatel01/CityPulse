@@ -364,12 +364,21 @@ export function CreateRecommendationForm({
         // For creating, use multipart/form-data with photos
         const formDataToSend = new FormData();
         
-        // Append all fields
+        // Append all fields (except tags which needs special handling)
         Object.entries(requestData).forEach(([key, value]) => {
+          if (key === 'tags') {
+            // Skip tags here, handle separately
+            return;
+          }
           if (value !== null && value !== undefined && value !== '') {
             formDataToSend.append(key, value.toString());
           }
         });
+        
+        // Handle tags as JSON array string for FormData
+        if (tags && tags.length > 0) {
+          formDataToSend.append('tags', JSON.stringify(tags));
+        }
         
         // Append photos (required for new recommendations)
         selectedFiles.forEach((file) => {

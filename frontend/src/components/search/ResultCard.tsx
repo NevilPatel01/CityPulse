@@ -18,6 +18,24 @@ const ResultCard: React.FC<ResultCardProps> = ({ item, view }) => {
     // Format price display
     const formatPrice = () => {
         if (!item.price) return null;
+        
+        // Check if price is FREE (both min and max are 0)
+        if (item.price.min === 0 && item.price.max === 0) {
+            return 'FREE';
+        }
+        
+        // If display already contains "$0", replace it with FREE
+        if (item.price.display && item.price.display.includes('$0')) {
+            // Check if it's exactly "$0 - $0" or similar
+            if ((item.price.min === 0 && item.price.max === 0) || 
+                item.price.display === '$0 - $0' ||
+                item.price.display === '$0' ||
+                item.price.display === 'From $0' ||
+                item.price.display === 'Up to $0') {
+                return 'FREE';
+            }
+        }
+        
         return item.price.display;
     };
 

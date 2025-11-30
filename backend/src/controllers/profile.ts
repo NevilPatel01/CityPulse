@@ -552,16 +552,25 @@ export const updateProfile = async (req: Request, res: Response) => {
         let paramCount = 1;
 
         if (bio !== undefined) {
+            // Sanitize bio to prevent XSS
+            const { sanitizeHtml } = await import('../utils/sanitize');
+            const sanitizedBio = sanitizeHtml(bio);
             userUpdateFields.push(`bio = $${paramCount++}`);
-            userUpdateValues.push(bio);
+            userUpdateValues.push(sanitizedBio);
         }
         if (currentLocation !== undefined) {
+            // Sanitize currentLocation to prevent XSS
+            const { sanitizeString } = await import('../utils/sanitize');
+            const sanitizedLocation = sanitizeString(currentLocation);
             userUpdateFields.push(`current_location = $${paramCount++}`);
-            userUpdateValues.push(currentLocation);
+            userUpdateValues.push(sanitizedLocation);
         }
         if (hometown !== undefined) {
+            // Sanitize hometown to prevent XSS
+            const { sanitizeString } = await import('../utils/sanitize');
+            const sanitizedHometown = sanitizeString(hometown);
             userUpdateFields.push(`hometown = $${paramCount++}`);
-            userUpdateValues.push(hometown);
+            userUpdateValues.push(sanitizedHometown);
         }
         if (phone !== undefined) {
             userUpdateFields.push(`phone = $${paramCount++}`);

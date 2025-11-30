@@ -44,10 +44,34 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, onCancel, isLoading
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+      
+      // Real-time validation: if start_date changes and end_date is before it, update end_date
+      if (name === 'start_date' && value && updated.end_date) {
+        const start = new Date(value);
+        const end = new Date(updated.end_date);
+        if (end < start) {
+          // Set end_date to start_date if it becomes invalid
+          updated.end_date = value;
+        }
+      }
+      
+      // Real-time validation: if end_date changes and it's before start_date, update start_date
+      if (name === 'end_date' && value && updated.start_date) {
+        const start = new Date(updated.start_date);
+        const end = new Date(value);
+        if (end < start) {
+          // Set start_date to end_date if it becomes invalid
+          updated.start_date = value;
+        }
+      }
+      
+      return updated;
+    });
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -56,6 +80,27 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, onCancel, isLoading
         delete newErrors[name];
         return newErrors;
       });
+    }
+    
+    // Real-time validation for dates
+    if ((name === 'start_date' || name === 'end_date') && formData.start_date && formData.end_date) {
+      const start = new Date(name === 'start_date' ? value : formData.start_date);
+      const end = new Date(name === 'end_date' ? value : formData.end_date);
+      if (end < start) {
+        setErrors((prev) => ({
+          ...prev,
+          [name === 'start_date' ? 'end_date' : 'start_date']: name === 'start_date' 
+            ? 'End date must be after start date' 
+            : 'Start date must be before end date',
+        }));
+      } else {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.start_date;
+          delete newErrors.end_date;
+          return newErrors;
+        });
+      }
     }
   };
 
@@ -169,6 +214,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, onCancel, isLoading
                 name="start_date"
                 value={formData.start_date}
                 onChange={handleChange}
+                max={formData.end_date || undefined}
                 className="w-full px-4 py-3 bg-[var(--surface-glass)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--pulse)] transition-colors"
                 disabled={isLoading}
               />
@@ -186,6 +232,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, onCancel, isLoading
                 name="end_date"
                 value={formData.end_date}
                 onChange={handleChange}
+                min={formData.start_date || undefined}
                 className="w-full px-4 py-3 bg-[var(--surface-glass)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--pulse)] transition-colors"
                 disabled={isLoading}
               />
@@ -302,22 +349,24 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, onCancel, isLoading
             </div>
           </div>
 
-          {/* Collaborative */}
-          <div className="flex items-center gap-3 p-4 bg-[var(--surface-glass)] border border-[var(--border-subtle)] rounded-lg">
-            <input
-              type="checkbox"
-              id="is_collaborative"
-              name="is_collaborative"
-              checked={formData.is_collaborative}
-              onChange={handleChange}
-              className="w-5 h-5 rounded border-[var(--border-subtle)] text-[var(--pulse)] focus:ring-[var(--pulse)] focus:ring-offset-0"
-              disabled={isLoading}
-            />
-            <label htmlFor="is_collaborative" className="flex-1 cursor-pointer">
-              <p className="text-sm font-medium text-[var(--text-primary)]">Collaborative Planning</p>
-              <p className="text-xs text-[var(--text-muted)]">Allow companions to add and edit itinerary items</p>
-            </label>
-          </div>
+          {/* Collaborative - Only show for Buddies and Public privacy */}
+          {formData.privacy !== 'private' && (
+            <div className="flex items-center gap-3 p-4 bg-[var(--surface-glass)] border border-[var(--border-subtle)] rounded-lg">
+              <input
+                type="checkbox"
+                id="is_collaborative"
+                name="is_collaborative"
+                checked={formData.is_collaborative}
+                onChange={handleChange}
+                className="w-5 h-5 rounded border-[var(--border-subtle)] text-[var(--pulse)] focus:ring-[var(--pulse)] focus:ring-offset-0"
+                disabled={isLoading}
+              />
+              <label htmlFor="is_collaborative" className="flex-1 cursor-pointer">
+                <p className="text-sm font-medium text-[var(--text-primary)]">Collaborative Planning</p>
+                <p className="text-xs text-[var(--text-muted)]">Allow companions to add and edit itinerary items</p>
+              </label>
+            </div>
+          )}
 
           {/* Submit Buttons */}
           <div className="flex gap-3 pt-4">

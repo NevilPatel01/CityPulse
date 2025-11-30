@@ -209,7 +209,10 @@ export function ProfileContent({ activeTab, username }: ProfileContentProps) {
                 )}
                 {(item.price_range_min || item.price_range_max) && (
                   <div className="text-pulse text-sm font-medium">
-                    ${item.price_range_min || 0}.00 - ${item.price_range_max || 0}.00
+                    {item.price_range_min === 0 && item.price_range_max === 0
+                      ? 'FREE'
+                      : `$${item.price_range_min || 0}.00 - $${item.price_range_max || 0}.00`
+                    }
                   </div>
                 )}
               </div>
@@ -288,7 +291,10 @@ export function ProfileContent({ activeTab, username }: ProfileContentProps) {
                 )}
                 {(item.price_range_min || item.price_range_max) && (
                   <div className="text-pulse text-sm font-medium">
-                    ${item.price_range_min || 0}.00 - ${item.price_range_max || 0}.00
+                    {item.price_range_min === 0 && item.price_range_max === 0
+                      ? 'FREE'
+                      : `$${item.price_range_min || 0}.00 - $${item.price_range_max || 0}.00`
+                    }
                   </div>
                 )}
               </div>

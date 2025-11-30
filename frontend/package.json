@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "pnpm exec eslint .",
     "lint:fix": "pnpm exec eslint . --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "a11y:check": "bash src/scripts/accessibility-check.sh"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",

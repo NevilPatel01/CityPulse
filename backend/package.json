@@ -39,7 +39,8 @@
     "test:trips": "jest src/tests/trips/ --testTimeout=600000",
     "test:all": "jest src/tests/",
     "test:clean": "psql $DATABASE_URL -c \"DELETE FROM users WHERE email LIKE '%test_%';\"",
-    "security:audit": "pnpm audit --audit-level=high"
+    "security:audit": "pnpm audit --audit-level=high",
+    "security:check": "bash src/scripts/security-audit.sh"
   },
   "keywords": [
     "citypulse",

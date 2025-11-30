@@ -556,6 +556,8 @@ export const getSearchFilters = async (req: Request, res: Response) => {
  * Helper function to format price range
  */
 function formatPriceRange(min: number | null, max: number | null): string {
+    // Show FREE if both are 0
+    if (min === 0 && max === 0) return 'FREE';
     if (!min && !max) return 'Free';
     if (!min) return `Up to $${max}`;
     if (!max) return `From $${min}`;

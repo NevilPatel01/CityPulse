@@ -3,6 +3,7 @@ import { query } from '../lib/database';
 import { processImage, generateFilename, deleteRecommendationFolder } from '../utils/imageUpload';
 import { notifyRecommendationLike, notifyRecommendationRating } from '../utils/notifications';
 import { checkAndAwardAchievements } from './achievements';
+import { sanitizeHtml, sanitizeString, sanitizeUrl, sanitizeDescription } from '../utils/sanitize';
 
 // Get all recommendations with pagination and filters
 export const getRecommendations = async (req: Request, res: Response) => {
@@ -317,10 +318,31 @@ export const createRecommendation = async (req: Request, res: Response) => {
             best_time_to_visit,
             duration_suggestion,
             user_rating,
-            tags
+            tags: tagsInput
         } = req.body;
-        // Ensure description is a non-null string for DB insertion
-        const safeDescription = description ?? '';
+        
+        // Handle tags - can be array or JSON string (from FormData)
+        let tags: string[] | undefined;
+        if (tagsInput) {
+            if (typeof tagsInput === 'string') {
+                try {
+                    const parsed = JSON.parse(tagsInput);
+                    tags = Array.isArray(parsed) ? parsed : undefined;
+                } catch {
+                    // If parsing fails, treat as single tag
+                    tags = [tagsInput];
+                }
+            } else if (Array.isArray(tagsInput)) {
+                tags = tagsInput;
+            }
+        }
+        
+        // Sanitize user input to prevent XSS
+        const sanitizedPlaceName = sanitizeString(place_name, 200);
+        const safeDescription = description ? sanitizeDescription(description) : '';
+        const sanitizedAddress = address ? sanitizeString(address, 500) : null;
+        const sanitizedBestTime = best_time_to_visit ? sanitizeString(best_time_to_visit, 200) : null;
+        const sanitizedDuration = duration_suggestion ? sanitizeString(duration_suggestion, 100) : null;
 
 
         const userId = (req as any).user?.userId;
@@ -428,17 +450,17 @@ export const createRecommendation = async (req: Request, res: Response) => {
             `;
             const queryValues = [
                 userId,
-                place_name,
+                sanitizedPlaceName,
                 safeDescription,
                 finalCategoryId,
                 price_range_min,
                 price_range_max,
                 difficulty_level,
-                address,
+                sanitizedAddress,
                 latitude,
                 longitude,
-                best_time_to_visit,
-                duration_suggestion,
+                sanitizedBestTime,
+                sanitizedDuration,
                 user_rating
             ];
 
@@ -594,6 +616,13 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             tags
         } = req.body;
 
+        // Sanitize user input to prevent XSS
+        const sanitizedPlaceName = place_name ? sanitizeString(place_name, 200) : undefined;
+        const safeDescription = description ? sanitizeDescription(description) : undefined;
+        const sanitizedAddress = address ? sanitizeString(address, 500) : undefined;
+        const sanitizedBestTime = best_time_to_visit ? sanitizeString(best_time_to_visit, 200) : undefined;
+        const sanitizedDuration = duration_suggestion ? sanitizeString(duration_suggestion, 100) : undefined;
+
         const userId = (req as any).user?.userId;
 
         console.log('[UPDATE_REC] Updating recommendation:', id);
@@ -705,10 +734,19 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             `;
 
             await query(updateQuery, [
-                place_name, description, finalCategoryId, address,
-                latitude, longitude, best_time_to_visit,
-                duration_suggestion, user_rating, 
-                price_range_min, price_range_max, difficulty_level, id
+                sanitizedPlaceName ?? place_name, 
+                safeDescription ?? description, 
+                finalCategoryId, 
+                sanitizedAddress ?? address,
+                latitude, 
+                longitude, 
+                sanitizedBestTime ?? best_time_to_visit,
+                sanitizedDuration ?? duration_suggestion, 
+                user_rating, 
+                price_range_min, 
+                price_range_max, 
+                difficulty_level, 
+                id
             ]);
 
             console.log('[UPDATE_REC] Updated recommendation with city:', finalCityId);

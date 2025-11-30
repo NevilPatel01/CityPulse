@@ -67,9 +67,18 @@ const TripDetailPage = () => {
       setLoading(true);
       const data = await tripService.getTripById(Number(id));
       setTrip(data);
-    } catch (error) {
-      showError('Failed to load trip');
-      console.error('Error loading trip:', error);
+    } catch (error: any) {
+      // Check if it's a 404 (not found) vs actual error
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 404) {
+        // Trip not found - just set trip to null, UI handles the "not found" state
+        setTrip(null);
+      } else {
+        // Actual error - show error message
+        showError('Failed to load trip. Please try again.');
+        console.error('Error loading trip:', error);
+        setTrip(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,12 +89,22 @@ const TripDetailPage = () => {
     
     try {
       const data = await tripService.getTripComments(Number(id));
-      setComments(data);
-    } catch (error) {
-      showError('Failed to load comments');
-      console.error('Error loading comments:', error);
+      // Always set comments to array (empty array if no comments)
+      setComments(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      // Check if it's a 404 (not found) or empty response - both are fine
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 404 || statusCode === 200) {
+        // No comments exist yet or empty response - this is fine, just set empty array
+        setComments([]);
+      } else {
+        // Only log actual errors, don't show error toast
+        // Empty comments state is handled by the UI
+        console.error('Error loading comments:', error);
+        setComments([]);
+      }
     }
-  }, [id, showError]);
+  }, [id]);
 
   useEffect(() => {
     if (id) {
@@ -619,7 +638,7 @@ const TripDetailPage = () => {
         />
       )}
 
-      {showItineraryModal && id && (
+      {showItineraryModal && id && trip && (
         <ItineraryItemModal
           tripId={Number(id)}
           item={editingItineraryItem}
@@ -629,6 +648,9 @@ const TripDetailPage = () => {
             setEditingItineraryItem(undefined);
           }}
           isLoading={isSubmittingItinerary}
+          tripStartDate={trip.start_date}
+          tripEndDate={trip.end_date}
+          existingItineraryItems={trip.itinerary || trip.itinerary_items || []}
         />
       )}
 

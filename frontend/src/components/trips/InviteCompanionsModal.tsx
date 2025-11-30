@@ -28,7 +28,7 @@ export const InviteCompanionsModal: React.FC<InviteCompanionsModalProps> = ({
     try {
       setLoading(true);
       const response = await getBuddies();
-      if (response.success && response.data.buddies) {
+      if (response.success && response.data?.buddies) {
         // Filter out buddies who are already companions
         const existingIds = existingCompanions.map(c => c.user_id);
         const availableBuddies = response.data.buddies.filter(
@@ -36,10 +36,25 @@ export const InviteCompanionsModal: React.FC<InviteCompanionsModalProps> = ({
         );
         setBuddies(availableBuddies);
         setFilteredBuddies(availableBuddies);
+      } else {
+        // No buddies or empty response - this is fine, show empty state
+        setBuddies([]);
+        setFilteredBuddies([]);
       }
-    } catch (error) {
-      console.error('Error loading buddies:', error);
-      showError('Failed to load buddies');
+    } catch (error: any) {
+      // Check if it's a 404 or empty response vs actual error
+      const statusCode = error?.response?.status || error?.status;
+      if (statusCode === 404 || statusCode === 200) {
+        // No buddies exist or empty response - this is fine, just set empty array
+        setBuddies([]);
+        setFilteredBuddies([]);
+      } else {
+        // Only log actual errors, don't show error toast
+        // Empty buddies state is handled gracefully by the UI
+        console.error('Error loading buddies:', error);
+        setBuddies([]);
+        setFilteredBuddies([]);
+      }
     } finally {
       setLoading(false);
     }

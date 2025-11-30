@@ -39,6 +39,11 @@ export function RecommendationPreview({
     const min = parseFloat(price_range_min || '0');
     const max = parseFloat(price_range_max || '0');
     
+    // Show FREE if both are 0
+    if (min === 0 && max === 0) {
+      return 'FREE';
+    }
+    
     if (min && max) {
       return `$ ${min} - $${max}`;
     } else if (min) {

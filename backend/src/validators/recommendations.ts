@@ -123,7 +123,7 @@ export const getCitiesSchema = z.object({
     search: z.string().max(100, 'Search term must not exceed 100 characters').optional()
 });
 
-// Preprocess form data to convert string numbers to actual numbers
+// Preprocess form data to convert string numbers to actual numbers and parse tags
 const preprocessFormData = (body: any): any => {
     const processed = { ...body };
     
@@ -136,6 +136,22 @@ const preprocessFormData = (body: any): any => {
             if (!isNaN(num)) {
                 processed[field] = num;
             }
+        }
+    }
+    
+    // Handle tags - can be JSON string (from FormData) or array
+    if (processed.tags !== undefined && processed.tags !== null) {
+        if (typeof processed.tags === 'string') {
+            try {
+                const parsed = JSON.parse(processed.tags);
+                processed.tags = Array.isArray(parsed) ? parsed : undefined;
+            } catch {
+                // If parsing fails, treat as single tag in array
+                processed.tags = [processed.tags];
+            }
+        } else if (!Array.isArray(processed.tags)) {
+            // If it's not a string or array, remove it
+            processed.tags = undefined;
         }
     }
     

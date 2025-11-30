@@ -391,12 +391,20 @@ export function RecommendationDetailPage() {
   };
 
   const formatPrice = () => {
-    if (recommendation?.price_range_min && recommendation?.price_range_max) {
-      return `$${recommendation.price_range_min} - $${recommendation.price_range_max}`;
-    } else if (recommendation?.price_range_min) {
-      return `From $${recommendation.price_range_min}`;
-    } else if (recommendation?.price_range_max) {
-      return `Up to $${recommendation.price_range_max}`;
+    const min = recommendation?.price_range_min ?? null;
+    const max = recommendation?.price_range_max ?? null;
+    
+    // Show FREE if both are 0
+    if (min === 0 && max === 0) {
+      return 'FREE';
+    }
+    
+    if (min !== null && max !== null) {
+      return `$${min} - $${max}`;
+    } else if (min !== null && min !== 0) {
+      return `From $${min}`;
+    } else if (max !== null && max !== 0) {
+      return `Up to $${max}`;
     }
     return null;
   };
