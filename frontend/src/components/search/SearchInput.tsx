@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import SearchHistoryDropdown from './SearchHistoryDropdown';
 
 interface SearchInputProps {
   className?: string;
@@ -15,6 +16,9 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Update internal state when URL params change
   useEffect(() => {
@@ -27,21 +31,42 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       // Update URL and trigger search
       navigate(`/search?q=${encodeURIComponent(query.trim())}`);
       onSearch?.(query.trim());
+      setShowHistoryDropdown(false);
     }
   };
 
   const handleClear = () => {
     setQuery('');
     navigate('/search');
+    setShowHistoryDropdown(false);
+  };
+
+  const handleFocus = () => {
+    setShowHistoryDropdown(true);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    setShowHistoryDropdown(true);
+  };
+
+  const handleSelectHistory = (selectedQuery: string) => {
+    setQuery(selectedQuery);
+    setShowHistoryDropdown(false);
+    navigate(`/search?q=${encodeURIComponent(selectedQuery)}`);
+    onSearch?.(selectedQuery);
+    inputRef.current?.blur();
   };
 
   return (
     <form onSubmit={handleSubmit} className={`relative ${className}`}>
-      <div className="relative">
+      <div ref={containerRef} className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleChange}
+          onFocus={handleFocus}
           placeholder={placeholder}
           className="w-full bg-surface-glass border border-subtle rounded-lg px-4 py-3 pr-20 text-base text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-pulse transition-all duration-200 hover:border-pulse/50"
         />
@@ -71,6 +96,15 @@ export const SearchInput: React.FC<SearchInputProps> = ({
           </svg>
         </button>
       </div>
+      
+      {/* Search History Dropdown */}
+      <SearchHistoryDropdown
+        query={query}
+        isOpen={showHistoryDropdown}
+        onSelect={handleSelectHistory}
+        onClose={() => setShowHistoryDropdown(false)}
+        inputRef={inputRef}
+      />
     </form>
   );
 };

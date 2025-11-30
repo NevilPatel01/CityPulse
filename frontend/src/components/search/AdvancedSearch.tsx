@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import SearchFilters from './SearchFilters';
 import SearchResults from './SearchResults';
+import SearchHistoryList from './SearchHistoryList';
 import { searchApi, type FilterOptions, type SearchResult } from '../../services/searchService';
 
 export interface SearchFilters {
@@ -48,6 +49,7 @@ const AdvancedSearch: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
 
     const performSearch = useCallback(async () => {
         setLoading(true);
@@ -56,6 +58,32 @@ const AdvancedSearch: React.FC = () => {
             const searchResults = await searchApi.advancedSearch(filters);
             console.log('[SEARCH] Received results:', searchResults);
             setResults(searchResults);
+            
+            // Save search history (backend auto-saves, but we can ensure it has filter info)
+            if (filters.q.trim()) {
+                try {
+                    await searchApi.saveSearchHistory(
+                        filters.q.trim(),
+                        {
+                            location: filters.location,
+                            categories: filters.categories,
+                            tags: filters.tags,
+                            priceMin: filters.priceMin,
+                            priceMax: filters.priceMax,
+                            minRating: filters.minRating,
+                            difficulty: filters.difficulty,
+                            dateFrom: filters.dateFrom,
+                            dateTo: filters.dateTo,
+                            sortBy: filters.sortBy,
+                            type: filters.type
+                        },
+                        searchResults.total
+                    );
+                } catch (error) {
+                    // Don't fail the search if history save fails
+                    console.error('Failed to save search history:', error);
+                }
+            }
         } catch (error) {
             console.error('Search failed:', error);
         } finally {
@@ -154,6 +182,43 @@ const AdvancedSearch: React.FC = () => {
         setFilters((prev: SearchFilters) => ({ ...prev, ...updates }));
     };
 
+    const handleSelectHistory = (query: string, historyFilters?: Record<string, unknown>) => {
+        // Clear all filters first
+        const updates: Partial<SearchFilters> = {
+            q: query,
+            location: [],
+            categories: [],
+            tags: [],
+            priceMin: 0,
+            priceMax: 1000,
+            minRating: 0,
+            difficulty: 'any',
+            dateFrom: '',
+            dateTo: '',
+            dateType: 'both',
+            sortBy: 'relevant',
+            type: 'all'
+        };
+        
+        // Restore filters from history if they exist
+        if (historyFilters) {
+            if (historyFilters.location) updates.location = historyFilters.location as string[];
+            if (historyFilters.categories) updates.categories = historyFilters.categories as string[];
+            if (historyFilters.tags) updates.tags = historyFilters.tags as string[];
+            if (historyFilters.priceMin !== undefined) updates.priceMin = historyFilters.priceMin as number;
+            if (historyFilters.priceMax !== undefined) updates.priceMax = historyFilters.priceMax as number;
+            if (historyFilters.minRating !== undefined) updates.minRating = historyFilters.minRating as number;
+            if (historyFilters.difficulty) updates.difficulty = historyFilters.difficulty as string;
+            if (historyFilters.dateFrom) updates.dateFrom = historyFilters.dateFrom as string;
+            if (historyFilters.dateTo) updates.dateTo = historyFilters.dateTo as string;
+            if (historyFilters.sortBy) updates.sortBy = historyFilters.sortBy as SearchFilters['sortBy'];
+            if (historyFilters.type) updates.type = historyFilters.type as SearchFilters['type'];
+        }
+        
+        updateFilters(updates);
+        setShowHistory(false);
+    };
+
     const resetFilters = () => {
         setFilters({
             q: filters.q, // Keep search query
@@ -201,22 +266,38 @@ const AdvancedSearch: React.FC = () => {
                                 value={filters.q}
                                 onChange={(e) => updateFilters({ q: e.target.value })}
                                 placeholder="Search places, friends, or experiences..."
-                                className="w-full pl-12 pr-4 py-4 bg-surface-glass border border-subtle rounded-xl text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-transparent transition-all"
+                                className="w-full pl-12 pr-20 py-4 bg-surface-glass border border-subtle rounded-xl text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-pulse focus:border-transparent transition-all"
                                 autoFocus
                                 aria-label="Search query"
                                 aria-describedby="search-help"
                             />
-                            {filters.q && (
+                            <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-2">
+                                {filters.q && (
+                                    <button
+                                        onClick={() => updateFilters({ q: '' })}
+                                        className="p-1 text-muted hover:text-primary transition-colors"
+                                        aria-label="Clear search query"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
                                 <button
-                                    onClick={() => updateFilters({ q: '' })}
-                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted hover:text-primary transition-colors"
-                                    aria-label="Clear search query"
+                                    onClick={() => setShowHistory(!showHistory)}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                        showHistory 
+                                            ? 'bg-pulse text-white' 
+                                            : 'text-muted hover:text-primary hover:bg-surface-glass'
+                                    }`}
+                                    aria-label="Toggle search history"
+                                    title="Search history"
                                 >
                                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </button>
-                            )}
+                            </div>
                         </div>
                         
                         {/* Mobile Filter Button */}
@@ -242,7 +323,7 @@ const AdvancedSearch: React.FC = () => {
                 {/* Filters and Results Layout */}
                 <div className="flex flex-col lg:flex-row gap-6">
                     {/* Filters - Toggleable on mobile, always visible on desktop */}
-                    {filterOptions && (
+                    {filterOptions && !showHistory && (
                         <>
                             {/* Mobile Filter Modal/Overlay */}
                             {isMobile && showFilters && (
@@ -301,69 +382,78 @@ const AdvancedSearch: React.FC = () => {
 
                     {/* Main Content Area */}
                     <main className="flex-1 min-w-0">
-                        {/* Results Header with View Toggle */}
-                        {(results && results.total > 0) && (
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-bold text-primary">
-                                        {results.total} {results.total === 1 ? 'Result' : 'Results'}
-                                    </h2>
-                                    
-                                    {/* Sort Dropdown */}
-                                    <div className="ml-4">
-                                        <select
-                                            value={filters.sortBy}
-                                            onChange={(e) => updateFilters({ sortBy: e.target.value as 'relevant' | 'rating' | 'recent' | 'price_low' | 'price_high' })}
-                                            className="px-4 py-2 bg-surface-glass border border-subtle rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-pulse transition-all"
-                                        >
-                                            <option value="relevant">Most Relevant</option>
-                                            <option value="rating">Highest Rated</option>
-                                            <option value="recent">Most Recent</option>
-                                            <option value="price_low">Price: Low to High</option>
-                                            <option value="price_high">Price: High to Low</option>
-                                        </select>
+                        {showHistory ? (
+                            /* Search History List */
+                            <SearchHistoryList
+                                onSelectSearch={handleSelectHistory}
+                            />
+                        ) : (
+                            <>
+                                {/* Results Header with View Toggle */}
+                                {(results && results.total > 0) && (
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-xl font-bold text-primary">
+                                                {results.total} {results.total === 1 ? 'Result' : 'Results'}
+                                            </h2>
+                                            
+                                            {/* Sort Dropdown */}
+                                            <div className="ml-4">
+                                                <select
+                                                    value={filters.sortBy}
+                                                    onChange={(e) => updateFilters({ sortBy: e.target.value as 'relevant' | 'rating' | 'recent' | 'price_low' | 'price_high' })}
+                                                    className="px-4 py-2 bg-surface-glass border border-subtle rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-pulse transition-all"
+                                                >
+                                                    <option value="relevant">Most Relevant</option>
+                                                    <option value="rating">Highest Rated</option>
+                                                    <option value="recent">Most Recent</option>
+                                                    <option value="price_low">Price: Low to High</option>
+                                                    <option value="price_high">Price: High to Low</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* View Toggle */}
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => updateFilters({ view: 'grid' })}
+                                                className={`p-2 rounded-lg transition-all ${
+                                                    filters.view === 'grid'
+                                                        ? 'bg-pulse text-white'
+                                                        : 'bg-surface-glass text-muted hover:text-primary hover:bg-surface-glass/80'
+                                                }`}
+                                                aria-label="Grid view"
+                                                title="Grid view"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={() => updateFilters({ view: 'list' })}
+                                                className={`p-2 rounded-lg transition-all ${
+                                                    filters.view === 'list'
+                                                        ? 'bg-pulse text-white'
+                                                        : 'bg-surface-glass text-muted hover:text-primary hover:bg-surface-glass/80'
+                                                }`}
+                                                aria-label="List view"
+                                                title="List view"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* View Toggle */}
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => updateFilters({ view: 'grid' })}
-                                        className={`p-2 rounded-lg transition-all ${
-                                            filters.view === 'grid'
-                                                ? 'bg-pulse text-white'
-                                                : 'bg-surface-glass text-muted hover:text-primary hover:bg-surface-glass/80'
-                                        }`}
-                                        aria-label="Grid view"
-                                        title="Grid view"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        onClick={() => updateFilters({ view: 'list' })}
-                                        className={`p-2 rounded-lg transition-all ${
-                                            filters.view === 'list'
-                                                ? 'bg-pulse text-white'
-                                                : 'bg-surface-glass text-muted hover:text-primary hover:bg-surface-glass/80'
-                                        }`}
-                                        aria-label="List view"
-                                        title="List view"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
+                                <SearchResults
+                                    results={results}
+                                    loading={loading}
+                                    view={filters.view}
+                                />
+                            </>
                         )}
-
-                        <SearchResults
-                            results={results}
-                            loading={loading}
-                            view={filters.view}
-                        />
                     </main>
                 </div>
             </div>

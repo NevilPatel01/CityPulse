@@ -87,6 +87,26 @@ export interface FilterOptions {
     }>;
 }
 
+export interface SearchHistoryItem {
+    id: number;
+    searchQuery: string;
+    filtersApplied: Record<string, unknown> | null;
+    resultsCount: number | null;
+    clickedResultId: number | null;
+    searchDate: string;
+    createdAt: string;
+}
+
+export interface SearchHistoryResponse {
+    history: SearchHistoryItem[];
+    pagination: {
+        limit: number;
+        offset: number;
+        total: number;
+        hasMore: boolean;
+    };
+}
+
 export const searchApi = {
     /**
      * Get available filter options
@@ -165,6 +185,57 @@ export const searchApi = {
                 total: number;
             }
         }>(`/api/search?${params.toString()}`);
+        return response.data;
+    },
+
+    /**
+     * Get user's search history
+     */
+    async getSearchHistory(limit: number = 20, offset: number = 0): Promise<SearchHistoryResponse> {
+        const params = new URLSearchParams();
+        if (limit) params.append('limit', limit.toString());
+        if (offset) params.append('offset', offset.toString());
+        
+        const response = await apiRequest<{ data: SearchHistoryResponse }>(
+            `/api/search/history?${params.toString()}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Delete a single search history item
+     */
+    async deleteSearchHistoryItem(id: number): Promise<void> {
+        await apiRequest(`/api/search/history/${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    /**
+     * Clear all search history
+     */
+    async clearSearchHistory(): Promise<void> {
+        await apiRequest('/api/search/history', {
+            method: 'DELETE'
+        });
+    },
+
+    /**
+     * Manually save a search to history (optional, backend auto-saves)
+     */
+    async saveSearchHistory(
+        query: string,
+        filtersApplied?: Record<string, unknown>,
+        resultsCount?: number
+    ): Promise<SearchHistoryItem> {
+        const response = await apiRequest<{ data: SearchHistoryItem }>('/api/search/history', {
+            method: 'POST',
+            body: JSON.stringify({
+                searchQuery: query,
+                filtersApplied,
+                resultsCount
+            })
+        });
         return response.data;
     }
 };

@@ -221,34 +221,46 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
         }
     };
 
-    const getDefaultImage = () => {
-        if (item.type === 'city') {
-            return 'https://via.placeholder.com/400x300?text=City';
-        }
-        return 'https://via.placeholder.com/400x300?text=Recommendation';
-    };
-
     // Get the full image URL
     const getImageUrl = () => {
-        if (!item.imageUrl) return getDefaultImage();
+        if (!item.imageUrl) return null;
         // If it's already a full URL (starts with http), use it as is
         if (item.imageUrl.startsWith('http')) return item.imageUrl;
         // Otherwise, prepend the API base URL
         return `${apiConfig.baseUrl}${item.imageUrl}`;
     };
 
+    const [imageError, setImageError] = useState(false);
+
     return (
         <div className="bg-surface-glass backdrop-blur-glass rounded-2xl shadow-glass overflow-hidden hover:shadow-xl transition-all border border-subtle group">
             {/* Image */}
             <div className="relative h-52 bg-surface-glass overflow-hidden">
-                <img
-                    src={getImageUrl()}
-                    alt={item.title || 'Image'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).src = getDefaultImage();
-                    }}
-                />
+                {getImageUrl() && !imageError ? (
+                    <img
+                        src={getImageUrl()!}
+                        alt={item.title || 'Image'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={() => {
+                            setImageError(true);
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pulse/20 to-orange-500/20">
+                        <div className="text-center">
+                            <svg className="w-16 h-16 mx-auto text-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {item.type === 'city' ? (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                ) : (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                )}
+                            </svg>
+                            <p className="text-xs text-muted font-medium">
+                                {item.type === 'city' ? 'City' : 'Image'}
+                            </p>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Category Badge */}
                 {item.category && (
@@ -508,16 +520,9 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
         }
     };
 
-    const getDefaultImage = () => {
-        if (item.type === 'city') {
-            return 'https://via.placeholder.com/400x300?text=City';
-        }
-        return 'https://via.placeholder.com/400x300?text=Recommendation';
-    };
-
     // Get the full image URL
     const getImageUrl = () => {
-        if (!item.imageUrl) return getDefaultImage();
+        if (!item.imageUrl) return null;
         // If it's already a full URL (starts with http), use it as is
         if (item.imageUrl.startsWith('http')) return item.imageUrl;
         // Otherwise, prepend the API base URL
@@ -538,14 +543,31 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
             <div className="flex flex-col sm:flex-row gap-0">
                 {/* Image */}
                 <div className="relative w-full sm:w-72 h-56 bg-surface-glass flex-shrink-0">
-                    <img
-                        src={getImageUrl()}
-                        alt={item.title || 'Image'}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src = getDefaultImage();
-                        }}
-                    />
+                    {getImageUrl() && !imageError ? (
+                        <img
+                            src={getImageUrl()!}
+                            alt={item.title || 'Image'}
+                            className="w-full h-full object-cover"
+                            onError={() => {
+                                setImageError(true);
+                            }}
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pulse/20 to-orange-500/20">
+                            <div className="text-center">
+                                <svg className="w-12 h-12 mx-auto text-muted mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {item.type === 'city' ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    )}
+                                </svg>
+                                <p className="text-xs text-muted font-medium">
+                                    {item.type === 'city' ? 'City' : 'Image'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Category Badge */}
                     {item.category && (

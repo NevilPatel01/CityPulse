@@ -69,6 +69,38 @@ export const getSearchHistory = async (req: Request, res: Response) => {
         const limitNum = Math.min(parseInt(limit as string) || 20, 100);
         const offsetNum = parseInt(offset as string) || 0;
 
+        console.log('[SEARCH_HISTORY] Fetching history for user:', userId, 'limit:', limitNum, 'offset:', offsetNum);
+
+        // Check if table exists first
+        try {
+            const tableCheck = await query(
+                `SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'search_history'
+                )`
+            );
+            
+            if (!tableCheck.rows[0].exists) {
+                console.error('[SEARCH_HISTORY] Table search_history does not exist');
+                // Create table if it doesn't exist
+                await query(`
+                    CREATE TABLE IF NOT EXISTS search_history (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        search_query VARCHAR(255) NOT NULL,
+                        filters_applied JSONB,
+                        results_count INTEGER,
+                        clicked_result_id INTEGER REFERENCES recommendations(id) ON DELETE SET NULL,
+                        search_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    )
+                `);
+                console.log('[SEARCH_HISTORY] Created search_history table');
+            }
+        } catch (tableError) {
+            console.error('[SEARCH_HISTORY] Error checking/creating table:', tableError);
+        }
+
         const result = await query(
             `SELECT 
                 id,
@@ -76,12 +108,11 @@ export const getSearchHistory = async (req: Request, res: Response) => {
                 filters_applied,
                 results_count,
                 clicked_result_id,
-                search_date,
-                created_at
-                FROM search_history
-                WHERE user_id = $1
-                ORDER BY search_date DESC
-                LIMIT $2 OFFSET $3`,
+                search_date
+            FROM search_history
+            WHERE user_id = $1
+            ORDER BY search_date DESC
+            LIMIT $2 OFFSET $3`,
             [userId, limitNum, offsetNum]
         );
 
@@ -90,7 +121,7 @@ export const getSearchHistory = async (req: Request, res: Response) => {
             [userId]
         );
 
-        const total = parseInt(countResult.rows[0].total);
+        const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
         res.json({
             success: true,
@@ -98,11 +129,13 @@ export const getSearchHistory = async (req: Request, res: Response) => {
                 history: result.rows.map(row => ({
                     id: row.id,
                     searchQuery: row.search_query,
-                    filtersApplied: row.filters_applied ? JSON.parse(row.filters_applied) : null,
+                    filtersApplied: row.filters_applied 
+                        ? (typeof row.filters_applied === 'string' ? JSON.parse(row.filters_applied) : row.filters_applied)
+                        : null,
                     resultsCount: row.results_count,
                     clickedResultId: row.clicked_result_id,
                     searchDate: row.search_date,
-                    createdAt: row.created_at
+                    createdAt: row.search_date // Use search_date as createdAt since created_at doesn't exist
                 })),
                 pagination: {
                     limit: limitNum,
@@ -113,10 +146,21 @@ export const getSearchHistory = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        console.error('Get search history error:', error);
+        console.error('[SEARCH_HISTORY] Get search history error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorDetails = error instanceof Error ? {
+            message: errorMessage,
+            stack: error.stack,
+            name: error.name
+        } : error;
+        
+        console.error('[SEARCH_HISTORY] Error details:', JSON.stringify(errorDetails, null, 2));
+        console.error('[SEARCH_HISTORY] User ID:', req.user?.userId);
+        
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch search history'
+            message: 'Failed to fetch search history',
+            error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
         });
     }
 };
@@ -255,7 +299,9 @@ export const saveSearch = async (req: Request, res: Response) => {
                 id: result.rows[0].id,
                 searchName: result.rows[0].search_name,
                 searchQuery: result.rows[0].search_query,
-                filtersApplied: result.rows[0].filters_applied ? JSON.parse(result.rows[0].filters_applied) : null,
+                filtersApplied: result.rows[0].filters_applied 
+                    ? (typeof result.rows[0].filters_applied === 'string' ? JSON.parse(result.rows[0].filters_applied) : result.rows[0].filters_applied)
+                    : null,
                 isActive: result.rows[0].is_active,
                 createdAt: result.rows[0].created_at,
                 updatedAt: result.rows[0].updated_at
@@ -316,7 +362,9 @@ export const getSavedSearches = async (req: Request, res: Response) => {
                 id: row.id,
                 searchName: row.search_name,
                 searchQuery: row.search_query,
-                filtersApplied: row.filters_applied ? JSON.parse(row.filters_applied) : null,
+                filtersApplied: row.filters_applied 
+                    ? (typeof row.filters_applied === 'string' ? JSON.parse(row.filters_applied) : row.filters_applied)
+                    : null,
                 isActive: row.is_active,
                 createdAt: row.created_at,
                 updatedAt: row.updated_at
@@ -414,7 +462,9 @@ export const updateSavedSearch = async (req: Request, res: Response) => {
                 id: result.rows[0].id,
                 searchName: result.rows[0].search_name,
                 searchQuery: result.rows[0].search_query,
-                filtersApplied: result.rows[0].filters_applied ? JSON.parse(result.rows[0].filters_applied) : null,
+                filtersApplied: result.rows[0].filters_applied 
+                    ? (typeof result.rows[0].filters_applied === 'string' ? JSON.parse(result.rows[0].filters_applied) : result.rows[0].filters_applied)
+                    : null,
                 isActive: result.rows[0].is_active,
                 createdAt: result.rows[0].created_at,
                 updatedAt: result.rows[0].updated_at

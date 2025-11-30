@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import SearchHistoryDropdown from './SearchHistoryDropdown';
 
 interface SearchBarProps {
     value: string;
@@ -26,11 +27,37 @@ const SearchBar: React.FC<SearchBarProps> = ({
     resultsCount = 0
 }) => {
     const [isFocused, setIsFocused] = useState(false);
+    const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             onSearch();
+            setShowHistoryDropdown(false);
         }
+    };
+
+    const handleFocus = () => {
+        setIsFocused(true);
+        setShowHistoryDropdown(true);
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        // Delay closing to allow dropdown clicks
+        setTimeout(() => setShowHistoryDropdown(false), 200);
+    };
+
+    const handleChange = (newValue: string) => {
+        onChange(newValue);
+        setShowHistoryDropdown(true);
+    };
+
+    const handleSelectHistory = (selectedQuery: string) => {
+        onChange(selectedQuery);
+        setShowHistoryDropdown(false);
+        onSearch();
+        inputRef.current?.blur();
     };
 
     const sortOptions = [
@@ -66,18 +93,22 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         </svg>
                     </div>
                     <input
+                        ref={inputRef}
                         type="text"
                         value={value}
-                        onChange={(e) => onChange(e.target.value)}
+                        onChange={(e) => handleChange(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={() => setIsFocused(false)}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
                         placeholder="Search places, food, activities..."
                         className="w-full h-12 pl-12 pr-4 bg-surface-glass border border-subtle rounded-xl text-primary placeholder-muted focus:outline-none focus:border-pulse transition-colors"
                     />
                     {value && (
                         <button
-                            onClick={() => onChange('')}
+                            onClick={() => {
+                                onChange('');
+                                setShowHistoryDropdown(false);
+                            }}
                             className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted hover:text-primary transition-colors"
                             aria-label="Clear search"
                         >
@@ -86,6 +117,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
                             </svg>
                         </button>
                     )}
+                    
+                    {/* Search History Dropdown */}
+                    <SearchHistoryDropdown
+                        query={value}
+                        isOpen={showHistoryDropdown}
+                        onSelect={handleSelectHistory}
+                        onClose={() => setShowHistoryDropdown(false)}
+                        inputRef={inputRef}
+                    />
                 </div>
 
                 {/* Search Button */}
