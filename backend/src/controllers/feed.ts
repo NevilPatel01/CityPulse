@@ -21,7 +21,8 @@ export const getFeed = async (req: Request, res: Response) => {
         const offset = (Number(page) - 1) * Number(limit);
         const totalLimit = Number(limit);
 
-        // Get recommendations
+        // Get personalized recommendations with scoring
+        // Priority: 1. Buddy recommendations (2x), 2. Recent engagement (1.5x), 3. Recent posts (1x)
         const recommendationsQuery = `
             SELECT 
                 r.id,
@@ -53,7 +54,23 @@ export const getFeed = async (req: Request, res: Response) => {
                 EXISTS(
                     SELECT 1 FROM recommendation_saves rs 
                     WHERE rs.recommendation_id = r.id AND rs.user_id = $1
-                ) as is_bookmarked
+                ) as is_bookmarked,
+                -- Personalized scoring: prioritize buddy content and recent engagement
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM travel_buddy_connections tbc
+                        WHERE ((tbc.requester_id = $1 AND tbc.requested_id = r.user_id)
+                            OR (tbc.requester_id = r.user_id AND tbc.requested_id = $1))
+                        AND tbc.status = 'accepted'
+                    ) THEN 2.0
+                    ELSE 1.0
+                END * 
+                CASE 
+                    WHEN r.created_at >= NOW() - INTERVAL '7 days' 
+                    AND (r.likes_count + r.views_count * 0.1) > 5 
+                    THEN 1.5
+                    ELSE 1.0
+                END as personalization_score
             FROM recommendations r
             JOIN users u ON r.user_id = u.id
             JOIN user_profiles up ON u.id = up.user_id
@@ -61,7 +78,9 @@ export const getFeed = async (req: Request, res: Response) => {
             LEFT JOIN recommendation_cities rec_city ON r.id = rec_city.recommendation_id
             LEFT JOIN cities c ON rec_city.city_id = c.id
             WHERE r.status = 'active'
-            ORDER BY r.created_at DESC
+            ORDER BY 
+                personalization_score DESC,
+                r.created_at DESC
             LIMIT $2
         `;
 
@@ -122,11 +141,20 @@ export const getFeed = async (req: Request, res: Response) => {
             pool.query(tripsQuery, [userId, Math.floor(totalLimit / 2)])
         ]);
 
-        // Combine and sort by created_at
+        // Combine and sort by personalization score and created_at
         const combinedResults = [
             ...recommendationsResult.rows,
             ...tripsResult.rows
-        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        ].sort((a, b) => {
+            // First sort by personalization score if available
+            const scoreA = a.personalization_score || 1.0;
+            const scoreB = b.personalization_score || 1.0;
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA;
+            }
+            // Then by created_at
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })
          .slice(0, totalLimit);
 
         res.status(200).json({

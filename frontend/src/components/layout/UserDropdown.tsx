@@ -164,6 +164,22 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className = '' }) =>
             </Link>
             
             <Link
+              to="/leaderboard"
+              className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                isActivePath('/leaderboard') 
+                  ? 'bg-pulse/10 text-pulse border-l-4 border-pulse' 
+                  : 'text-primary hover:bg-surface-glass'
+              }`}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="mr-3 text-base">🏆</span>
+              Leaderboard
+              {isActivePath('/leaderboard') && (
+                <span className="ml-auto text-pulse" aria-hidden="true">●</span>
+              )}
+            </Link>
+            
+            <Link
               to="/settings"
               className={`flex items-center px-4 py-2 text-sm transition-colors ${
                 isActivePath('/settings') 

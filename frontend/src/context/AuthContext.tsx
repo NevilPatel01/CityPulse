@@ -1,7 +1,8 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { apiEndpoints, apiRequest } from '../config/api';
 import { useSafeToast } from '../hooks/useSafeToast';
+import { getAuthToken, setAuthToken as storeAuthToken, removeAuthToken } from '../utils/authStorage';
 
 // User interface
 export interface User {
@@ -64,25 +65,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const { showSuccess, showError } = useSafeToast();
 
     // Check if user is authenticated
-    const isAuthenticated = !!user && !!(sessionStorage.getItem('authToken') || localStorage.getItem('authToken'));
-
-    // Check authentication status on app start
-    useEffect(() => {
-        checkAuthStatus();
-    }, []);
+    // User must exist AND token must be present
+    // During loading, we don't check authentication to allow auth verification to complete
+    const isAuthenticated = !isLoading && !!user && !!getAuthToken();
 
     // Check authentication status
-    const checkAuthStatus = async () => {
+    const checkAuthStatus = useCallback(async () => {
         try {
-            // Check both localStorage (remember me) and sessionStorage
-            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            // Get token from storage utility (checks both storages)
+            // This syncs localStorage to sessionStorage if needed for cross-tab access
+            const token = getAuthToken();
             
             if (!token) {
+                console.log('[AUTH] No token found in storage');
                 setIsLoading(false);
                 return;
             }
 
-            console.log('[AUTH] Verifying token with server...');
+            console.log('[AUTH] Token found, verifying with server...');
             // Verify token and get user data
             const data = await apiRequest<UserProfileResponse>(
                 apiEndpoints.auth.profile,
@@ -97,17 +97,68 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('✅ [AUTH] Token valid, user authenticated:', data.data.user.email);
             setUser(data.data.user);
-        } catch (error) {
+        } catch (error: any) {
             // Token is invalid or expired
             console.error('❌ [AUTH] Auth check failed:', error);
-            localStorage.removeItem('authToken');
-            sessionStorage.removeItem('authToken');
-            setUser(null);
+            
+            // Only remove token if it's actually an auth error (401, 403)
+            // Don't remove on network errors - user might just be offline
+            if (error?.status === 401 || error?.status === 403) {
+                console.log('[AUTH] Token invalid or expired, removing from storage');
+                removeAuthToken();
+                setUser(null);
+            } else {
+                // For network errors, keep the token but mark as not authenticated
+                // User can retry when network is back
+                console.log('[AUTH] Network error during auth check, keeping token');
+                setUser(null);
+            }
         } finally {
             console.log('🏁 [AUTH] Auth check complete, loading finished');
             setIsLoading(false);
         }
-    };
+    }, []);
+
+    // Check authentication status on app start and listen for storage changes
+    useEffect(() => {
+        checkAuthStatus();
+        
+        // Listen for storage changes from other tabs/windows
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'authToken') {
+                console.log('[AUTH] Storage change detected from another tab/window');
+                // If token was removed (logout), clear user state
+                if (!e.newValue) {
+                    setUser(null);
+                } else {
+                    // If token was added, verify and update user state
+                    checkAuthStatus();
+                }
+            }
+        };
+        
+        // Listen for custom auth token change events (from same origin)
+        const handleAuthTokenChange = (e: CustomEvent) => {
+            console.log('[AUTH] Auth token change event detected');
+            if (e.detail.token) {
+                // Token was set, verify it
+                checkAuthStatus();
+            } else {
+                // Token was removed (logout)
+                setUser(null);
+            }
+        };
+        
+        // Add event listeners
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('authTokenChanged', handleAuthTokenChange as EventListener);
+        
+        // Cleanup
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('authTokenChanged', handleAuthTokenChange as EventListener);
+        };
+    }, [checkAuthStatus]);
 
     // Login function
     const login = async (email: string, password: string, rememberMe: boolean = false) => {
@@ -122,16 +173,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('[AUTH] Login successful for:', data.data.user.email);
             
-            // Store token based on rememberMe preference
-            if (rememberMe) {
-                // Store in localStorage for persistent login
-                localStorage.setItem('authToken', data.data.accessToken);
-                console.log('[AUTH] Token stored in localStorage (Remember Me enabled)');
-            } else {
-                // Store in sessionStorage for session-only login
-                sessionStorage.setItem('authToken', data.data.accessToken);
-                console.log('[AUTH] Token stored in sessionStorage (session only)');
-            }
+            // Store token using utility function (handles both storages and cross-tab sync)
+            storeAuthToken(data.data.accessToken, rememberMe);
             
             setUser(data.data.user);
             
@@ -165,8 +208,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('[AUTH] Registration successful for:', data.data.user.email);
 
-            // Store token and user data in sessionStorage
-            sessionStorage.setItem('authToken', data.data.accessToken);
+            // Store token using utility function (default to sessionStorage for new registrations)
+            storeAuthToken(data.data.accessToken, false);
             setUser(data.data.user);
             
             // Show success toast
@@ -191,9 +234,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         console.log(' [AUTH] User logging out:', user?.email);
         const userName = user?.fullName || 'User';
         
-        // Clear token from both storages
-        localStorage.removeItem('authToken');
-        sessionStorage.removeItem('authToken');
+        // Clear token from all storages using utility function (notifies other tabs)
+        removeAuthToken();
         setUser(null);
         
         // Show success toast

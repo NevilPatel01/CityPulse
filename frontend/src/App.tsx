@@ -10,6 +10,7 @@ import LandingPage from './components/landing/LandingPage';
 
 import AboutPage from './pages/AboutPage.tsx';
 import FeaturesPage from './pages/FeaturesPage.tsx';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -30,6 +31,7 @@ import TripsPage from './pages/TripsPage';
 import TripDetailPage from './pages/TripDetailPage';
 import CompanionFinderPage from './pages/CompanionFinderPage';
 import ModeratorDashboard from './pages/ModeratorDashboard';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 import { InactivityHandler } from './components/auth/InactivityHandler';
 
@@ -64,6 +66,7 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
           
           {/* Auth routes - only accessible when NOT authenticated */}
           <Route path="/login" element={
@@ -172,6 +175,13 @@ function App() {
           <Route path="/moderator/dashboard" element={
             <ProtectedRoute>
               <ModeratorDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Leaderboard route */}
+          <Route path="/leaderboard" element={
+            <ProtectedRoute>
+              <LeaderboardPage />
             </ProtectedRoute>
           } />
           

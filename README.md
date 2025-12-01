@@ -127,7 +127,7 @@
 - [x] Keyboard navigation support (arrow keys, Enter, Escape)
 - [x] Integrated into SearchInput, SearchBar, and AdvancedSearch components
 - [x] Custom useSearchHistory hook for state management
-- [ ] User favorites system (User_Favourites table)
+- [x] User favorites system (User_Favourites table) - Implemented via recommendation_saves
 - [ ] GitHub Actions: final test automation 
 - [ ] critical bug fixes 
 - [x] Test E2E and Unit Test of all the features - Comprehensive test suites added
@@ -182,6 +182,17 @@ NOTE: I will add as I go.
 - Health Check: https://api.city-pulse.app/health
 
 *CityPulse - Connecting Travelers, Sharing Experiences, Building Communities* 🌍✈️
+
+## 📊 Test Coverage
+
+Run coverage reports locally:
+- **Backend**: `cd backend && pnpm test:coverage`
+- **Frontend**: `cd frontend && pnpm test:coverage`
+- **View HTML Reports**: `cd backend && pnpm test:coverage:html` (opens in browser)
+
+Coverage reports are generated in:
+- Backend: `backend/coverage/`
+- Frontend: `frontend/coverage/`
 
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/cqMWIy-z)
 

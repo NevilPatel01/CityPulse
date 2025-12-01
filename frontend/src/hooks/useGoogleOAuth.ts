@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getGoogleAuthUrl, googleOAuthConfig } from '../config/googleOAuth';
 import { apiEndpoints, apiRequest } from '../config/api';
 import { useAuth } from './useAuth';
+import { setAuthToken } from '../utils/authStorage';
 
 interface GoogleOAuthState {
     isLoading: boolean;
@@ -31,7 +32,7 @@ export const useGoogleOAuth = () => {
     });
 
     const navigate = useNavigate();
-    const { updateUser } = useAuth();
+    const { updateUser, checkAuthStatus } = useAuth();
 
     /**
      * Initiate Google OAuth flow
@@ -85,13 +86,21 @@ export const useGoogleOAuth = () => {
             );
             console.log('Backend auth response:', authResponse);
 
-            // Store JWT token in sessionStorage
-            sessionStorage.setItem('authToken', authResponse.data.accessToken);
-            console.log('Auth token stored in sessionStorage');
+            // Store JWT token using storage utility
+            // Use localStorage (rememberMe=true) for Google OAuth to enable cross-tab persistence
+            // Google OAuth is typically used for convenience and users expect it to persist
+            setAuthToken(authResponse.data.accessToken, true);
+            console.log('[OAUTH] Auth token stored in localStorage for cross-tab persistence');
 
             // Update auth context with the user data
             updateUser(authResponse.data.user);
             console.log('✅ Auth context updated with user data');
+            
+            // Manually trigger checkAuthStatus to ensure auth state is properly verified
+            // This ensures the user is immediately authenticated in this tab after OAuth
+            // The storage event will handle cross-tab sync, but we need to verify in this tab too
+            await checkAuthStatus();
+            console.log('✅ Auth status verified after OAuth');
 
             // Get the stored redirect path or default to explore
             const redirectPath = sessionStorage.getItem('oauth_redirect_path') || '/explore';
@@ -142,7 +151,7 @@ export const useGoogleOAuth = () => {
                 state: { error: errorMessage }
             });
         }
-    }, [navigate, updateUser]);
+    }, [navigate, updateUser, checkAuthStatus]);
 
     /**
      * Login with Google OAuth (alternative method using popup)

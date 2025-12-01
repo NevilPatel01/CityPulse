@@ -484,7 +484,343 @@ describe('POST /api/recommendations/:id/photos', () => {
         expect(response.body.success).toBe(false);
     });
 
-    // Note: Actual file upload tests would require multipart/form-data
-    // and mock files, which can be added if needed
+    it('should upload photos for own recommendation', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        const newRecommendation = {
+            place_name: 'Photo Test Place',
+            city_name: city.name,
+            category_id: category.rows[0].id,
+            description: 'Testing photo upload',
+            user_rating: 5
+        };
+
+        const createResponse = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(newRecommendation)
+            .expect(201);
+
+        const recommendationId = createResponse.body.data.id;
+        createdRecommendationIds.push(recommendationId);
+
+        // Create a mock image buffer
+        const mockImage = Buffer.from('fake-image-data');
+        
+        const uploadResponse = await request(app)
+            .post(`/api/recommendations/${recommendationId}/photos`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .attach('photos', mockImage, 'test-image.jpg')
+            .expect(201);
+
+        expect(uploadResponse.body.success).toBe(true);
+        expect(uploadResponse.body.data.photos).toBeDefined();
+    });
+
+    it('should reject photo upload with invalid file type', async () => {
+        const city = await createTestCity();
+        const recommendation = await createTestRecommendation(testUser.id, city.id);
+        createdRecommendationIds.push(recommendation.id);
+
+        const mockFile = Buffer.from('fake-file-data');
+        
+        const response = await request(app)
+            .post(`/api/recommendations/${recommendation.id}/photos`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .attach('photos', mockFile, 'test-file.txt')
+            .expect(400);
+
+        expect(response.body.success).toBe(false);
+    });
+});
+
+describe('GET /api/search/recommendations', () => {
+    it('should search recommendations with valid query', async () => {
+        const city = await createTestCity();
+        const recommendation = await createTestRecommendation(testUser.id, city.id);
+        createdRecommendationIds.push(recommendation.id);
+
+        const response = await request(app)
+            .get(`/api/search/recommendations?q=${encodeURIComponent(recommendation.title)}`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(Array.isArray(response.body.data.recommendations)).toBe(true);
+    });
+
+    it('should reject search with empty query', async () => {
+        const response = await request(app)
+            .get('/api/search/recommendations?q=')
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(400);
+
+        expect(response.body.success).toBe(false);
+    });
+
+    it('should handle special characters in search query', async () => {
+        const response = await request(app)
+            .get('/api/search/recommendations?q=test%26special%3C%3E')
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200);
+
+        expect(response.body.success).toBe(true);
+    });
+
+    it('should prevent SQL injection in search query', async () => {
+        const maliciousQuery = "'; DROP TABLE users; --";
+        
+        const response = await request(app)
+            .get(`/api/search/recommendations?q=${encodeURIComponent(maliciousQuery)}`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200);
+
+        expect(response.body.success).toBe(true);
+        // Verify database still works
+        const verifyResponse = await request(app)
+            .get('/api/recommendations')
+            .expect(200);
+        expect(verifyResponse.body.success).toBe(true);
+    });
+
+    it('should filter search results by category', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT name FROM recommendation_categories LIMIT 1');
+        const response = await request(app)
+            .get(`/api/search/recommendations?q=test&category=${category.rows[0].name}`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200);
+
+        expect(response.body.success).toBe(true);
+    });
+
+    it('should filter search results by city', async () => {
+        const city = await createTestCity();
+        const response = await request(app)
+            .get(`/api/search/recommendations?q=test&city=${city.name}`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200);
+
+        expect(response.body.success).toBe(true);
+    });
+});
+
+describe('POST /api/recommendations - Test-to-Pass Values', () => {
+    it('should create recommendation with all fields from proposal', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories WHERE id = 2 OR id = (SELECT id FROM recommendation_categories LIMIT 1) LIMIT 1');
+        
+        const proposalValidData = {
+            place_name: 'Amazing CN Tower',
+            description: 'Must-visit Toronto landmark',
+            category_id: category.rows[0].id,
+            price_range_min: 35.00,
+            price_range_max: 50.00,
+            difficulty_level: 'easy',
+            address: '290 Bremner Blvd, Toronto',
+            city_name: city.name,
+            user_rating: 5
+        };
+
+        const response = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(proposalValidData)
+            .expect(201);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.id).toBeDefined();
+        expect(response.body.data.title).toBe('Amazing CN Tower');
+        expect(response.body.data.price_range_min).toBe(35.00);
+        expect(response.body.data.price_range_max).toBe(50.00);
+
+        createdRecommendationIds.push(response.body.data.id);
+    });
+});
+
+describe('POST /api/recommendations - Test-to-Fail Values', () => {
+    it('should reject recommendation with missing title (missing required field)', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        
+        const invalidData = {
+            description: 'Test description without title',
+            category_id: category.rows[0].id,
+            city_name: city.name
+        };
+
+        const response = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(invalidData)
+            .expect(400);
+
+        expect(response.body.success).toBe(false);
+    });
+
+    it('should reject recommendation with invalid category_id (999)', async () => {
+        const city = await createTestCity();
+        
+        const invalidData = {
+            place_name: 'Test Place',
+            description: 'Test description',
+            category_id: 999,
+            city_name: city.name,
+            user_rating: 5
+        };
+
+        const response = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(invalidData)
+            .expect(400);
+
+        expect(response.body.success).toBe(false);
+    });
+
+    it('should reject recommendation with negative price', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        
+        const invalidData = {
+            place_name: 'Test Place',
+            description: 'Test description',
+            category_id: category.rows[0].id,
+            price_range_min: -10,
+            city_name: city.name,
+            user_rating: 5
+        };
+
+        const response = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(invalidData)
+            .expect(400);
+
+        expect(response.body.success).toBe(false);
+    });
+
+    it('should sanitize XSS attempt in title', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        
+        const xssData = {
+            place_name: "<script>alert('xss')</script>",
+            description: 'Test description',
+            category_id: category.rows[0].id,
+            city_name: city.name,
+            user_rating: 5
+        };
+
+        const response = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(xssData)
+            .expect(201);
+
+        expect(response.body.success).toBe(true);
+        // Verify XSS was sanitized
+        expect(response.body.data.title).not.toContain('<script>');
+        expect(response.body.data.title).not.toContain('alert');
+
+        createdRecommendationIds.push(response.body.data.id);
+    });
+
+    it('should sanitize XSS attempt in description', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        
+        const xssData = {
+            place_name: 'Test Place',
+            description: "<img src='x' onerror=\"alert('xss')\">",
+            category_id: category.rows[0].id,
+            city_name: city.name,
+            user_rating: 5
+        };
+
+        const response = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(xssData)
+            .expect(201);
+
+        expect(response.body.success).toBe(true);
+        // Verify XSS was sanitized
+        const description = response.body.data.description;
+        expect(description).not.toContain('<img');
+        expect(description).not.toContain('onerror');
+
+        createdRecommendationIds.push(response.body.data.id);
+    });
+});
+
+describe('GET /api/recommendations/:id - Private Content Access', () => {
+    it('should allow owner to access private recommendation', async () => {
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        
+        const privateRecommendation = {
+            place_name: 'Private Place',
+            description: 'Private description',
+            category_id: category.rows[0].id,
+            city_name: city.name,
+            user_rating: 5,
+            visibility: 'private'
+        };
+
+        const createResponse = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(privateRecommendation)
+            .expect(201);
+
+        const recommendationId = createResponse.body.data.id;
+        createdRecommendationIds.push(recommendationId);
+
+        // Owner should be able to access
+        const response = await request(app)
+            .get(`/api/recommendations/${recommendationId}`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200);
+
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.id).toBe(recommendationId);
+    });
+
+    it('should prevent unauthorized access to private recommendation', async () => {
+        // Create another user
+        const otherUser = await createTestUser();
+        createdUserIds.push(otherUser.id);
+        const otherUserToken = generateTestToken(otherUser.id);
+
+        const city = await createTestCity();
+        const category = await query('SELECT id FROM recommendation_categories LIMIT 1');
+        
+        const privateRecommendation = {
+            place_name: 'Private Place 2',
+            description: 'Private description',
+            category_id: category.rows[0].id,
+            city_name: city.name,
+            user_rating: 5,
+            visibility: 'private'
+        };
+
+        const createResponse = await request(app)
+            .post('/api/recommendations')
+            .set('Authorization', `Bearer ${authToken}`)
+            .send(privateRecommendation)
+            .expect(201);
+
+        const recommendationId = createResponse.body.data.id;
+        createdRecommendationIds.push(recommendationId);
+
+        // Other user should not be able to access private content
+        const response = await request(app)
+            .get(`/api/recommendations/${recommendationId}`)
+            .set('Authorization', `Bearer ${otherUserToken}`)
+            .expect(403);
+
+        expect(response.body.success).toBe(false);
+    });
 });
 

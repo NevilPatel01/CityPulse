@@ -64,7 +64,9 @@ describe('OWASP Security Tests', () => {
 
     describe('SQL Injection Tests', () => {
         const sqlInjectionPayloads = [
-            "' OR '1'='1",
+            "'; DROP TABLE users; --",  
+            "' OR '1'='1",              
+            "UNION SELECT * FROM users", 
             "' OR '1'='1' --",
             "' OR '1'='1' /*",
             "admin'--",
@@ -159,6 +161,9 @@ describe('OWASP Security Tests', () => {
 
     describe('Cross-Site Scripting (XSS) Tests', () => {
         const xssPayloads = [
+            "<script>alert('xss')</script>",    
+            "javascript:alert('xss')",           
+            "<img src=\"x\" onerror=\"alert('xss')\">", 
             '<script>alert("XSS")</script>',
             '<img src=x onerror=alert("XSS")>',
             '<svg/onload=alert("XSS")>',
@@ -173,7 +178,6 @@ describe('OWASP Security Tests', () => {
             '<audio src=x onerror=alert("XSS")>',
             '<details open ontoggle=alert("XSS")>',
             '<marquee onstart=alert("XSS")>',
-            'javascript:alert("XSS")',
             '<a href="javascript:alert(\'XSS\')">Click</a>',
             '<div style="background:url(javascript:alert(\'XSS\'))">',
         ];
@@ -401,6 +405,25 @@ describe('OWASP Security Tests', () => {
 
             expect([401, 403]).toContain(response.status);
         });
+
+        it('should enforce JWT token expiration (15 minutes per proposal Section 1.3.3)', async () => {
+            const jwt = require('jsonwebtoken');
+            const secret = process.env.JWT_SECRET || 'test-secret';
+            
+            // Create expired token (expired 16 minutes ago - simulating session timeout)
+            const expiredToken = jwt.sign(
+                { userId: testUserId, email: 'test@test.com', username: 'test', role: 'user' },
+                secret,
+                { expiresIn: '-16m', issuer: 'citypulse-api', audience: 'citypulse-client' }
+            );
+
+            const response = await request(app)
+                .get('/api/profile')
+                .set('Authorization', `Bearer ${expiredToken}`);
+
+            expect([401, 403]).toContain(response.status);
+            expect(response.body.message || '').toMatch(/token|expired|unauthorized/i);
+        });
     });
 
     describe('Input Validation Tests', () => {
@@ -468,17 +491,14 @@ describe('OWASP Security Tests', () => {
                 return;
             }
 
-            const requests = [];
-            for (let i = 0; i < 10; i++) {
-                requests.push(
-                    request(app)
-                        .post('/api/auth/login')
-                        .send({
-                            email: 'test@test.com',
-                            password: 'wrongpassword'
-                        })
-                );
-            }
+            const requests = Array(10).fill(null).map(() =>
+                request(app)
+                    .post('/api/auth/login')
+                    .send({
+                        email: 'test@test.com',
+                        password: 'wrongpassword'
+                    })
+            );
 
             const responses = await Promise.all(requests);
             const tooManyRequests = responses.some(r => r.status === 429);

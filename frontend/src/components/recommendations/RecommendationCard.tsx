@@ -264,8 +264,9 @@ export function RecommendationCard({
               }}
               className="p-2.5 bg-pulse hover:bg-pulse/90 text-white rounded-full transition-all shadow-lg shadow-pulse/30 hover:scale-110 active:scale-95"
               title="Edit recommendation"
+              aria-label={`Edit recommendation: ${recommendation.title}`}
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="w-4 h-4" aria-hidden="true" />
             </button>
             <button
               onClick={(e) => {
@@ -275,8 +276,9 @@ export function RecommendationCard({
               }}
               className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-all shadow-lg shadow-red-600/30 hover:scale-110 active:scale-95"
               title="Delete recommendation"
+              aria-label={`Delete recommendation: ${recommendation.title}`}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -363,17 +365,19 @@ export function RecommendationCard({
                   onClick={handleLike}
                   className="flex flex-col items-center gap-1 disabled:opacity-50 group"
                   title={isLiked ? 'Unlike' : 'Like'}
+                  aria-label={isLiked ? `Unlike ${recommendation.title} (${likesCount} likes)` : `Like ${recommendation.title} (${likesCount} likes)`}
+                  disabled={!user}
                 >
                   <Heart className={`w-6 h-6 transition-all ${
                     isLiked 
                       ? 'fill-red-500 text-red-500' 
                       : 'text-red-500 hover:text-red-600 hover:scale-110'
-                  }`} style={!isLiked ? { strokeWidth: 2.5 } : {}} />
+                  }`} style={!isLiked ? { strokeWidth: 2.5 } : {}} aria-hidden="true" />
                   <span className="text-xs font-medium text-primary">{likesCount}</span>
                 </button>
                 
-                <div className="flex flex-col items-center gap-1">
-                  <Eye className="w-6 h-6 text-primary" />
+                <div className="flex flex-col items-center gap-1" role="status" aria-label={`${recommendation.views_count} views`}>
+                  <Eye className="w-6 h-6 text-primary" aria-hidden="true" />
                   <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
           </div>
           
@@ -381,6 +385,8 @@ export function RecommendationCard({
                   onClick={handleBookmark}
                   className="flex flex-col items-center gap-1 disabled:opacity-50 group"
                   title={isBookmarked ? 'Unsave' : 'Save recommendation'}
+                  aria-label={isBookmarked ? `Unsave ${recommendation.title}` : `Save ${recommendation.title} for later`}
+                  disabled={!user}
                 >
                   <Bookmark 
                     className={`w-6 h-6 transition-all hover:scale-110 ${
@@ -390,6 +396,7 @@ export function RecommendationCard({
                     }`}
                     fill={isBookmarked ? 'currentColor' : 'none'}
                     style={isBookmarked ? {} : { strokeWidth: 2.5 }}
+                    aria-hidden="true"
                   />
                   <span className="text-xs font-medium text-primary">{isBookmarked ? 'Saved' : 'Save'}</span>
                 </button>

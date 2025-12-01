@@ -75,7 +75,7 @@ export function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
         {(localImages.cover || profile.coverPhotoUrl) ? (
           <img 
             src={localImages.cover || profile.coverPhotoUrl} 
-            alt="Cover" 
+            alt={`${profile.fullName || profile.username}'s cover photo`}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -89,8 +89,11 @@ export function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold text-white tracking-tight">CityPulse</span>
             <div className="flex items-center gap-2">
-              <button className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <button 
+                className="p-2 rounded-full hover:bg-white/10 text-white transition-colors"
+                aria-label="View buddies"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                   <path d="M15 8a3 3 0 10-6 0 3 3 0 006 0zM9 8a3 3 0 10-6 0 3 3 0 006 0zM12 15a6 6 0 00-6 6h12a6 6 0 00-6-6z" />
                 </svg>
               </button>
@@ -99,13 +102,17 @@ export function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
                   <button 
                     onClick={onEditProfile}
                     className="p-2 rounded-full hover:bg-white/10 text-white transition-colors"
+                    aria-label="Edit profile"
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                     </svg>
                   </button>
-                  <button className="p-2 rounded-full hover:bg-white/10 text-white transition-colors">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <button 
+                    className="p-2 rounded-full hover:bg-white/10 text-white transition-colors"
+                    aria-label="Settings"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                       <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                     </svg>
                   </button>
@@ -130,11 +137,12 @@ export function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
             }}
             className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-all duration-200 opacity-0 group-hover:opacity-100"
             disabled={isUploading}
+            aria-label="Upload cover photo"
           >
             {uploadingType === 'cover' ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" aria-hidden="true"></div>
             ) : (
-              '📷'
+              <span aria-hidden="true">📷</span>
             )}
           </button>
         )}
@@ -148,7 +156,7 @@ export function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
                 {(localImages.profile || profile.profilePhotoUrl) ? (
                   <img 
                     src={localImages.profile || profile.profilePhotoUrl} 
-                    alt={profile.fullName}
+                    alt={`${profile.fullName || profile.username}'s profile photo`}
                     className="w-full h-full object-cover"
                   />
                 ) : (

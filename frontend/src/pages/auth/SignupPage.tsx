@@ -334,7 +334,10 @@ const SignupPage = () => {
             />
             <span className="text-sm text-muted leading-relaxed">
               I agree to the{' '}
-              <Link to="/terms" className="text-pulse hover:underline hover:text-pulse/80 transition-colors duration-200">
+              <Link 
+                to="/terms" 
+                className="text-pulse hover:underline hover:text-pulse/80 transition-colors duration-200"
+              >
                 Terms of Service
               </Link>{' '}
               and{' '}

@@ -184,8 +184,13 @@ export const apiRequest = async <T = unknown>(
     console.log('[API] Making request to:', fullUrl);
     console.log('[API] Request options:', fetchOptions);
 
-    // Get auth token from sessionStorage
-    const authToken = sessionStorage.getItem('authToken');
+    // Get auth token from storage (checks both sessionStorage and localStorage)
+    // Check localStorage first for cross-tab persistence (Google OAuth uses localStorage)
+    // Then check sessionStorage for session-only logins
+    const authToken = typeof window !== 'undefined' 
+        ? (localStorage.getItem('authToken') || sessionStorage.getItem('authToken'))
+        : null;
+    
     console.log('[API] Auth token:', authToken ? 'Present' : 'Not found');
 
     const headers: Record<string, string> = {

@@ -41,6 +41,11 @@ const QuickActionsAndLinksCard = () => {
             variant: 'secondary' as const
         },
         {
+            label: 'Leaderboard',
+            onClick: () => navigate('/leaderboard'),
+            variant: 'secondary' as const
+        },
+        {
             label: 'Settings',
             onClick: () => navigate('/settings'),
             variant: 'secondary' as const

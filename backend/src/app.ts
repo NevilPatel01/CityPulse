@@ -17,6 +17,7 @@ import feedRoutes from './routes/feed';
 import citiesRoutes from './routes/cities';
 import tripsRoutes from './routes/trips';
 import achievementRoutes from './routes/achievements';
+import leaderboardRoutes from './routes/leaderboard';
 import moderationRoutes from './routes/moderation';
 import { healthCheck, schemaCheck } from './controllers/health';
 import { getUploadsBaseDir } from './utils/paths';
@@ -182,6 +183,10 @@ export const createApp = (): express.Express => {
     console.log('[APP] Setting up achievement routes...');
     // Achievement routes - handles badges and gamification
     app.use('/api/achievements', achievementRoutes);
+
+    console.log('[APP] Setting up leaderboard routes...');
+    // Leaderboard routes - handles user rankings by achievements
+    app.use('/api/leaderboard', leaderboardRoutes);
 
     console.log('[APP] Setting up moderation routes...');
     // Moderation routes - handles content moderation and user management (moderator only)
