@@ -97,13 +97,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
             console.log('✅ [AUTH] Token valid, user authenticated:', data.data.user.email);
             setUser(data.data.user);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Token is invalid or expired
             console.error('❌ [AUTH] Auth check failed:', error);
             
             // Only remove token if it's actually an auth error (401, 403)
             // Don't remove on network errors - user might just be offline
-            if (error?.status === 401 || error?.status === 403) {
+            const errorStatus = (error as { status?: number })?.status;
+            if (errorStatus === 401 || errorStatus === 403) {
                 console.log('[AUTH] Token invalid or expired, removing from storage');
                 removeAuthToken();
                 setUser(null);

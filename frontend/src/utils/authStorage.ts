@@ -25,7 +25,7 @@ export const getAuthToken = (): string | null => {
       // This ensures the token is available for API calls in this tab
       try {
         sessionStorage.setItem('authToken', localToken);
-      } catch (e) {
+      } catch {
         // If sessionStorage is full or blocked, continue with localStorage token
         console.warn('[AUTH STORAGE] Could not sync to sessionStorage, using localStorage token only');
       }
