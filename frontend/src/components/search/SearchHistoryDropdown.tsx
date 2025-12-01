@@ -7,7 +7,7 @@ interface SearchHistoryDropdownProps {
     isOpen: boolean;
     onSelect: (query: string, filters?: Record<string, unknown>) => void;
     onClose: () => void;
-    inputRef: React.RefObject<HTMLInputElement>;
+    inputRef: React.RefObject<HTMLInputElement | null>;
     maxItems?: number;
 }
 

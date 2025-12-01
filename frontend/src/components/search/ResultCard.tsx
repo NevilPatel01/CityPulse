@@ -407,6 +407,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [isBookmarking, setIsBookmarking] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     // Check bookmark status on mount (only for recommendations)
     useEffect(() => {
