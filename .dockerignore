@@ -5,12 +5,6 @@ dist
 tmp
 temp
 
-tests/
-**/__tests__/
-**/*.test.js
-**/*.test.ts
-**/*.spec.js
-**/*.spec.ts
 
 .git
 Dockerfile

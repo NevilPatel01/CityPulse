@@ -58,7 +58,12 @@ export const query = async (text: string, params?: any[]): Promise<any> => {
         return result;
     } catch (err) {
         console.error('Database query error:', err);
-        throw err;
+        const enhancedError = new Error(`Database query failed: ${(err as any).message}`);
+        (enhancedError as any).code = (err as any).code;
+        (enhancedError as any).detail = (err as any).detail;
+        (enhancedError as any).hint = (err as any).hint;
+        (enhancedError as any).originalError = err;
+        throw enhancedError;
     } finally {
         client.release();
     }
@@ -74,4 +79,5 @@ export const closePool = async (): Promise<void> => {
     await pool.end();
 };
 
+// Export pool as default
 export default pool;
