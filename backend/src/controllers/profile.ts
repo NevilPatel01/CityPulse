@@ -152,53 +152,6 @@ export const getProfile = async (req: Request, res: Response) => {
                 code: 'PROFILE_PRIVATE'
             });
         }
-        
-        // Legacy code - kept for reference but should not be reached
-        if (false && isPrivateAccount) {
-            const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
-            const profilePhotoUrl = user.profile_photo_url ?
-                (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
-
-            // Check buddy request status and direction
-            let buddyRequestStatus = 'none';
-            let buddyRequestDirection = undefined;
-            if (currentUserId) {
-                const requestResult = await query(
-                    `SELECT status, requester_id, requested_id FROM travel_buddy_connections
-                     WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))`,
-                    [currentUserId, user.id]
-                );
-                if (requestResult.rows.length > 0) {
-                    const connection = requestResult.rows[0];
-                    buddyRequestStatus = connection.status;
-                    
-                    if (connection.status === 'pending' || connection.status === 'accepted') {
-                        buddyRequestDirection = connection.requester_id === currentUserId ? 'sent' : 'received';
-                    }
-                }
-            }
-
-            return res.json({
-                success: true,
-                data: {
-                    user: {
-                        id: user.id,
-                        username: user.username,
-                        fullName: user.full_name,
-                        bio: user.bio,
-                        profilePhotoUrl: profilePhotoUrl,
-                        isPrivate: true,
-                        buddyRequestStatus: buddyRequestStatus,
-                        buddyRequestDirection: buddyRequestDirection,
-                        stats: {
-                            cities: 0,
-                            recommendations: 0,
-                            travelBuddies: 0
-                        }
-                    }
-                }
-            });
-        }
 
         // Get user stats from actual tables
         const statsResult = await query(
@@ -217,7 +170,8 @@ export const getProfile = async (req: Request, res: Response) => {
         const stats = {
             cities_count: allCities.length, // Use the combined count
             recommendations_count: statsResult.rows[0]?.recommendations_count || 0,
-            travel_buddies_count: statsResult.rows[0]?.travel_buddies_count || 0
+            travel_buddies_count: statsResult.rows[0]?.travel_buddies_count || 0,
+            points: 0 // Points calculation can be added later if needed
         };
 
         // Get user badges - simplified for now

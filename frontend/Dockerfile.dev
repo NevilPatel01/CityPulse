@@ -5,13 +5,11 @@ RUN npm install -g pnpm@10.10.0
 WORKDIR /workspace
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY shared/package.json ./shared/package.json
 COPY frontend/package.json ./frontend/package.json
 
 RUN pnpm install --frozen-lockfile
 
 # Copy source code with proper ownership
-COPY --chown=node:node shared ./shared
 COPY --chown=node:node frontend ./frontend
 
 USER node

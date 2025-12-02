@@ -336,13 +336,13 @@ describe('Recommendation Edge Cases', () => {
 
             // Verify update worked
             expect(response.body.success).toBe(true);
-            const ratingResult = await query(
-                `SELECT rating, review FROM recommendation_ratings 
-                    WHERE recommendation_id = $1 AND user_id = $2`,
-                [testRecommendation.id, user2.id]
-            );
-            expect(ratingResult.rows[0].rating).toBe(5);
-            expect(ratingResult.rows[0].review).toBe('Updated review');
+                const ratingResult = await query(
+                    `SELECT rating, review FROM recommendation_ratings 
+                        WHERE recommendation_id = $1 AND user_id = $2`,
+                    [testRecommendation.id, user2.id]
+                );
+                expect(ratingResult.rows[0].rating).toBe(5);
+                expect(ratingResult.rows[0].review).toBe('Updated review');
         });
 
         it('should allow valid ratings (1-5)', async () => {
@@ -413,7 +413,7 @@ describe('Recommendation Edge Cases', () => {
             // Update may return 200 or error
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
 
@@ -452,7 +452,7 @@ describe('Recommendation Edge Cases', () => {
             expect([200, 404]).toContain(response.status);
             if (response.status === 200 && response.body.success) {
                 const recommendations = response.body.data?.recommendations || [];
-                const found = recommendations.some((r: any) => r.id === recommendation.id);
+            const found = recommendations.some((r: any) => r.id === recommendation.id);
                 // Search may or may not find it immediately - just verify search works
                 expect(Array.isArray(recommendations)).toBe(true);
             }

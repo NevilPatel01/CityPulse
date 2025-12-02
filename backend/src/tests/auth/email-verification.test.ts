@@ -102,7 +102,7 @@ describe('Email Verification API Tests', () => {
             if (response.status === 200) {
                 expect(response.body.success).toBe(true);
             } else {
-                expect(response.body.success).toBe(false);
+            expect(response.body.success).toBe(false);
             }
         });
 

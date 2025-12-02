@@ -238,7 +238,7 @@ describe('POST /api/recommendations', () => {
 
         // Create a valid test image buffer
         const testImage = await createValidTestImage();
-        
+
         const response = await request(app)
             .post('/api/recommendations')
             .set('Authorization', `Bearer ${authToken}`)
@@ -278,7 +278,7 @@ describe('POST /api/recommendations', () => {
 
         // Create a valid test image buffer
         const testImage = await createValidTestImage();
-        
+
         const response = await request(app)
             .post('/api/recommendations')
             .set('Authorization', `Bearer ${authToken}`)

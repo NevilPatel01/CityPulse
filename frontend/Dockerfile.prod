@@ -13,17 +13,11 @@ RUN npm install -g pnpm@10.10.0
 # Copy root package files for workspace setup
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
-# Copy shared package.json
-COPY shared/package.json ./shared/package.json
-
 # Copy frontend package.json
 COPY frontend/package.json ./frontend/package.json
 
 # Install dependencies using frozen lockfile for reproducible builds
 RUN pnpm install --frozen-lockfile
-
-# Copy shared source code
-COPY shared ./shared
 
 # Copy frontend source code
 COPY frontend ./frontend

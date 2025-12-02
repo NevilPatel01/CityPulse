@@ -187,7 +187,7 @@ describe('Comprehensive Search Functionality', () => {
             // Advanced search may work or may have issues with array params
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
     });
@@ -312,7 +312,7 @@ describe('Comprehensive Search Functionality', () => {
             // Advanced search may work or may have issues with array params
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
     });
@@ -339,7 +339,7 @@ describe('Comprehensive Search Functionality', () => {
             // Advanced search may work or may have issues
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
 
@@ -366,7 +366,7 @@ describe('Comprehensive Search Functionality', () => {
             // Advanced search may work or may have issues
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
     });
@@ -393,7 +393,7 @@ describe('Comprehensive Search Functionality', () => {
             // Advanced search may work or may have issues
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
 
@@ -425,7 +425,7 @@ describe('Comprehensive Search Functionality', () => {
             // Advanced search may work or may have issues
             expect([200, 400, 500]).toContain(response.status);
             if (response.status === 200) {
-                expect(response.body.success).toBe(true);
+            expect(response.body.success).toBe(true);
             }
         });
     });
@@ -583,7 +583,7 @@ describe('Comprehensive Search Functionality', () => {
             // Get category IDs (API expects IDs, not names)
             const catResult = await query('SELECT id FROM recommendation_categories LIMIT 1');
             const categoryId = catResult.rows.length > 0 ? catResult.rows[0].id : testCategory.id;
-
+            
             const response = await request(app)
                 .get('/api/advanced-search')
                 .set('Authorization', `Bearer ${token}`)

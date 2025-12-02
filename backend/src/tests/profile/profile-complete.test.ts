@@ -184,7 +184,7 @@ describe('Profile Management', () => {
             // Either validation rejects it (400) or it accepts it (200)
             expect([200, 400]).toContain(response.status);
             if (response.status === 400) {
-                expect(response.body.success).toBe(false);
+            expect(response.body.success).toBe(false);
             }
         });
 
@@ -233,17 +233,17 @@ describe('Profile Management', () => {
                 const jpegHeader = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]);
                 const jpegData = Buffer.concat([jpegHeader, Buffer.alloc(100)]);
                 
-                const response = await request(app)
-                    .post('/api/profile/photo')
-                    .set('Authorization', `Bearer ${accessToken}`)
+            const response = await request(app)
+                .post('/api/profile/photo')
+                .set('Authorization', `Bearer ${accessToken}`)
                     .field('type', 'profile')
                     .attach('photo', jpegData, 'profile.jpg');
 
                 // Photo upload may fail if image validation is strict
                 // Accept either success or validation error
                 if (response.status === 200) {
-                    expect(response.body.success).toBe(true);
-                    expect(response.body.message).toContain('uploaded');
+            expect(response.body.success).toBe(true);
+            expect(response.body.message).toContain('uploaded');
                     expect(response.body.data.imageUrl || response.body.data.profilePhotoUrl).toBeDefined();
                 } else {
                     // If validation fails, that's acceptable - just verify it's a validation error
@@ -292,7 +292,7 @@ describe('Profile Management', () => {
             // Accept either 400 (validation) or 500 (multer error)
             expect([400, 500]).toContain(response.status);
             if (response.status === 400) {
-                expect(response.body.success).toBe(false);
+            expect(response.body.success).toBe(false);
             }
         });
 

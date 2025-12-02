@@ -142,7 +142,7 @@ export function deepSanitize<T extends Record<string, any>>(obj: T): T {
     }
 
     if (Array.isArray(obj)) {
-        return obj.map(item => deepSanitize(item)) as T;
+        return obj.map(item => deepSanitize(item)) as unknown as T;
     }
 
     const sanitized: any = {};
