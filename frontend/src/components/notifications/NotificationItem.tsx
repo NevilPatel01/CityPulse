@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Notification } from '../../services/notificationService';
+import { apiConfig } from '../../config/api';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -8,6 +10,7 @@ interface NotificationItemProps {
 
 export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onMarkAsRead }) => {
   const navigate = useNavigate();
+  const [imageError, setImageError] = useState(false);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -95,11 +98,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
         !notification.is_read ? 'bg-pulse/5 border-l-3 border-pulse' : ''
       }`}
     >
-      {notification.related_user_photo ? (
+      {notification.related_user_photo && !imageError ? (
         <img
-          src={notification.related_user_photo}
+          src={notification.related_user_photo.startsWith('http') ? notification.related_user_photo : `${apiConfig.baseUrl}${notification.related_user_photo.startsWith('/') ? notification.related_user_photo : `/${notification.related_user_photo}`}`}
           alt={notification.related_user_name || ''}
           className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          onError={() => setImageError(true)}
         />
       ) : (
         getNotificationIcon(notification.notification_type)

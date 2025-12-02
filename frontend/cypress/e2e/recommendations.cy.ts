@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 describe('Recommendations Flow', () => {
   beforeEach(() => {
     // Set up authentication

@@ -1,6 +1,7 @@
 import { Calendar, MapPin, Users, Lock, Globe, UsersRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Trip } from '../../types/trip';
+import { apiConfig } from '../../config/api';
 
 interface TripFeedCardProps {
   trip: Trip;
@@ -116,17 +117,22 @@ export const TripFeedCard: React.FC<TripFeedCardProps> = ({ trip }) => {
         <div className="flex items-center gap-3 pt-3 border-t border-subtle">
           {trip.creator_photo ? (
             <img
-              src={trip.creator_photo}
+              src={trip.creator_photo.startsWith('http') ? trip.creator_photo : `${apiConfig.baseUrl}${trip.creator_photo.startsWith('/') ? trip.creator_photo : `/${trip.creator_photo}`}`}
               alt={trip.creator_name || trip.creator_username}
               className="w-8 h-8 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
             />
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-pulse to-orange-600 rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-white">
-                {(trip.creator_name || trip.creator_username || 'U').charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+          ) : null}
+          <div 
+            className={`w-8 h-8 bg-gradient-to-br from-pulse to-orange-600 rounded-full flex items-center justify-center ${trip.creator_photo ? 'hidden' : ''}`}
+          >
+            <span className="text-xs font-bold text-white">
+              {(trip.creator_name || trip.creator_username || 'U').charAt(0).toUpperCase()}
+            </span>
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-text-primary truncate">
               {trip.creator_name || trip.creator_username}

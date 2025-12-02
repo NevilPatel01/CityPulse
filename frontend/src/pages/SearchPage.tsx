@@ -1,18 +1,23 @@
-import { Header } from '../components/layout/Header';
-import { BottomNavigation } from '../components/layout/BottomNavigation';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import AdvancedSearch from '../components/search/AdvancedSearch';
+import { useSearchOverlay } from '../context/SearchOverlayContext';
 
+/**
+ * SearchPage - Redirects to explore and opens search modal
+ * The search functionality is now handled entirely through the GlobalSearchOverlay modal
+ */
 export default function SearchPage() {
   useAuthGuard({ requireAuth: true });
+  const navigate = useNavigate();
+  const { openSearch } = useSearchOverlay();
 
-  return (
-    <div className="min-h-screen bg-base">
-      <Header />
-      <main className="pt-16 pb-20 lg:pb-8">
-        <AdvancedSearch />
-      </main>
-      <BottomNavigation />
-    </div>
-  );
+  useEffect(() => {
+    // Open the search modal and redirect to explore
+    openSearch();
+    navigate('/explore', { replace: true });
+  }, [openSearch, navigate]);
+
+  // Return null since we're redirecting
+  return null;
 }

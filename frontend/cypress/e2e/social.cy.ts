@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 describe('Social Features Workflow - Buddy Connections', () => {
   let user1Token: string;
   let user2Token: string;

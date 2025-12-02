@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 describe('Profile Flow', () => {
   beforeEach(() => {
     // Authenticate to access profile pages

@@ -119,14 +119,14 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
         <div className="px-4 py-2 border-b border-subtle flex gap-2">
           <button
             onClick={handleMarkAllAsRead}
-            className="text-xs text-muted hover:text-primary transition-colors"
+            className="text-xs text-pulse hover:text-accent-amber transition-colors font-medium"
           >
             Mark all as read
           </button>
-          <span className="text-muted">•</span>
+          <span className="text-pulse">•</span>
           <button
             onClick={handleClearAllRead}
-            className="text-xs text-muted hover:text-primary transition-colors"
+            className="text-xs text-pulse hover:text-accent-amber transition-colors font-medium"
           >
             Clear read
           </button>

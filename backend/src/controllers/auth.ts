@@ -18,6 +18,7 @@ import {
     generateSecurityCode,
     generateResetToken
 } from '../services/emailService';
+import { removeSensitiveFields, sanitizeUserForSelf } from '../utils/responseSanitizer';
 
 // Google OAuth user interface
 interface GoogleOAuthUser {
@@ -142,9 +143,9 @@ export const login = async (req: Request, res: Response) => {
         // Convert email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        // Find user
+        // Find user - explicitly select fields, excluding password_hash from initial query
         const userResult = await query(
-            'SELECT * FROM users WHERE email = $1',
+            'SELECT id, username, email, password_hash, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at, updated_at, last_login, deactivated_at, is_google_user FROM users WHERE email = $1',
             [normalizedEmail]
         );
 
@@ -239,7 +240,8 @@ export const login = async (req: Request, res: Response) => {
         // Set cookies
         setTokenCookies(res, accessToken, refreshToken);
 
-        const userResponse = {
+        // Sanitize user response - remove password_hash and other sensitive fields
+        const userResponse = sanitizeUserForSelf({
             id: user.id,
             username: user.username,
             email: user.email,
@@ -253,7 +255,7 @@ export const login = async (req: Request, res: Response) => {
             emailVerified: user.email_verified,
             createdAt: user.created_at,
             lastLogin: user.last_login
-        };
+        });
 
         res.json({
             success: true,
@@ -316,9 +318,9 @@ export const refreshToken = async (req: Request, res: Response) => {
             });
         }
 
-        // Get current user data
+        // Get current user data - exclude password_hash
         const userResult = await query(
-            'SELECT * FROM users WHERE id = $1',
+            'SELECT id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at, updated_at, last_login, is_google_user FROM users WHERE id = $1',
             [decoded.userId]
         );
 
@@ -433,9 +435,9 @@ export const changePassword = async (req: Request, res: Response) => {
 
         const { currentPassword, newPassword } = req.body;
 
-        // Get user with password hash
+        // Get user with password hash - needed for password verification
         const userResult = await query(
-            'SELECT * FROM users WHERE id = $1',
+            'SELECT id, username, email, password_hash, account_status, is_google_user FROM users WHERE id = $1',
             [req.user.userId]
         );
 
@@ -567,9 +569,9 @@ export const googleOAuth = async (req: Request, res: Response) => {
             });
         }
 
-        // Check if user already exists (by email or google ID)
+        // Check if user already exists (by email or google ID) - include password_hash for Google users who might have password
         const existingUserResult = await query(
-            'SELECT * FROM users WHERE email = $1 OR google_id = $2',
+            'SELECT id, username, email, password_hash, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at, updated_at, last_login, deactivated_at, is_google_user, google_id FROM users WHERE email = $1 OR google_id = $2',
             [normalizedEmail, googleId]
         );
 

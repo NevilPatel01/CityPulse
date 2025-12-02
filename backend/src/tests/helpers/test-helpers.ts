@@ -227,6 +227,33 @@ export const ensureRecommendationCategory = async (categoryName: string = 'Food'
 };
 
 /**
+ * Create a valid test JPEG image buffer using Sharp
+ */
+export const createValidTestImage = async (): Promise<Buffer> => {
+    try {
+        const sharp = await import('sharp');
+        // Create a minimal 1x1 pixel JPEG image
+        const imageBuffer = await sharp.default({
+            create: {
+                width: 100,
+                height: 100,
+                channels: 3,
+                background: { r: 255, g: 255, b: 255 }
+            }
+        })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+        return imageBuffer;
+    } catch (error) {
+        // Fallback: create minimal JPEG header if Sharp fails
+        console.warn('Failed to create image with Sharp, using fallback');
+        const jpegHeader = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46]);
+        const jpegData = Buffer.concat([jpegHeader, Buffer.alloc(1000)]);
+        return jpegData;
+    }
+};
+
+/**
  * Create a test recommendation
  */
 export const createTestRecommendation = async (userId: number, overrides: any = {}) => {

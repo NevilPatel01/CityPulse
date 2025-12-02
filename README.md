@@ -114,19 +114,19 @@
 - [x] Content removal and user management
 - [x] Moderation queue and workflow
 - [x] Admin analytics and reporting
-- [ ] Security audit and penetration testing
+- [x] Security audit and penetration testing
 
 #### Week 12 (Nov 17)
 - [ ] Final polish: responsive layout, accessibility checks (Lighthouse/Axe)
 - [ ] Recommendation algorithm optimization
 - [x] Search history and saved searches (Search_History, Saved_Searches tables) - Backend API and Frontend UI implemented
-- [x] Search history dropdown with auto-complete suggestions (shows matching history items while typing)
-- [x] Full search history sidebar with date grouping (Today, Yesterday, This Week, Older)
-- [x] Click history items to re-run searches with saved filters
-- [x] Delete individual history items or clear all history
-- [x] Keyboard navigation support (arrow keys, Enter, Escape)
-- [x] Integrated into SearchInput, SearchBar, and AdvancedSearch components
-- [x] Custom useSearchHistory hook for state management
+  - [x] Search history dropdown with auto-complete suggestions (shows matching history items while typing)
+  - [x] Full search history sidebar with date grouping (Today, Yesterday, This Week, Older)
+  - [x] Click history items to re-run searches with saved filters
+  - [x] Delete individual history items or clear all history
+  - [x] Keyboard navigation support (arrow keys, Enter, Escape)
+  - [x] Integrated into SearchInput, SearchBar, and AdvancedSearch components
+  - [x] Custom useSearchHistory hook for state management
 - [x] User favorites system (User_Favourites table) - Implemented via recommendation_saves
 - [ ] GitHub Actions: final test automation 
 - [ ] critical bug fixes 

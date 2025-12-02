@@ -242,7 +242,7 @@ describe('Password Reset Flow', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toContain('Password reset successful');
+            expect(response.body.message).toContain('Password has been reset successfully');
 
             // Verify can login with new password
             const loginResponse = await request(app)

@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 describe('Feed Interactions - Like, Bookmark, Share', () => {
   let authToken: string;
   let userId: number;

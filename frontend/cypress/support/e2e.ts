@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 import './commands';
 
 // Prevent Cypress from failing on common browser errors that don't affect functionality

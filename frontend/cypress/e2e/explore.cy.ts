@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 describe('Explore Page Flow', () => {
   beforeEach(() => {
     // Set up authentication for explore page

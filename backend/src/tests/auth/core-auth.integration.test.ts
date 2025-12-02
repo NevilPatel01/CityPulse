@@ -3,6 +3,7 @@ import request from 'supertest';
 import { createApp } from '../../app';
 import { cleanupDatabase } from '../setup';
 import { generateTestId, generateAlphanumericTestId, deleteTestUser, cleanupAllTestData } from '../helpers/test-helpers';
+import { query } from '../../lib/database';
 
 const app = createApp();
 
@@ -46,22 +47,10 @@ describe('Core Authentication Integration Tests', () => {
                 .expect(201);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.message).toContain('registered successfully');
+            expect(response.body.message).toContain('Registration successful');
             expect(response.body.data.user).toBeDefined();
             expect(response.body.data.user.email).toBe(userRegistration.email);
             expect(response.body.data.user.username).toBe(userRegistration.username);
-            expect(response.body.data.user.fullName).toBe(userRegistration.fullName);
-            expect(response.body.data.user.role).toBe('user');
-            expect(response.body.data.user.account_status).toBe('active');
-            expect(response.body.data.user.email_verified).toBe(false);
-            expect(response.body.data.user.password_hash).toBeUndefined(); // Should not be returned
-
-            expect(response.body.data.accessToken).toBeDefined();
-            expect(response.body.data.refreshToken).toBeDefined();
-
-            // Check that cookies are set
-            const cookies = response.headers['set-cookie'];
-            expect(cookies).toBeDefined();
 
             createdUserIds.push(response.body.data.user.id);
         });
@@ -82,10 +71,7 @@ describe('Core Authentication Integration Tests', () => {
                 .expect(201);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.data.user.bio).toBeNull();
-            expect(response.body.data.user.current_location).toBeNull();
-            expect(response.body.data.user.hometown).toBeNull();
-            expect(response.body.data.user.phone).toBeNull();
+            // Registration response only returns minimal user data (id, email, username)
 
             createdUserIds.push(response.body.data.user.id);
         });
@@ -179,6 +165,9 @@ describe('Core Authentication Integration Tests', () => {
                 .send(testUser);
 
             createdUserIds.push(registerResponse.body.data.user.id);
+            
+            // Verify email so user can login
+            await query('UPDATE users SET email_verified = TRUE WHERE id = $1', [registerResponse.body.data.user.id]);
         });
 
         it('should successfully login with valid credentials', async () => {
@@ -299,9 +288,18 @@ describe('Core Authentication Integration Tests', () => {
                 .post('/api/auth/register')
                 .send(testUser);
 
-            accessToken = registerResponse.body.data?.accessToken;
             if (registerResponse.body.data?.user?.id) {
                 createdUserIds.push(registerResponse.body.data.user.id);
+                // Verify email and get login token
+                await query('UPDATE users SET email_verified = TRUE WHERE id = $1', [registerResponse.body.data.user.id]);
+                
+                const loginResponse = await request(app)
+                    .post('/api/auth/login')
+                    .send({
+                        email: testUser.email,
+                        password: testUser.password
+                    });
+                accessToken = loginResponse.body.data?.accessToken;
             }
         });
 
@@ -358,9 +356,18 @@ describe('Core Authentication Integration Tests', () => {
                 .post('/api/auth/register')
                 .send(testUser);
 
-            accessToken = registerResponse.body.data?.accessToken;
             if (registerResponse.body.data?.user?.id) {
                 createdUserIds.push(registerResponse.body.data.user.id);
+                // Verify email and get login token
+                await query('UPDATE users SET email_verified = TRUE WHERE id = $1', [registerResponse.body.data.user.id]);
+                
+                const loginResponse = await request(app)
+                    .post('/api/auth/login')
+                    .send({
+                        email: testUser.email,
+                        password: testUser.password
+                    });
+                accessToken = loginResponse.body.data?.accessToken;
             }
         });
 
@@ -480,6 +487,9 @@ describe('Core Authentication Integration Tests', () => {
 
             expect(registerResponse.body.success).toBe(true);
             createdUserIds.push(registerResponse.body.data.user.id);
+            
+            // Verify email so user can login
+            await query('UPDATE users SET email_verified = TRUE WHERE id = $1', [registerResponse.body.data.user.id]);
 
             // 2. Login (to test separate login after registration)
             const loginResponse = await request(app)

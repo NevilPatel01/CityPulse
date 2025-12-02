@@ -112,7 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 // For network errors, keep the token but mark as not authenticated
                 // User can retry when network is back
                 console.log('[AUTH] Network error during auth check, keeping token');
-                setUser(null);
+            setUser(null);
             }
         } finally {
             console.log('🏁 [AUTH] Auth check complete, loading finished');

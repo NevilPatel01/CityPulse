@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/glo
 import request from 'supertest';
 import { createApp } from '../../app';
 import { cleanupDatabase } from '../setup';
-import { generateTestId, generateAlphanumericTestId } from '../helpers/test-helpers';
+import { generateTestId, generateAlphanumericTestId, createTestUser, deleteTestUser } from '../helpers/test-helpers';
 import { query } from '../../lib/database';
 
 const app = createApp();
@@ -13,7 +13,7 @@ describe('Token Refresh Integration Tests', () => {
     afterEach(async () => {
         // Clean up created users
         for (const userId of createdUserIds) {
-            await query('DELETE FROM users WHERE id = $1', [userId]);
+            await deleteTestUser(userId);
         }
         createdUserIds.length = 0;
     });
@@ -24,33 +24,21 @@ describe('Token Refresh Integration Tests', () => {
 
     // Helper function to create a user and get tokens
     const createUserAndGetTokens = async () => {
-        const testId = generateTestId();
-        const alphaTestId = generateAlphanumericTestId();
-
-        const userRegistration = {
-            username: `refreshtest_${alphaTestId}`,
-            email: `refreshtest_${testId}@example.com`,
-            password: 'SecurePassword123!',
-            fullName: 'Refresh Test User'
-        };
-
-        const response = await request(app)
-            .post('/api/auth/register')
-            .send(userRegistration);
-
-        // Verify email so user can login
-        if (response.body.data?.user?.id) {
-            await query('UPDATE users SET email_verified = true WHERE id = $1', [response.body.data.user.id]);
-            createdUserIds.push(response.body.data.user.id);
-        }
+        // Use createTestUser helper which creates verified users by default
+        const testUser = await createTestUser({
+            password: 'SecurePassword123!'
+        });
+        
+        createdUserIds.push(testUser.id);
 
         // Login to get tokens
         const loginResponse = await request(app)
             .post('/api/auth/login')
             .send({
-                email: userRegistration.email,
-                password: userRegistration.password
-            });
+                email: testUser.email,
+                password: 'SecurePassword123!'
+            })
+            .expect(200);
 
         if (!loginResponse.body.success) {
             console.error('Login failed:', loginResponse.body);

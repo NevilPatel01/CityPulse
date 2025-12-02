@@ -361,10 +361,9 @@ export default function Explore() {
         if (post.content_type === 'recommendation') {
             return post.category_name?.toLowerCase() === selectedInterest.toLowerCase();
         }
-        // For trips, show them regardless of category (trips don't have categories)
-        // Or if you want to filter trips too when they have categories, uncomment below:
-        // return post.category_name?.toLowerCase() === selectedInterest.toLowerCase();
-        return true; // Show all trips
+        // For trips, hide them when a category is selected since trips don't have categories
+        // This ensures trips are filtered out when filtering by category
+        return false;
     };
 
     // Separate posts by content type and filter/sort

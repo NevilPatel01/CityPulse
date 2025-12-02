@@ -1,11 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useSearchOverlay } from '../../context/SearchOverlayContext';
 
 export const BottomNavigation: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const location = useLocation();
+    const { openSearch } = useSearchOverlay();
     
     const getIcon = (label: string, isActive: boolean) => {
         const iconClass = `w-6 h-6 ${isActive ? 'text-pulse' : 'text-muted group-hover:text-primary'}`;
@@ -54,8 +56,8 @@ export const BottomNavigation: React.FC = () => {
         },
         { 
             label: "Search", 
-            path: "/search",
-            active: location.pathname.startsWith("/search") 
+            path: "/explore",
+            active: false // Search is now a modal, not a page
         },
         { 
             label: "Trips", 
@@ -76,8 +78,8 @@ export const BottomNavigation: React.FC = () => {
 
     const handleNavigation = (path: string, label: string) => {
         if (label === "Search") {
-            // Navigate to search page with search functionality
-            navigate("/search");
+            // Open search modal instead of navigating to search page
+            openSearch();
         } else {
             navigate(path);
         }

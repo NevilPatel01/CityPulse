@@ -94,7 +94,12 @@ export const Header: React.FC = () => {
                 <SearchBar />
               </div>
 
-              {/* Mobile: Just spacer to push user dropdown to the right */}
+              {/* Mobile Search Bar - Icon button */}
+              <div className="md:hidden flex-shrink-0">
+                <SearchBar isMobile={true} />
+              </div>
+
+              {/* Mobile: Spacer to push notification and user dropdown to the right */}
               <div className="md:hidden flex-1"></div>
 
               {/* Notification Bell */}

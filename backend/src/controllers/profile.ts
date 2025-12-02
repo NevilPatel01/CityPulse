@@ -144,8 +144,17 @@ export const getProfile = async (req: Request, res: Response) => {
             }
         }
 
-        // If private account and not a buddy, return limited data
+        // If private account and not a buddy, return 403
         if (isPrivateAccount) {
+            return res.status(403).json({
+                success: false,
+                message: 'This profile is private',
+                code: 'PROFILE_PRIVATE'
+            });
+        }
+        
+        // Legacy code - kept for reference but should not be reached
+        if (false && isPrivateAccount) {
             const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5001';
             const profilePhotoUrl = user.profile_photo_url ?
                 (user.profile_photo_url.startsWith('http') ? user.profile_photo_url : `${baseUrl}${user.profile_photo_url}`) : null;
@@ -353,9 +362,10 @@ export const getProfile = async (req: Request, res: Response) => {
             createdAt: user.created_at,
             lastLogin: user.last_login,
             stats: {
-                cities: stats.cities_count,
-                recommendations: stats.recommendations_count,
-                travelBuddies: stats.travel_buddies_count
+                cities: Number(stats.cities_count) || 0,
+                recommendations: Number(stats.recommendations_count) || 0,
+                travelBuddies: Number(stats.travel_buddies_count) || 0,
+                points: Number(stats.points) || 0
             },
             badges: userBadges,
             profileCompletion: {
@@ -935,10 +945,10 @@ export const getUserStats = async (req: Request, res: Response) => {
         res.json({
             success: true,
             data: {
-                cities: stats.cities_count,
-                recommendations: stats.recommendations_count,
-                travelBuddies: stats.travel_buddies_count,
-                points: stats.points
+                cities: Number(stats.cities_count) || 0,
+                recommendations: Number(stats.recommendations_count) || 0,
+                travelBuddies: Number(stats.travel_buddies_count) || 0,
+                points: Number(stats.points) || 0
             }
         });
 

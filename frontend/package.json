@@ -13,12 +13,14 @@
     "test": "cypress run",
     "test:open": "cypress open",
     "test:component": "cypress run --component",
-    "test:e2e": "cypress run --e2e",
-    "test:ci": "cypress run --headless",
-    "test:coverage": "cypress run --env coverage=true",
-    "a11y:axe": "axe http://localhost:3000 --exit",
-    "a11y:lighthouse": "lhci autorun --collect.url=http://localhost:3000 --collect.numberOfRuns=1",
-    "a11y:lighthouse:local": "lighthouse http://localhost:3000 --output=html --output-path=./accessibility-report.html --view"
+    "test:e2e": "cypress run --e2e --config video=false,screenshotOnRunFailure=false,retries=0",
+    "test:e2e:fast": "cypress run --e2e --config video=false,retries=0",
+    "test:e2e:quick": "cypress run --e2e --config video=false,screenshotOnRunFailure=false,retries=0,defaultCommandTimeout=8000,requestTimeout=8000,responseTimeout=8000",
+    "test:ci": "cypress run --headless --e2e",
+    "test:coverage": "cypress run --e2e --env coverage=true",
+    "a11y:axe": "axe http://localhost:3001 --exit",
+    "a11y:lighthouse": "lhci autorun --collect.url=http://localhost:3001 --collect.numberOfRuns=1",
+    "a11y:lighthouse:local": "lighthouse http://localhost:3001 --output=html --output-path=./accessibility-report.html --view"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",

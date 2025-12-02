@@ -35,14 +35,17 @@
     "test:security:sqli": "jest src/tests/security/owasp-zap.test.ts -t 'SQL Injection'",
     "test:security:xss": "jest src/tests/security/owasp-zap.test.ts -t 'Cross-Site Scripting'",
     "test:security:headers": "jest src/tests/security/owasp-zap.test.ts -t 'HTTP Security Headers'",
+    "test:security:all": "jest src/tests/security/ --testTimeout=600000 --verbose",
     "test:companions": "jest src/tests/trips/trip-companions.test.ts --testTimeout=600000",
     "test:achievements": "jest src/tests/achievements/achievements.test.ts --testTimeout=600000",
     "test:trips": "jest src/tests/trips/ --testTimeout=600000",
     "test:all": "jest src/tests/",
     "test:clean": "psql $DATABASE_URL -c \"DELETE FROM users WHERE email LIKE '%test_%';\"",
     "test:db:create": "tsx src/scripts/create-test-database.ts",
-    "security:audit": "pnpm audit --audit-level=high",
-    "security:check": "bash src/scripts/security-audit.sh"
+    "security:audit": "bash src/scripts/security-audit.sh",
+    "security:deps": "pnpm audit --audit-level=high",
+    "security:full": "pnpm test:security:all && pnpm security:deps",
+    "penetration:test": "echo 'Penetration testing reports available in security-audit/ directory'"
   },
   "keywords": [
     "citypulse",

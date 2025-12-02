@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(20) DEFAULT 'user',
     account_status VARCHAR(20) DEFAULT 'active',
     email_verified BOOLEAN DEFAULT FALSE,
+    deactivated_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_login TIMESTAMP WITH TIME ZONE
@@ -81,23 +82,10 @@ CREATE TABLE IF NOT EXISTS travel_preferences (
 );
 
 -- =====================================================
--- 3. INTERESTS & CATEGORIES
+-- 3. LOCATION & GEOGRAPHY (moved earlier for dependencies)
 -- =====================================================
 
--- User Interests (links users to recommendation categories they're interested in)
-CREATE TABLE IF NOT EXISTS user_interests (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    category_id INTEGER NOT NULL REFERENCES recommendation_categories(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, category_id)
-);
-
--- =====================================================
--- 4. LOCATION & GEOGRAPHY
--- =====================================================
-
--- Cities
+-- Cities (moved before user_profiles due to foreign key reference)
 CREATE TABLE IF NOT EXISTS cities (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -112,6 +100,32 @@ CREATE TABLE IF NOT EXISTS cities (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- =====================================================
+-- 4. RECOMMENDATIONS SYSTEM (moved earlier for dependencies)
+-- =====================================================
+
+-- Recommendation Categories (moved before user_interests due to foreign key reference)
+CREATE TABLE IF NOT EXISTS recommendation_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    icon_url VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 5. INTERESTS & CATEGORIES
+-- =====================================================
+
+-- User Interests (links users to recommendation categories they're interested in)
+CREATE TABLE IF NOT EXISTS user_interests (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES recommendation_categories(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, category_id)
+);
+
 -- User City Visits (for stats)
 CREATE TABLE IF NOT EXISTS user_city_visits (
     id SERIAL PRIMARY KEY,
@@ -123,17 +137,8 @@ CREATE TABLE IF NOT EXISTS user_city_visits (
 );
 
 -- =====================================================
--- 5. RECOMMENDATIONS SYSTEM
+-- 6. RECOMMENDATIONS (continued)
 -- =====================================================
-
--- Recommendation Categories
-CREATE TABLE IF NOT EXISTS recommendation_categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    icon_url VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
 -- Recommendations (for stats)
 CREATE TABLE IF NOT EXISTS recommendations (
@@ -172,7 +177,7 @@ CREATE TABLE IF NOT EXISTS recommendation_cities (
 );
 
 -- =====================================================
--- 6. TAGS & MEDIA FOR RECOMMENDATIONS
+-- 7. TAGS & MEDIA FOR RECOMMENDATIONS
 -- =====================================================
 
 -- Recommendation Tags
@@ -206,7 +211,7 @@ CREATE TABLE IF NOT EXISTS recommendation_photos (
 );
 
 -- =====================================================
--- 7. RATINGS & INTERACTIONS
+-- 8. RATINGS & INTERACTIONS
 -- =====================================================
 
 -- Recommendation Ratings
@@ -249,7 +254,7 @@ CREATE TABLE IF NOT EXISTS recommendation_saves (
 );
 
 -- =====================================================
--- 8. SOCIAL CONNECTIONS & TRAVEL BUDDIES
+-- 9. SOCIAL CONNECTIONS & TRAVEL BUDDIES
 -- =====================================================
 
 -- Travel Buddy Connections (for stats)
