@@ -192,6 +192,40 @@ export const createApp = (): express.Express => {
     // Moderation routes - handles content moderation and user management (moderator only)
     app.use('/api/moderator', moderationRoutes);
 
+    // === PRODUCTION SUBDOMAIN ROUTES (without /api/ prefix) ===
+    // For api.city-pulse.app - duplicate routes without /api/ prefix
+    console.log('[APP] Setting up production subdomain routes (without /api/ prefix)...');
+    app.use('/auth', authRoutes);
+    app.use('/profile', profileRoutes);
+    app.use('/recommendations', recommendationRoutes);
+    app.use('/search', searchRoutes);
+    app.use('/advanced-search', advancedSearchRoutes);
+    app.use('/buddies', buddyRoutes);
+    app.use('/notifications', notificationRoutes);
+    app.use('/social', socialRoutes);
+    app.use('/feed', feedRoutes);
+    app.use('/cities', citiesRoutes);
+    app.use('/trips', tripsRoutes);
+    app.use('/achievements', achievementRoutes);
+    app.use('/leaderboard', leaderboardRoutes);
+    app.use('/moderator', moderationRoutes);
+    
+    // Health endpoints for subdomain
+    app.get('/health', (req, res) => {
+        res.json({
+            success: true,
+            message: 'Server is healthy',
+            data: {
+                timestamp: new Date().toISOString(),
+                database: {
+                    connected: true,
+                    currentTime: new Date().toISOString()
+                }
+            }
+        });
+    });
+    app.get('/health/schema', schemaCheck);
+
     console.log('[APP] Setting up static file serving for uploads...');
     const uploadsDir = getUploadsBaseDir();
     console.log(`[APP] Serving uploads from: ${uploadsDir}`);

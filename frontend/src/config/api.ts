@@ -61,6 +61,7 @@ export const apiConfig: ApiConfig = {
 
 /**
  * This is a Utility function to build API endpoints
+ * Handles both local development (/api/ prefix) and production subdomain (no /api/ prefix)
  */
 export const buildApiUrl = (endpoint: string): string => {
     // Remove leading slash if present to avoid double slashes
@@ -71,7 +72,19 @@ export const buildApiUrl = (endpoint: string): string => {
         ? apiConfig.baseUrl.slice(0, -1)
         : apiConfig.baseUrl;
 
-    return `${cleanBaseUrl}/${cleanEndpoint}`;
+    // Check if we're using API subdomain (production)
+    const isApiSubdomain = cleanBaseUrl.includes('api.');
+    
+    // For API subdomain, remove 'api/' prefix to avoid double API in URL
+    // For local development, keep the 'api/' prefix
+    let finalEndpoint = cleanEndpoint;
+    if (isApiSubdomain && cleanEndpoint.startsWith('api/')) {
+        finalEndpoint = cleanEndpoint.substring(4); // Remove 'api/' prefix
+    }
+
+    const result = `${cleanBaseUrl}/${finalEndpoint}`;
+    console.log(`[API] buildApiUrl: ${endpoint} -> ${result} (subdomain: ${isApiSubdomain})`);
+    return result;
 };
 
 /**

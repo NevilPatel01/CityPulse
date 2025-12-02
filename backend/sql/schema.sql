@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     whatsapp_contact VARCHAR(50),
     website_url VARCHAR(255),
     cities_visited JSONB DEFAULT '[]'::JSONB,
-    current_city_id INTEGER REFERENCES cities(id),
+    current_city_id INTEGER, -- Will be constrained later after cities table is created
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
     profile_visibility VARCHAR(20) DEFAULT 'public' CHECK (profile_visibility IN ('public', 'private')),
@@ -99,6 +99,19 @@ CREATE TABLE IF NOT EXISTS cities (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add foreign key constraint for user_profiles.current_city_id after cities table exists
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'user_profiles_current_city_id_fkey'
+    ) THEN
+        ALTER TABLE user_profiles 
+        ADD CONSTRAINT user_profiles_current_city_id_fkey 
+        FOREIGN KEY (current_city_id) REFERENCES cities(id);
+    END IF;
+END $$;
 
 -- =====================================================
 -- 4. RECOMMENDATIONS SYSTEM (moved earlier for dependencies)
