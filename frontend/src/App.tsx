@@ -6,6 +6,7 @@ import { SearchOverlayProvider } from './context/SearchOverlayContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
 import GlobalSearchOverlay from './components/search/GlobalSearchOverlay';
+import { ScrollToTop } from './components/layout/ScrollToTop';
 import LandingPage from './components/landing/LandingPage';
 
 import AboutPage from './pages/AboutPage.tsx';
@@ -60,6 +61,7 @@ function App() {
         <InactivityHandler />
         <SearchOverlayProvider>
           <Router>
+            <ScrollToTop />
             <GlobalSearchOverlay />
             <Routes>
               {/* Public routes - accessible without authentication */}

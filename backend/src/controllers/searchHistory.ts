@@ -101,23 +101,29 @@ export const getSearchHistory = async (req: Request, res: Response) => {
             console.error('[SEARCH_HISTORY] Error checking/creating table:', tableError);
         }
 
+        // Use subquery with DISTINCT ON to get unique search queries (keeping most recent),
+        // then order the final results by date
         const result = await query(
-            `SELECT 
-                id,
-                search_query,
-                filters_applied,
-                results_count,
-                clicked_result_id,
-                search_date
-            FROM search_history
-            WHERE user_id = $1
+            `SELECT * FROM (
+                SELECT DISTINCT ON (LOWER(search_query))
+                    id,
+                    search_query,
+                    filters_applied,
+                    results_count,
+                    clicked_result_id,
+                    search_date
+                FROM search_history
+                WHERE user_id = $1
+                ORDER BY LOWER(search_query), search_date DESC
+            ) AS unique_searches
             ORDER BY search_date DESC
             LIMIT $2 OFFSET $3`,
             [userId, limitNum, offsetNum]
         );
 
+        // Get count of unique searches
         const countResult = await query(
-            `SELECT COUNT(*) as total FROM search_history WHERE user_id = $1`,
+            `SELECT COUNT(DISTINCT LOWER(search_query)) as total FROM search_history WHERE user_id = $1`,
             [userId]
         );
 

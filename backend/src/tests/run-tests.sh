@@ -30,44 +30,44 @@ pnpm install --ignore-scripts
 # Run all test suites by folder
 echo "🚀 Running test suites..."
 
-# echo "📁 Running Achievements tests..."
-# npm run test:achievements
+echo "📁 Running Achievements tests..."
+npm run test:achievements
 
-# echo "📁 Running Auth tests..."
-# npm run test:auth
+echo "📁 Running Auth tests..."
+npm run test:auth
 
-# echo "📁 Running Buddies tests..."
-# npm run test:buddies
+echo "📁 Running Buddies tests..."
+npm run test:buddies
 
-# echo "📁 Running Feed tests..."
-# npm run test:feed
+echo "📁 Running Feed tests..."
+npm run test:feed
 
-# echo "📁 Running Moderation tests..."
-# npm run test:moderation
+echo "📁 Running Moderation tests..."
+npm run test:moderation
 
-# echo "📁 Running Notifications tests..."
-# npm run test:notifications
+echo "📁 Running Notifications tests..."
+npm run test:notifications
 
 echo "📁 Running Performance tests..."
 npm run test:performance
 
-# echo "📁 Running Profile tests..."
-# npm run test:profile
+echo "📁 Running Profile tests..."
+npm run test:profile
 
-# echo "📁 Running Recommendations tests..."
-# npm run test:recommendations
+echo "📁 Running Recommendations tests..."
+npm run test:recommendations
 
-# echo "📁 Running Search tests..."
-# npm run test:search
+echo "📁 Running Search tests..."
+npm run test:search
 
-# echo "📁 Running Security tests..."
-# npm run test:security
+echo "📁 Running Security tests..."
+npm run test:security
 
-# echo "📁 Running Social tests..."
-# npm run test:social
+echo "📁 Running Social tests..."
+npm run test:social
 
-# echo "📁 Running Trips tests..."
-# npm run test:trips
+echo "📁 Running Trips tests..."
+npm run test:trips
 
 # Cleanup
 echo "🧹 Cleaning up test data..."

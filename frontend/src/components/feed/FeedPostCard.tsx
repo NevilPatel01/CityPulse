@@ -28,7 +28,6 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
     const handleUpdate = onUpdate || (() => {});
     const navigate = useNavigate();
     const { showSuccess, showError } = useToast();
-    const [showShareMenu, setShowShareMenu] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
 
     const handleLike = async (e: React.MouseEvent) => {
@@ -67,35 +66,19 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
         }
     };
 
-    const handleShare = async (platform: string) => {
+    const handleShare = async (e: React.MouseEvent) => {
+        e.stopPropagation();
         try {
-            await recordShare(post.id, platform);
+            await recordShare(post.id, 'copy_link');
             handleUpdate(post.id, {
                 shares_count: post.shares_count + 1
             });
 
             const url = `${window.location.origin}/${post.username}/recommendation/${post.id}`;
-            const text = `Check out: ${post.title}`;
-
-            switch (platform) {
-                case 'twitter':
-                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-                    break;
-                case 'facebook':
-                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-                    break;
-                case 'whatsapp':
-                    window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-                    break;
-                case 'copy_link':
-                    navigator.clipboard.writeText(url);
-                    showSuccess('Link copied to clipboard');
-                    break;
-            }
-
-            setShowShareMenu(false);
+            await navigator.clipboard.writeText(url);
+            showSuccess('Link copied to clipboard');
         } catch {
-            showError('Failed to share');
+            showError('Failed to copy link');
         }
     };
 
@@ -217,51 +200,17 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) =>
                                 <Bookmark size={20} fill={post.is_bookmarked ? 'currentColor' : 'none'} />
                             </button>
 
-                            {/* Share */}
-                            <div className="relative">
-                                <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowShareMenu(!showShareMenu);
-                                    }}
-                                    className="flex items-center gap-1 text-text-secondary hover:text-accent-teal transition-colors"
-                                >
-                                    <Share2 size={20} />
-                                    {post.shares_count > 0 && (
-                                        <span className="text-sm">{post.shares_count}</span>
-                                    )}
-                                </button>
-
-                                {/* Share Menu */}
-                                {showShareMenu && (
-                                    <div className="absolute bottom-full mb-2 left-0 bg-surface-glass backdrop-blur-lg border border-white/10 rounded-lg shadow-xl p-2 z-10 min-w-[150px]">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); handleShare('twitter'); }}
-                                            className="w-full text-left px-3 py-2 hover:bg-white/10 rounded text-sm"
-                                        >
-                                            Twitter
-                                        </button>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); handleShare('facebook'); }}
-                                            className="w-full text-left px-3 py-2 hover:bg-white/10 rounded text-sm"
-                                        >
-                                            Facebook
-                                        </button>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); handleShare('whatsapp'); }}
-                                            className="w-full text-left px-3 py-2 hover:bg-white/10 rounded text-sm"
-                                        >
-                                            WhatsApp
-                                        </button>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); handleShare('copy_link'); }}
-                                            className="w-full text-left px-3 py-2 hover:bg-white/10 rounded text-sm"
-                                        >
-                                            Copy Link
-                                        </button>
-                                    </div>
+                            {/* Share - Just copy link */}
+                            <button 
+                                onClick={handleShare}
+                                className="flex items-center gap-1 text-text-secondary hover:text-accent-teal transition-colors"
+                                title="Copy link"
+                            >
+                                <Share2 size={20} />
+                                {post.shares_count > 0 && (
+                                    <span className="text-sm">{post.shares_count}</span>
                                 )}
-                            </div>
+                            </button>
                         </div>
 
                         {/* Report */}

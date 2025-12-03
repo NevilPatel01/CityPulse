@@ -76,7 +76,8 @@ export function RecommendationDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [viewsCount, setViewsCount] = useState(0);
-  const [sharesCount, setSharesCount] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_sharesCount, setSharesCount] = useState(0);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [showRatingActions, setShowRatingActions] = useState(false);
   const [userRatings, setUserRatings] = useState<Array<{
@@ -347,51 +348,45 @@ export function RecommendationDetailPage() {
       return;
     }
     
+    // Optimistic update - update UI immediately
+    const previousSavedState = isSaved;
+    const previousSavesCount = savesCount;
+    setIsSaved(!isSaved);
+    setSavesCount(prev => isSaved ? Math.max(0, prev - 1) : prev + 1);
+    
     try {
       setIsSaving(true);
       
       // Call toggle bookmark API
-      const result = await toggleBookmark(Number(id)) as { success?: boolean; data?: { isBookmarked: boolean } };
+      const result = await toggleBookmark(Number(id)) as { success?: boolean; data?: { isBookmarked: boolean }; message?: string };
       
-      // Determine new bookmark state
-      let newBookmarkState = !isSaved; // Optimistic update
+      // Determine new bookmark state from API response
+      let newBookmarkState = !previousSavedState; // Default to optimistic update
       
-      if (result.success && result.data && typeof result.data.isBookmarked === 'boolean') {
-        // Use API response
-        newBookmarkState = result.data.isBookmarked;
-      } else if (result.data && typeof result.data.isBookmarked === 'boolean') {
-        // Fallback if success field is missing
-        newBookmarkState = result.data.isBookmarked;
-      } else {
-        // If response format is unexpected, refresh status from API
-        const statusResponse = await checkBookmarkStatus(Number(id));
-        if (statusResponse.success) {
-          newBookmarkState = statusResponse.data.isBookmarked;
+      // Check response structure - backend returns { success: true, data: { isBookmarked: boolean } }
+      if (result) {
+        if (result.data && typeof result.data.isBookmarked === 'boolean') {
+          newBookmarkState = result.data.isBookmarked;
+        } else if (result.success === false) {
+          // If API call failed, revert optimistic update
+          throw new Error(result.message || 'Failed to toggle bookmark');
         }
       }
       
-      // Update state immediately for responsive UI
+      // Update state with confirmed value from API (or keep optimistic update if response is unclear)
       setIsSaved(newBookmarkState);
       
-      // Update saves count optimistically
-      if (newBookmarkState) {
-        // Bookmarked - increase count
-        setSavesCount(prev => prev + 1);
-      } else {
-        // Unbookmarked - decrease count (but don't go below 0)
-        setSavesCount(prev => Math.max(0, prev - 1));
-      }
-      
-      // Optionally refresh saves count from API to ensure accuracy
+      // Refresh saves count from API to ensure accuracy
       try {
-        const updatedData = await apiRequest<{ success: boolean; data: { saves_count: number } }>(
+        const updatedData = await apiRequest<{ success: boolean; data: Recommendation }>(
           `/api/recommendations/${id}`
         );
-        if (updatedData.success && updatedData.data) {
-          setSavesCount(updatedData.data.saves_count);
+        if (updatedData && updatedData.success && updatedData.data) {
+          setSavesCount(updatedData.data.saves_count || 0);
         }
       } catch {
-        // Silently fail - we already updated optimistically
+        // If refresh fails, revert saves count
+        setSavesCount(previousSavesCount);
       }
       
       showSuccess(newBookmarkState ? 'Saved recommendation' : 'Removed from saved recommendations');
@@ -400,12 +395,15 @@ export function RecommendationDetailPage() {
       console.error('Error updating save:', error);
       showError('Failed to update bookmark. Please try again.');
       
+      // Revert optimistic update on error
+      setIsSaved(previousSavedState);
+      setSavesCount(previousSavesCount);
+      
       // Always refresh status on error to ensure UI matches backend
       try {
         await checkSaveStatus();
       } catch {
-        // If refresh fails, revert optimistic update
-        setIsSaved(!isSaved);
+        // If refresh fails, state is already reverted
       }
     } finally {
       setIsSaving(false);
@@ -650,7 +648,7 @@ export function RecommendationDetailPage() {
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Image Carousel */}
-            <div className="relative">
+            <div className="relative rounded-lg overflow-hidden">
               {recommendation.photos && recommendation.photos.length > 0 ? (
                 <ImageCarousel 
                   images={recommendation.photos.map(photo => {
@@ -662,7 +660,7 @@ export function RecommendationDetailPage() {
                   autoPlayInterval={5000}
                 />
               ) : (
-                <div className="relative w-full h-[500px] bg-surface-glass backdrop-blur-glass rounded-lg flex items-center justify-center">
+                <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9] bg-surface-glass backdrop-blur-glass rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <svg 
                       className="mx-auto h-16 w-16 text-muted mb-4" 
@@ -689,11 +687,10 @@ export function RecommendationDetailPage() {
                   </div>
                 </div>
               )}
-              
             </div>
 
             {/* Social Media Style Action Buttons with Counts Below */}
-            <div className="py-4 border-b border-subtle">
+            <div className="py-3 border-b border-subtle -mt-1">
               <div className="flex items-center justify-between gap-6 mb-3">
                 <div className="flex items-center gap-6">
                   {user && (
@@ -726,7 +723,7 @@ export function RecommendationDetailPage() {
                           fill={isSaved ? 'currentColor' : 'none'}
                           style={isSaved ? {} : { strokeWidth: 2.5 }}
                         />
-                        <span className="text-xs font-medium text-primary">{savesCount}</span>
+                        <span className="text-xs font-medium text-primary">Save</span>
                       </button>
                     </>
                   )}
@@ -740,7 +737,7 @@ export function RecommendationDetailPage() {
                     ) : (
                       <Share2 className="w-6 h-6 text-primary hover:text-pulse hover:scale-110 transition-all" />
                     )}
-                    <span className="text-xs font-medium text-primary">{sharesCount}</span>
+                    <span className="text-xs font-medium text-primary">Share</span>
                   </button>
                   <div className="flex flex-col items-center gap-1">
                     <Eye className="w-6 h-6 text-primary" />
@@ -892,14 +889,12 @@ export function RecommendationDetailPage() {
                   </div>
                 )}
                 
-                <div className="flex items-center justify-between py-3 border-b border-subtle">
-                  <span className="text-muted">Average Rating</span>
-                  <div className="flex items-center gap-2">
-                    {renderStars(recommendation.average_rating || recommendation.user_rating || 0)}
-                  </div>
-                </div>
-                
-                {recommendation.best_time_to_visit && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-subtle gap-2">
+                    <span className="text-muted">Average Rating</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {renderStars(recommendation.average_rating || recommendation.user_rating || 0)}
+                    </div>
+                  </div>                {recommendation.best_time_to_visit && (
                   <div className="flex items-start justify-between py-3 border-b border-subtle">
                     <span className="text-muted flex items-center gap-2">
                       <Calendar className="w-4 h-4" />

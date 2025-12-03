@@ -566,113 +566,111 @@ export default function ProfilePage() {
                   )}
           </div>
 
-                {/* Profile Info Section - Relative container for absolute avatar */}
-                <div className="relative px-5 md:px-6 pb-6">
-                  {/* Avatar - Positioned absolutely to overlap cover */}
-                  <div className="absolute -top-14 left-5 md:left-6 z-10">
-                <div className="relative group">
-                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-base overflow-hidden border-[3px] border-gray-700/50 shadow-2xl">
-                    {(localImages.profile || profile.profilePhotoUrl) ? (
-                      <img 
-                        src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
-                        alt={profile.fullName}
-                            className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-pulse to-purple-600 flex items-center justify-center">
-                            <span className="text-white text-2xl sm:text-3xl font-bold">
-                          {profile.fullName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                      {/* Profile Photo Upload */}
-                  {isOwnProfile && (
-                    <button
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*';
-                        input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
-                        input.click();
-                      }}
-                          className="absolute bottom-1 right-1 p-1.5 rounded-xl text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
-                      aria-label="Upload profile photo"
-                    >
-                          <Camera size={12} />
-                    </button>
-                  )}
-                    </div>
-                </div>
-
-                  {/* Name, Username, Edit Button - With left padding for avatar space */}
-                  <div className="pt-4 pl-28 sm:pl-36">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                      <h1 className="text-xl sm:text-2xl font-bold text-primary truncate">
-                        {profile.fullName}
-                      </h1>
-                      
-                      {/* Action Buttons - Inline on desktop */}
-                      <div className="flex gap-2 sm:ml-auto flex-shrink-0">
-                        {isOwnProfile ? (
-                    <button
-                      onClick={handleEditProfile}
-                            className="px-5 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 shadow-md shadow-pulse/20 hover:scale-105 active:scale-95"
-                    >
-                      Edit Profile
-                          </button>
-                        ) : (
-                          <>
-                            {isBuddyConnected ? (
-                              <>
-                                <button 
-                                  onClick={() => setShowBuddyModal(true)}
-                                  className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-green-600 hover:bg-green-700 border border-green-500 flex items-center gap-1.5 transition-all duration-300 shadow-md shadow-green-600/20"
-                                  title="Manage Travel Buddy"
-                                >
-                                  <Users size={14} />
-                                  Buddy
-                                </button>
-                              </>
-                            ) : isPendingBuddy ? (
-                              isPendingRequestSent ? (
-                                <button 
-                                  onClick={handleCancelRequest}
-                                  className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-orange-600 hover:bg-orange-700 border border-orange-500 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-orange-600/20"
-                                  title="Cancel Buddy Request"
-                                >
-                                  <RotateCcw size={14} />
-                                  Request Sent
-                                </button>
-                              ) : (
-                                <button 
-                                  className="px-5 py-2 rounded-full text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default"
-                                  title="Request Pending"
-                                  disabled
-                                >
-                                  Pending
-                                </button>
-                              )
+                {/* Profile Info Section */}
+                <div className="relative px-5 md:px-6 pb-6 bg-[#1a1a1a]">
+                  {/* Top row: Avatar space + Button on right */}
+                  <div className="flex justify-end pt-3">
+                    {/* Action Button - Right side */}
+                    <div className="flex-shrink-0">
+                      {isOwnProfile ? (
+                        <button
+                          onClick={handleEditProfile}
+                          className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 shadow-md shadow-pulse/20"
+                        >
+                          Edit Profile
+                        </button>
+                      ) : (
+                        <>
+                          {isBuddyConnected ? (
+                            <button 
+                              onClick={() => setShowBuddyModal(true)}
+                              className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-green-600 hover:bg-green-700 border border-green-500 flex items-center gap-1.5 transition-all duration-300 shadow-md shadow-green-600/20"
+                              title="Manage Travel Buddy"
+                            >
+                              <Users size={14} />
+                              Buddy
+                            </button>
+                          ) : isPendingBuddy ? (
+                            isPendingRequestSent ? (
+                              <button 
+                                onClick={handleCancelRequest}
+                                className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-orange-600 hover:bg-orange-700 border border-orange-500 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-orange-600/20"
+                                title="Cancel Buddy Request"
+                              >
+                                <RotateCcw size={14} />
+                                Request Sent
+                              </button>
                             ) : (
                               <button 
-                                onClick={handleAddBuddy}
-                                className="px-5 py-2 rounded-full text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20"
+                                className="px-4 py-2 rounded-xl text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default"
+                                title="Request Pending"
+                                disabled
                               >
-                                <UserPlus size={14} />
-                                Add Buddy
-                    </button>
-                            )}
-                          </>
-                  )}
-                </div>
-              </div>
+                                Pending
+                              </button>
+                            )
+                          ) : (
+                            <button 
+                              onClick={handleAddBuddy}
+                              className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20"
+                            >
+                              <UserPlus size={14} />
+                              Add Buddy
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Avatar - Positioned absolutely to overlap cover */}
+                  <div className="absolute -top-14 left-5 md:left-6 z-10">
+                    <div className="relative group">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-base overflow-hidden border-[3px] border-gray-700/50 shadow-2xl">
+                        {(localImages.profile || profile.profilePhotoUrl) ? (
+                          <img 
+                            src={localImages.profile || getFullImageUrl(profile.profilePhotoUrl)} 
+                            alt={profile.fullName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-pulse to-purple-600 flex items-center justify-center">
+                            <span className="text-white text-2xl sm:text-3xl font-bold">
+                              {profile.fullName.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Profile Photo Upload */}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleFileSelect(e as unknown as React.ChangeEvent<HTMLInputElement>, 'profile');
+                            input.click();
+                          }}
+                          className="absolute bottom-1 right-1 p-1.5 rounded-xl text-white bg-pulse shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 active:scale-95"
+                          aria-label="Upload profile photo"
+                        >
+                          <Camera size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-                    <p className="text-muted text-sm mt-1">@{profile.username}</p>
-              </div>
+                  {/* Name and Username - Below avatar */}
+                  <div className="mt-8">
+                    <h1 className="text-xl sm:text-2xl font-bold text-primary">
+                      {profile.fullName}
+                    </h1>
+                    <p className="text-muted text-sm">@{profile.username}</p>
+                  </div>
 
               {/* Location Info */}
               {(profile.currentLocation || profile.hometown) && (

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
+import { MobileBackButton } from '../components/layout/MobileBackButton';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useAuthGuard } from '../hooks/useAuthGuard';
@@ -668,8 +670,9 @@ export default function BuddiesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-base">
+    <div className="min-h-screen bg-base pb-20">
       <Header />
+      <MobileBackButton fallbackPath="/explore" />
       <main className="pt-16">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-7xl mx-auto">
@@ -776,6 +779,7 @@ export default function BuddiesPage() {
           </Card>
         </div>
       )}
+      <BottomNavigation />
     </div>
   );
 }

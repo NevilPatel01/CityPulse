@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  MapPin, Users, TrendingUp, Compass, Filter
+  MapPin, Users, TrendingUp, Compass, Filter, ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiRequest, apiConfig } from '../config/api';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
+import { MobileBackButton } from '../components/layout/MobileBackButton';
 import Avatar from '../components/ui/Avatar';
 
 interface City {
@@ -63,6 +65,7 @@ export default function CityPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
 
   const fetchCityData = useCallback(async () => {
     try {
@@ -163,6 +166,9 @@ export default function CityPage() {
       {/* City Header Section - Replaces Hero */}
       <div className='container mx-auto px-6 pt-8'>
         <div className='max-w-7xl mx-auto'>
+          {/* Mobile Back Button */}
+          <MobileBackButton className="mb-4" />
+          
           {/* City Title and Location */}
           <div className='mb-6'>
             <div className='flex items-center gap-3 mb-3 flex-wrap'>
@@ -234,7 +240,55 @@ export default function CityPage() {
               <Filter className='w-5 h-5 text-text-muted' />
               <h2 className='text-xl font-bold text-text-primary'>Filter by Category</h2>
             </div>
-            <div className='flex gap-3 overflow-x-auto pb-2 scrollbar-hide'>
+            
+            {/* Mobile Filter Dropdown */}
+            <div className='lg:hidden relative mb-4'>
+              <button
+                onClick={() => setShowMobileFilter(!showMobileFilter)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all ${
+                  selectedCategory !== 'all'
+                    ? 'bg-pulse text-white'
+                    : 'bg-[var(--surface-elevated)] text-text-primary border border-subtle'
+                }`}
+              >
+                <span>{selectedCategory === 'all' ? 'All Categories' : selectedCategory}</span>
+                <ChevronDown className={`w-5 h-5 transition-transform ${showMobileFilter ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showMobileFilter && (
+                <div className='absolute top-full left-0 right-0 mt-2 bg-[var(--surface-elevated)] border border-subtle rounded-xl shadow-xl z-50 overflow-hidden'>
+                  <button
+                    onClick={() => { setSelectedCategory('all'); setShowMobileFilter(false); }}
+                    className={`w-full px-4 py-3 text-left font-medium transition-colors ${
+                      selectedCategory === 'all' 
+                        ? 'bg-pulse text-white' 
+                        : 'text-text-primary hover:bg-white/5'
+                    }`}
+                  >
+                    All Categories
+                  </button>
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => { setSelectedCategory(category.name); setShowMobileFilter(false); }}
+                      className={`w-full px-4 py-3 text-left font-medium transition-colors flex items-center gap-2 ${
+                        selectedCategory === category.name 
+                          ? 'bg-pulse text-white' 
+                          : 'text-text-primary hover:bg-white/5'
+                      }`}
+                    >
+                      {category.iconUrl && (
+                        <img src={category.iconUrl} alt='' className='w-4 h-4' />
+                      )}
+                      {category.name} ({category.count})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Desktop Filter Pills */}
+            <div className='hidden lg:flex gap-3 overflow-x-auto pb-2 scrollbar-hide'>
               <button
                 onClick={() => setSelectedCategory('all')}
                 className={`flex-shrink-0 px-6 py-3 rounded-full font-medium transition-all ${
@@ -458,6 +512,7 @@ export default function CityPage() {
           </div>
         </div>
       </div>
+      <BottomNavigation />
     </div>
   );
 }

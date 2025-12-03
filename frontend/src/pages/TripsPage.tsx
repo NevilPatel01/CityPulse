@@ -3,11 +3,12 @@ import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useToast } from '../hooks/useToast';
 import { Header } from '../components/layout/Header';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
+import { MobileBackButton } from '../components/layout/MobileBackButton';
 import TripCard from '../components/trips/TripCard';
 import TripForm from '../components/trips/TripForm';
 import tripService from '../services/tripService';
 import type { Trip, CreateTripData } from '../types/trip';
-import { Plus, Loader2, MapPin, Calendar, Filter } from 'lucide-react';
+import { Plus, Loader2, MapPin, Calendar, Filter, ChevronDown } from 'lucide-react';
 
 const TripsPage = () => {
   useAuthGuard();
@@ -19,6 +20,7 @@ const TripsPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
 
   // Load trips on mount
   const loadTrips = useCallback(async () => {
@@ -97,6 +99,9 @@ const TripsPage = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Mobile Back Button */}
+        <MobileBackButton fallbackPath="/explore" />
+
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
@@ -137,8 +142,44 @@ const TripsPage = () => {
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-3 overflow-x-auto pb-2">
+        {/* Filters - Mobile Dropdown */}
+        <div className="md:hidden relative">
+          <button
+            onClick={() => setShowMobileFilter(!showMobileFilter)}
+            className="flex items-center justify-between w-full px-4 py-3 bg-[var(--base)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)]"
+          >
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-[var(--text-muted)]" />
+              <span className="font-medium">
+                {statusFilter === 'all' ? 'All Trips' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+              </span>
+            </div>
+            <ChevronDown className={`w-5 h-5 text-[var(--text-muted)] transition-transform ${showMobileFilter ? 'rotate-180' : ''}`} />
+          </button>
+          {showMobileFilter && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--base)] border border-[var(--border-subtle)] rounded-lg shadow-lg z-20 overflow-hidden">
+              {['all', 'planning', 'active', 'completed'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    setStatusFilter(status);
+                    setShowMobileFilter(false);
+                  }}
+                  className={`w-full px-4 py-3 text-left transition-colors ${
+                    statusFilter === status
+                      ? 'bg-[var(--pulse)] text-white'
+                      : 'text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]'
+                  }`}
+                >
+                  {status === 'all' ? 'All Trips' : status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Filters - Desktop Pills */}
+        <div className="hidden md:flex items-center gap-3 overflow-x-auto pb-2">
           <div className="flex items-center gap-2 text-[var(--text-muted)]">
             <Filter className="w-4 h-4" />
             <span className="text-sm font-medium">Filter:</span>

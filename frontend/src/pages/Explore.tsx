@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { Header } from '../components/layout/Header';
 import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { useFeed } from '../hooks/useFeed';
-import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { FeedPostCard } from '../components/feed/FeedPostCard';
 import { TripFeedCard } from '../components/trips/TripFeedCard';
 import { CategoryFilter } from '../components/dashboard/CategoryFilter';
@@ -17,8 +16,106 @@ import {
 } from '../services/feedService';
 import type { UserStats, ActiveBuddy, FeedPost } from '../services/feedService';
 import type { Trip } from '../types/trip';
-import { Loader2, RefreshCw, TrendingUp, Users, Rss, MapPin, Heart, Camera, Plane } from 'lucide-react';
+import { Loader2, RefreshCw, TrendingUp, Users, Rss, MapPin, Heart, Camera, Plane, ChevronDown, Zap, Filter } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+
+// Mobile Quick Actions Dropdown Component
+const MobileQuickActionsDropdown = () => {
+    const navigate = useNavigate();
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    
+    const actions = [
+        { label: 'Add Recommendation', onClick: () => navigate('/create-recommendation'), icon: '📝' },
+        { label: 'Find Buddy', onClick: () => navigate('/travel-buddies'), icon: '👥' },
+        { label: 'Trip Planning', onClick: () => navigate('/trips'), icon: '✈️' },
+        { label: 'Leaderboard', onClick: () => navigate('/leaderboard'), icon: '🏆' },
+        { label: 'Settings', onClick: () => navigate('/settings'), icon: '⚙️' },
+    ];
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-pulse text-white rounded-xl font-medium text-sm shadow-lg shadow-pulse/20 transition-all hover:bg-pulse/90 active:scale-95"
+            >
+                <Zap size={16} />
+                <span>Actions</span>
+                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-surface-glass backdrop-blur-lg border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    {actions.map((action, index) => (
+                        <button
+                            key={index}
+                            onClick={() => { action.onClick(); setIsOpen(false); }}
+                            className="flex items-center gap-3 w-full px-4 py-3 text-left text-primary hover:bg-white/10 transition-colors text-sm"
+                        >
+                            <span>{action.icon}</span>
+                            <span>{action.label}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Mobile Filter Dropdown Component
+const MobileFilterDropdown = ({ selectedInterest, onSelectInterest }: { 
+    selectedInterest: string | null; 
+    onSelectInterest: (interest: string | null) => void;
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all active:scale-95 ${
+                    selectedInterest 
+                        ? 'bg-accent-teal text-white shadow-lg shadow-accent-teal/20' 
+                        : 'bg-white/10 text-primary border border-white/20 hover:bg-white/15'
+                }`}
+            >
+                <Filter size={16} />
+                <span>{selectedInterest || 'Filter'}</span>
+                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isOpen && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-surface-glass backdrop-blur-lg border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 p-3">
+                    <CategoryFilter 
+                        selectedInterest={selectedInterest}
+                        onSelectInterest={(interest) => { onSelectInterest(interest); setIsOpen(false); }}
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
 
 // Explore Components
 const QuickActionsAndLinksCard = () => {
@@ -325,11 +422,46 @@ export default function Explore() {
         refresh 
     } = useFeed({ limit: 10, enableLocation: true });
     
-    const { observerTarget } = useInfiniteScroll({
-        onLoadMore: loadMore,
-        isLoading: feedLoading,
-        hasMore
-    });
+    // Mobile observer ref
+    const mobileObserverRef = useRef<HTMLDivElement>(null);
+    // Desktop observer ref
+    const desktopObserverRef = useRef<HTMLDivElement>(null);
+    
+    // Unified infinite scroll observer for both mobile and desktop
+    useEffect(() => {
+        const loadMoreDebounced = (() => {
+            let lastLoad = 0;
+            return () => {
+                const now = Date.now();
+                if (now - lastLoad < 500) return; // 500ms debounce
+                if (feedLoading) return;
+                lastLoad = now;
+                console.log('[InfiniteScroll] Triggering loadMore');
+                loadMore();
+            };
+        })();
+        
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !feedLoading && hasMore) {
+                        loadMoreDebounced();
+                    }
+                });
+            },
+            { rootMargin: '400px', threshold: 0 }
+        );
+        
+        // Observe both mobile and desktop targets
+        if (mobileObserverRef.current) {
+            observer.observe(mobileObserverRef.current);
+        }
+        if (desktopObserverRef.current) {
+            observer.observe(desktopObserverRef.current);
+        }
+        
+        return () => observer.disconnect();
+    }, [feedLoading, hasMore, loadMore]);
 
     // Feed sections state
     const [topPlacesThisMonth, setTopPlacesThisMonth] = useState<FeedPost[]>([]);
@@ -386,21 +518,22 @@ export default function Explore() {
         return false;
     };
 
-    // Separate posts by content type and filter/sort
-    const recommendations = posts
-        .filter(post => 
-            post.content_type === 'recommendation' &&
-            filterByCategory(post) &&
-            post.username !== user?.username
-        )
-        .sort((a, b) => {
-            const aHasImage = (a.photos && a.photos.length > 0) ? 1 : 0;
-            const bHasImage = (b.photos && b.photos.length > 0) ? 1 : 0;
-            return bHasImage - aHasImage;
-        });
-    
-    const trips = posts.filter(post => post.content_type === 'trip' && filterByCategory(post));
-    const filteredPosts = [...recommendations, ...trips];
+    // Filter and mix posts - keep original order from API (already mixed and sorted by engagement)
+    // Only filter out current user's own posts and apply category filter
+    const filteredPosts = posts.filter(post => {
+        // Filter by category if selected
+        if (!filterByCategory(post)) return false;
+        
+        // Exclude current user's own posts
+        if (post.content_type === 'recommendation' && post.username === user?.username) {
+            return false;
+        }
+        if (post.content_type === 'trip' && post.creator_username === user?.username) {
+            return false;
+        }
+        
+        return true;
+    });
 
     // Filter Top Places This Month by category
     const filteredTopPlaces = topPlacesThisMonth.filter(filterByCategory);
@@ -466,22 +599,18 @@ export default function Explore() {
             {/* Mobile Layout */}
             <div className="lg:hidden">
                 <main id="main-content" role="main" className="pb-20 pt-16">
-                    <div className="space-y-4 p-4">
-                        {/* Sidebar Cards */}
-                        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <QuickActionsAndLinksCard />
-                            {/* Category Filters */}
-                            <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-4 shadow-lg">
-                                <h3 className="font-semibold text-primary mb-3">Filter by Category</h3>
-                                <CategoryFilter 
-                                    selectedInterest={selectedInterest}
-                                    onSelectInterest={setSelectedInterest}
-                                />
-                            </div>
+                    <div className="space-y-3 p-4">
+                        {/* Compact Action Bar with Dropdowns */}
+                        <div className="flex items-center gap-2 justify-between">
+                            <MobileQuickActionsDropdown />
+                            <MobileFilterDropdown 
+                                selectedInterest={selectedInterest}
+                                onSelectInterest={setSelectedInterest}
+                            />
                         </div>
 
                         {/* Tab Navigation */}
-                        <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-2 sticky top-16 z-10 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-2 sticky top-16 z-10 shadow-lg">
                             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                                 <button
                                     onClick={() => setActiveTab('top-places')}
@@ -603,12 +732,22 @@ export default function Explore() {
                                                     )
                                                 ))}
                                                 
-                                                <div ref={observerTarget} className="py-4 text-center">
-                                                    {feedLoading && !selectedInterest && (
-                                                        <Loader2 className="animate-spin text-pulse mx-auto" size={24} />
-                                                    )}
-                                                    {!hasMore && filteredPosts.length > 0 && !selectedInterest && (
-                                                        <p className="text-muted text-sm">You're all caught up! 🎉</p>
+                                                {/* Mobile Infinite scroll trigger */}
+                                                <div ref={mobileObserverRef} className="py-4 text-center min-h-[80px]">
+                                                    {feedLoading && !selectedInterest ? (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Loader2 className="animate-spin text-pulse" size={24} />
+                                                            <span className="text-muted text-sm">Loading more...</span>
+                                                        </div>
+                                                    ) : (
+                                                        /* Load More button as fallback */
+                                                        <button
+                                                            onClick={loadMore}
+                                                            disabled={feedLoading}
+                                                            className="px-6 py-2 bg-pulse/20 hover:bg-pulse/30 text-pulse rounded-full text-sm font-medium transition-all"
+                                                        >
+                                                            Load More
+                                                        </button>
                                                     )}
                                                 </div>
                                             </>
@@ -781,23 +920,22 @@ export default function Explore() {
                                                     ))}
                                                 </div>
                                                 
-                                                <div ref={observerTarget} className="py-8 text-center">
-                                                    {feedLoading && !selectedInterest && (
+                                                {/* Desktop Infinite scroll trigger */}
+                                                <div ref={desktopObserverRef} className="py-8 text-center min-h-[80px]">
+                                                    {feedLoading && !selectedInterest ? (
                                                         <div className="flex items-center justify-center gap-2">
                                                             <Loader2 className="animate-spin text-pulse" size={24} />
                                                             <span className="text-muted">Loading more posts...</span>
                                                         </div>
-                                                    )}
-                                                    {!hasMore && filteredPosts.length > 0 && !selectedInterest && (
-                                                        <div className="py-4">
-                                                            <p className="text-muted">You're all caught up! 🎉</p>
-                                                            <button 
-                                                                onClick={refresh}
-                                                                className="text-sm text-pulse hover:text-pulse/80 mt-2"
-                                                            >
-                                                                Refresh feed
-                                                            </button>
-                                                        </div>
+                                                    ) : (
+                                                        /* Load More button as fallback */
+                                                        <button
+                                                            onClick={loadMore}
+                                                            disabled={feedLoading}
+                                                            className="px-8 py-3 bg-pulse/20 hover:bg-pulse/30 text-pulse rounded-full text-sm font-medium transition-all hover:scale-105"
+                                                        >
+                                                            Load More Posts
+                                                        </button>
                                                     )}
                                                 </div>
                                             </>

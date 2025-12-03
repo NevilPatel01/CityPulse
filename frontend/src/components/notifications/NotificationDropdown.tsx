@@ -36,9 +36,12 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
     };
   }, [isOpen, onClose]);
 
+  // Add null safety for notifications
+  const safeNotifications = notifications || [];
+  
   const filteredNotifications = activeTab === 'unread' 
-    ? notifications.filter(n => !n.is_read)
-    : notifications;
+    ? safeNotifications.filter(n => !n.is_read)
+    : safeNotifications;
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -72,7 +75,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 mt-3 w-96 max-w-[calc(100vw-2rem)] bg-base border-2 border-subtle rounded-xl shadow-glass overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed sm:absolute top-16 sm:top-auto right-2 sm:right-0 mt-0 sm:mt-3 w-[calc(100vw-1rem)] sm:w-96 max-w-[400px] bg-base border-2 border-subtle rounded-xl shadow-glass overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200"
     >
       {/* Header */}
       <div className="p-4 border-b border-subtle">
@@ -115,7 +118,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
       </div>
 
       {/* Actions */}
-      {notifications.length > 0 && (
+      {safeNotifications.length > 0 && (
         <div className="px-4 py-2 border-b border-subtle flex gap-2">
           <button
             onClick={handleMarkAllAsRead}
@@ -139,7 +142,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pulse"></div>
           </div>
-        ) : filteredNotifications.length === 0 ? (
+        ) : (filteredNotifications || []).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4">
             <div className="w-16 h-16 rounded-full bg-surface-glass flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -152,7 +155,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ isOp
           </div>
         ) : (
           <div className="divide-y divide-subtle">
-            {filteredNotifications.map((notification) => (
+            {(filteredNotifications || []).map((notification) => (
               <div key={notification.id} className="relative group">
                 <NotificationItem
                   notification={notification}

@@ -8,7 +8,7 @@ import { getLeaderboard, getMyLeaderboardPosition, type LeaderboardEntry } from 
 import Avatar from '../components/ui/Avatar';
 import { Trophy, Medal, Award, Loader2 } from 'lucide-react';
 
-type LeaderboardType = 'all' | 'achievements' | 'points' | 'badges';
+type LeaderboardType = 'engagement';
 
 export default function LeaderboardPage() {
   useAuthGuard();
@@ -18,12 +18,12 @@ export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [myPosition, setMyPosition] = useState<{ rank: number; achievements_count: number; total_points: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [type, setType] = useState<LeaderboardType>('all');
+  const [type] = useState<LeaderboardType>('engagement');
 
   const loadLeaderboard = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getLeaderboard(type, 20);
+      const response = await getLeaderboard(type, type === 'engagement' ? 3 : 20);
       if (response.success) {
         setLeaderboard(response.data.leaderboard);
       }
@@ -63,18 +63,7 @@ export default function LeaderboardPage() {
     return <span className="w-6 h-6 flex items-center justify-center text-muted font-semibold">{rank}</span>;
   };
 
-  const getTypeLabel = (type: LeaderboardType) => {
-    switch (type) {
-      case 'achievements':
-        return 'Most Achievements';
-      case 'points':
-        return 'Highest Points';
-      case 'badges':
-        return 'Most Badges';
-      default:
-        return 'Overall Leaderboard';
-    }
-  };
+  const getTypeLabel = () => 'Top Engagement';
 
   return (
     <div className="min-h-screen bg-base">
@@ -94,7 +83,7 @@ export default function LeaderboardPage() {
           </div>
 
           {/* My Position Card */}
-          {myPosition && (
+          {myPosition && myPosition.rank !== null && (
             <div className="bg-pulse/10 border border-pulse/30 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -111,21 +100,11 @@ export default function LeaderboardPage() {
             </div>
           )}
 
-          {/* Type Filters */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {(['all', 'achievements', 'points', 'badges'] as LeaderboardType[]).map((filterType) => (
-              <button
-                key={filterType}
-                onClick={() => setType(filterType)}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                  type === filterType
-                    ? 'bg-pulse text-white'
-                    : 'bg-surface-glass text-primary border border-subtle hover:bg-surface-glass/80'
-                }`}
-              >
-                {getTypeLabel(filterType)}
-              </button>
-            ))}
+          {/* Static label for type */}
+          <div className="mb-6">
+            <div className="w-full px-4 py-2 rounded-lg bg-surface-glass text-primary border border-subtle font-medium">
+              {getTypeLabel()}
+            </div>
           </div>
 
           {/* Leaderboard List */}
@@ -184,19 +163,9 @@ export default function LeaderboardPage() {
                     <div className="flex-shrink-0 text-right">
                       <div className="flex items-center gap-4">
                         <div>
-                          <p className="text-sm text-muted">Achievements</p>
-                          <p className="font-semibold text-primary">{entry.achievements_count}</p>
+                          <p className="text-sm text-muted">Badges</p>
+                          <p className="font-semibold text-primary">{entry.unique_badges ?? 0}</p>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted">Points</p>
-                          <p className="font-semibold text-primary">{entry.total_points}</p>
-                        </div>
-                        {entry.unique_badges !== undefined && (
-                          <div>
-                            <p className="text-sm text-muted">Badges</p>
-                            <p className="font-semibold text-primary">{entry.unique_badges}</p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

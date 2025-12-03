@@ -2,6 +2,7 @@ import { CreateRecommendationForm } from '../components/recommendations/CreateRe
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { ArrowLeft } from 'lucide-react';
 
 export function CreateRecommendationPage() {
@@ -19,7 +20,7 @@ export function CreateRecommendationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-base">
+    <div className="min-h-screen bg-base pb-20">
       <Header />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -38,6 +39,7 @@ export function CreateRecommendationPage() {
           onCancel={handleCancel}
         />
       </div>
+      <BottomNavigation />
     </div>
   );
 }

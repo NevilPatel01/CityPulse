@@ -303,8 +303,11 @@ const AdvancedSearch: React.FC = () => {
                         {/* Mobile Filter Button */}
                         {isMobile && (
                             <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`lg:hidden px-4 py-4 rounded-xl border transition-all ${
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowFilters(!showFilters);
+                                }}
+                                className={`flex-shrink-0 px-4 py-4 rounded-xl border transition-all ${
                                     showFilters || hasActiveFilters 
                                         ? 'bg-pulse border-pulse text-white' 
                                         : 'bg-surface-glass border-subtle text-primary hover:border-pulse'
@@ -383,26 +386,29 @@ const AdvancedSearch: React.FC = () => {
                     {/* Main Content Area */}
                     <main className="flex-1 min-w-0">
                         {showHistory ? (
-                            /* Search History List */
-                            <SearchHistoryList
-                                onSelectSearch={handleSelectHistory}
-                            />
+                            /* Search History List - with proper background */
+                            <div className="relative z-10 bg-surface-glass rounded-xl p-4 border border-subtle">
+                                <SearchHistoryList
+                                    onSelectSearch={handleSelectHistory}
+                                />
+                            </div>
                         ) : (
                             <>
                                 {/* Results Header with View Toggle */}
                                 {(results && results.total > 0) && (
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="flex items-center gap-2">
-                                            <h2 className="text-xl font-bold text-primary">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                                        {/* Results Count and Sort */}
+                                        <div className="flex items-center justify-between sm:justify-start gap-2">
+                                            <h2 className="text-lg sm:text-xl font-bold text-primary">
                                                 {results.total} {results.total === 1 ? 'Result' : 'Results'}
                                             </h2>
                                             
                                             {/* Sort Dropdown */}
-                                            <div className="ml-4">
+                                            <div className="sm:ml-4">
                                                 <select
                                                     value={filters.sortBy}
                                                     onChange={(e) => updateFilters({ sortBy: e.target.value as 'relevant' | 'rating' | 'recent' | 'price_low' | 'price_high' })}
-                                                    className="px-4 py-2 bg-surface-glass border border-subtle rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-pulse transition-all"
+                                                    className="px-3 py-2 bg-surface-glass border border-subtle rounded-lg text-primary text-sm focus:outline-none focus:ring-2 focus:ring-pulse transition-all"
                                                 >
                                                     <option value="relevant">Most Relevant</option>
                                                     <option value="rating">Highest Rated</option>
@@ -414,7 +420,7 @@ const AdvancedSearch: React.FC = () => {
                                         </div>
 
                                         {/* View Toggle */}
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 self-end sm:self-auto">
                                             <button
                                                 onClick={() => updateFilters({ view: 'grid' })}
                                                 className={`p-2 rounded-lg transition-all ${

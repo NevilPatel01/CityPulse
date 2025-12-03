@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSearchOverlay } from '../../context/SearchOverlayContext';
@@ -8,6 +8,34 @@ export const BottomNavigation: React.FC = () => {
     const { user } = useAuth();
     const location = useLocation();
     const { openSearch } = useSearchOverlay();
+    const [isVisible, setIsVisible] = useState(true);
+    const lastScrollY = useRef(0);
+    const ticking = useRef(false);
+
+    // Handle scroll to show/hide bottom nav
+    useEffect(() => {
+        const handleScroll = () => {
+            if (!ticking.current) {
+                window.requestAnimationFrame(() => {
+                    const currentScrollY = window.scrollY;
+                    
+                    // Show when scrolling up, hide when scrolling down
+                    if (currentScrollY < lastScrollY.current || currentScrollY < 100) {
+                        setIsVisible(true);
+                    } else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+                        setIsVisible(false);
+                    }
+                    
+                    lastScrollY.current = currentScrollY;
+                    ticking.current = false;
+                });
+                ticking.current = true;
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
     
     const getIcon = (label: string, isActive: boolean) => {
         const iconClass = `w-6 h-6 ${isActive ? 'text-pulse' : 'text-muted group-hover:text-primary'}`;
@@ -86,7 +114,9 @@ export const BottomNavigation: React.FC = () => {
     };
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-base border-t border-subtle px-4 py-2 z-30">
+        <div className={`fixed bottom-0 left-0 right-0 lg:hidden bg-base border-t border-subtle px-4 py-2 z-30 transition-transform duration-300 ${
+            isVisible ? 'translate-y-0' : 'translate-y-full'
+        }`}>
             <div className="flex justify-around">
                 {navItems.map((item, index) => (
                     <button

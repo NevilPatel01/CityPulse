@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { ArrowLeft } from 'lucide-react';
 import { profileService } from '../services/profileService';
 import { buildApiUrl } from '../config/api';
@@ -488,6 +489,7 @@ export function EditProfilePage() {
           </div>
         </div>
       </div>
+      <BottomNavigation />
     </div>
   );
 }

@@ -52,7 +52,16 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-    await cleanupAllTestData();
+    try {
+        await cleanupAllTestData();
+    } catch (error: any) {
+        // Ignore errors if pool is already closed (happens when tests run in parallel)
+        if (error?.message?.includes('pool') || error?.message?.includes('ended')) {
+            console.log('Pool already closed, skipping cleanup');
+        } else {
+            throw error;
+        }
+    }
 });
 
 describe('Recommendations API', () => {

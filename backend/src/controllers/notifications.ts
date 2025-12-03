@@ -59,17 +59,23 @@ export const getNotifications = async (req: Request, res: Response) => {
             [userId]
         );
 
-        // Return simple array if no notifications
-        if (result.rows.length === 0) {
-            return res.json({
-                success: true,
-                data: []
-            });
-        }
+        // Get total count
+        const totalResult = await pool.query(
+            'SELECT COUNT(*) as total FROM notifications WHERE user_id = $1',
+            [userId]
+        );
 
+        const unreadCount = parseInt(unreadResult.rows[0].unread_count) || 0;
+        const total = parseInt(totalResult.rows[0].total) || 0;
+
+        // Return proper structure with notifications array, unreadCount, and total
         res.json({
             success: true,
-            data: result.rows
+            data: {
+                notifications: result.rows,
+                unreadCount,
+                total
+            }
         });
 
     } catch (error) {

@@ -36,11 +36,14 @@ router.use(authenticateToken);
 router.get('/', notificationLimiter, getNotifications);
 router.get('/unread-count', notificationLimiter, getUnreadCount);
 
-// Mark as read
+// Mark as read - support both PATCH and PUT methods
+router.patch('/:notificationId/read', notificationLimiter, markAsRead);
 router.put('/:notificationId/read', notificationLimiter, markAsRead);
+router.patch('/read-all', notificationLimiter, markAllAsRead);
 router.put('/mark-all-read', notificationLimiter, markAllAsRead);
 
-// Delete notifications
+// Delete notifications - support multiple paths for compatibility
+router.delete('/read/all', notificationLimiter, deleteAllRead);
 router.delete('/delete-all-read', notificationLimiter, deleteAllRead);
 router.delete('/:notificationId', notificationLimiter, deleteNotification);
 

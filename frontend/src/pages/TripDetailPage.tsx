@@ -324,7 +324,7 @@ const TripDetailPage = () => {
           
           <div className="trip-hero-overlay">
             <div className="trip-header">
-              <button onClick={() => navigate('/trips')} className="back-button">
+              <button onClick={() => navigate(-1)} className="back-button">
                 <ArrowLeft className="icon" />
                 <span>Back</span>
               </button>

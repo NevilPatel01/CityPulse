@@ -27,7 +27,7 @@ export const getCityDetails = async (req: Request, res: Response) => {
 
         // Build recommendations query with optional category filter
         let recommendationsQuery = `
-        SELECT 
+        SELECT DISTINCT ON (r.id)
         r.id,
         r.title,      
         r.description,
@@ -94,7 +94,7 @@ export const getCityDetails = async (req: Request, res: Response) => {
             queryParams.push(category);
         }
 
-        recommendationsQuery += ` ORDER BY r.created_at DESC`;
+        recommendationsQuery += ` ORDER BY r.id, r.created_at DESC`;
 
         const recommendationsResult = await pool.query(recommendationsQuery, queryParams);
 

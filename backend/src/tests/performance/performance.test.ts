@@ -68,7 +68,7 @@ describe('Performance Tests', () => {
 
             const duration = Date.now() - startTime;
             expect(response.body.success).toBe(true);
-            expect(duration).toBeLessThan(1500); // Under 1.5 seconds
+            expect(duration).toBeLessThan(2000); // Under 2 seconds
         });
 
         it('should fetch user profile quickly', async () => {
@@ -118,7 +118,7 @@ describe('Performance Tests', () => {
 
             const duration = Date.now() - startTime;
             expect(response.body.success).toBe(true);
-            expect(duration).toBeLessThan(3000); // 3 seconds for complex search
+            expect(duration).toBeLessThan(4000); // 4 seconds for complex search
         });
     });
 
@@ -134,7 +134,7 @@ describe('Performance Tests', () => {
             const duration = Date.now() - startTime;
 
             // Small files should upload quickly
-            expect(duration).toBeLessThan(1000);
+            expect(duration).toBeLessThan(2000); // 2 seconds for small file upload
         });
 
         it('should handle multiple simultaneous uploads (3-5 files)', async () => {

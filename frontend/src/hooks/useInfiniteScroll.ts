@@ -17,15 +17,20 @@ interface UseInfiniteScrollOptions {
     hasMore: boolean;
     
     /**
-     * Root margin for intersection observer (default: '100px')
+     * Root margin for intersection observer (default: '300px')
      * Triggers loading before reaching the bottom
      */
     rootMargin?: string;
     
     /**
-     * Threshold for intersection observer (default: 0.1)
+     * Threshold for intersection observer (default: 0)
      */
     threshold?: number;
+    
+    /**
+     * Debounce time in ms to prevent rapid fire (default: 300)
+     */
+    debounceMs?: number;
 }
 
 /**
@@ -52,27 +57,39 @@ export const useInfiniteScroll = ({
     onLoadMore,
     isLoading,
     hasMore,
-    rootMargin = '100px',
-    threshold = 0.1
+    rootMargin = '300px', // Trigger earlier - 300px before reaching bottom
+    threshold = 0,
+    debounceMs = 300
 }: UseInfiniteScrollOptions) => {
     const observerTarget = useRef<HTMLDivElement>(null);
+    const lastLoadTimeRef = useRef<number>(0);
 
     const handleObserver = useCallback(
         (entries: IntersectionObserverEntry[]) => {
             const [target] = entries;
+            const now = Date.now();
+            
+            // Debounce - don't trigger if we just loaded
+            if (now - lastLoadTimeRef.current < debounceMs) {
+                return;
+            }
             
             // If target is visible, not loading, and has more data, load more
             if (target.isIntersecting && !isLoading && hasMore) {
-                console.log('[InfiniteScroll] Loading more data...');
+                console.log('[InfiniteScroll] Target visible, triggering load more...');
+                lastLoadTimeRef.current = now;
                 onLoadMore();
             }
         },
-        [onLoadMore, isLoading, hasMore]
+        [onLoadMore, isLoading, hasMore, debounceMs]
     );
 
     useEffect(() => {
         const element = observerTarget.current;
-        if (!element) return;
+        if (!element) {
+            console.log('[InfiniteScroll] No observer target element');
+            return;
+        }
 
         const observer = new IntersectionObserver(handleObserver, {
             root: null, // viewport
@@ -81,6 +98,7 @@ export const useInfiniteScroll = ({
         });
 
         observer.observe(element);
+        console.log('[InfiniteScroll] Observer attached to element');
 
         return () => {
             if (element) {

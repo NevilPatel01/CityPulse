@@ -19,19 +19,23 @@ const ResultCard: React.FC<ResultCardProps> = ({ item, view }) => {
     const formatPrice = () => {
         if (!item.price) return null;
         
-        // Check if price is FREE (both min and max are 0)
-        if (item.price.min === 0 && item.price.max === 0) {
+        // Check if price is FREE (both min and max are 0 or null)
+        const minPrice = item.price.min ?? 0;
+        const maxPrice = item.price.max ?? 0;
+        
+        if (minPrice === 0 && maxPrice === 0) {
             return 'FREE';
         }
         
-        // If display already contains "$0", replace it with FREE
-        if (item.price.display && item.price.display.includes('$0')) {
-            // Check if it's exactly "$0 - $0" or similar
-            if ((item.price.min === 0 && item.price.max === 0) || 
-                item.price.display === '$0 - $0' ||
-                item.price.display === '$0' ||
-                item.price.display === 'From $0' ||
-                item.price.display === 'Up to $0') {
+        // If display already contains "$0-$0" or similar patterns, show FREE
+        if (item.price.display) {
+            const display = item.price.display.toLowerCase().trim();
+            if (display === '$0-$0' || 
+                display === '$0 - $0' ||
+                display === '$0' ||
+                display === 'from $0' ||
+                display === 'up to $0' ||
+                display === 'free') {
                 return 'FREE';
             }
         }
@@ -301,6 +305,7 @@ const ResultCardGrid: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
                         <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             <span className="line-clamp-1">{typeof item.city === 'string' ? item.city : item.city.name}</span>
                         </span>
@@ -604,6 +609,7 @@ const ResultCardList: React.FC<CardHelpersProps> = ({ item, formatPrice, closeSe
                                 <span className="inline-flex items-center gap-1">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                     <span>{typeof item.city === 'string' ? item.city : `${item.city.name}, ${item.city.country}`}</span>
                                 </span>

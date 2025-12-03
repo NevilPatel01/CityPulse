@@ -92,7 +92,7 @@ export function ImageCarousel({
 
   if (!images || images.length === 0) {
     return (
-      <div className="relative w-full h-[500px] bg-gray-900 rounded-lg flex items-center justify-center">
+      <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9] bg-gray-900 rounded-lg flex items-center justify-center">
         <div className="text-center">
           <svg 
             className="mx-auto h-16 w-16 text-gray-600 mb-4" 
@@ -117,7 +117,7 @@ export function ImageCarousel({
     <>
       {/* Main Carousel */}
       <div 
-        className="relative w-full h-[500px] bg-gray-900 rounded-lg overflow-hidden group"
+        className="relative w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9] bg-gray-900 rounded-lg overflow-hidden group"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={onTouchStart}
@@ -181,8 +181,8 @@ export function ImageCarousel({
           />
         )}
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        {/* Gradient Overlay - reduced for less dark area */}
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
 
         {/* Navigation Arrows */}
         {images.length > 1 && (

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import { useSafeToast } from '../hooks/useSafeToast';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { ChangePasswordModal } from '../components/settings/ChangePasswordModal';
 import { EmailNotificationsModal } from '../components/settings/EmailNotificationsModal';
@@ -306,6 +307,7 @@ export default function SettingsPage() {
         isOpen={showEmailNotificationsModal} 
         onClose={() => setShowEmailNotificationsModal(false)} 
       />
+      <BottomNavigation />
     </div>
   );
 }

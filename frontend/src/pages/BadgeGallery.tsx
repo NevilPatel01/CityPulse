@@ -4,6 +4,8 @@ import { apiEndpoints, apiRequest } from '../config/api';
 import { BadgeCard } from '../components/achievements/BadgeCard';
 import { Trophy, Target, TrendingUp, Award } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import { BottomNavigation } from '../components/layout/BottomNavigation';
+import { MobileBackButton } from '../components/layout/MobileBackButton';
 
 type FilterType = 'all' | 'completed' | 'in-progress' | 'locked';
 type SortType = 'recent' | 'progress' | 'name';
@@ -102,8 +104,9 @@ export const BadgeGallery: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 py-8">
+        <div className="min-h-screen bg-gray-900 py-8 pb-24">
             <Header />
+            <MobileBackButton fallbackPath="/explore" />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="mb-8">
@@ -233,6 +236,7 @@ export const BadgeGallery: React.FC = () => {
                     </div>
                 )}
             </div>
+            <BottomNavigation />
         </div>
     );
 };

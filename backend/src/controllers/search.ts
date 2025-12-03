@@ -413,6 +413,7 @@ export const searchCities = async (req: Request, res: Response) => {
                 c.name as city,
                 c.country,
                 COUNT(DISTINCT rc.recommendation_id) as mentions_count,
+                COUNT(DISTINCT rc.recommendation_id) as recommendation_count,
                 COUNT(DISTINCT r.user_id) as contributors_count
             FROM cities c
             LEFT JOIN recommendation_cities rc ON c.id = rc.city_id
@@ -428,6 +429,7 @@ export const searchCities = async (req: Request, res: Response) => {
             name: row.city,
             country: row.country,
             mentionsCount: parseInt(row.mentions_count) || 0,
+            recommendation_count: parseInt(row.recommendation_count) || 0,
             contributorsCount: parseInt(row.contributors_count) || 0
         }));
 

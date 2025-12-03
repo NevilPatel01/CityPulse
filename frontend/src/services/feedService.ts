@@ -42,11 +42,15 @@ export interface FeedResponse {
         limit: number;
         total: number;
         hasMore: boolean;
+        seenCount?: number;
     };
     debug?: {
         recommendationsCount?: number;
         tripsCount?: number;
-        totalCount?: number;
+        totalRecommendations?: number;
+        totalTrips?: number;
+        totalAvailable?: number;
+        seenCount?: number;
         buddyCount?: number;
         trendingCount?: number;
         interestCount?: number;
@@ -74,11 +78,13 @@ export interface ActiveBuddy {
 
 /**
  * Get personalized feed with algorithm (50% buddies, 30% trending, 20% interests)
+ * Supports excludeIds to prevent showing duplicate posts until all are seen
  */
 export const getFeed = async (
     page: number = 1,
     limit: number = 10,
-    location?: { latitude: number; longitude: number; radius?: number }
+    location?: { latitude: number; longitude: number; radius?: number },
+    excludeIds?: string[] // Format: ['rec_1', 'rec_2', 'trip_3', 'trip_4']
 ): Promise<FeedResponse> => {
     const params = new URLSearchParams({
         page: page.toString(),
@@ -89,6 +95,11 @@ export const getFeed = async (
         params.append('latitude', location.latitude.toString());
         params.append('longitude', location.longitude.toString());
         params.append('radius', (location.radius || 50).toString());
+    }
+
+    // Add excludeIds to prevent duplicates
+    if (excludeIds && excludeIds.length > 0) {
+        params.append('excludeIds', excludeIds.join(','));
     }
 
     const url = buildApiUrl(`api/feed?${params.toString()}`);
@@ -247,4 +258,19 @@ export const getBuddiesActivity = async (page: number = 1, limit: number = 10): 
     });
     const url = buildApiUrl(`api/feed/buddies-activity?${params.toString()}`);
     return await apiRequest<{ success: boolean; data: FeedPost[] }>(url);
+};
+
+/**
+ * Get top 5 recommendations + top 5 trips this month (last 30 days)
+ * Ranked by engagement score
+ */
+export const getTopFiveThisMonth = async (): Promise<{ 
+    success: boolean; 
+    data: { 
+        recommendations: FeedPost[]; 
+        trips: FeedPost[] 
+    } 
+}> => {
+    const url = buildApiUrl('api/feed/top-five-month');
+    return await apiRequest<{ success: boolean; data: { recommendations: FeedPost[]; trips: FeedPost[] } }>(url);
 };

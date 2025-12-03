@@ -240,12 +240,20 @@ export const login = async (req: Request, res: Response) => {
         // Set cookies
         setTokenCookies(res, accessToken, refreshToken);
 
+        // Get profile photo from user_profiles
+        const profileResult = await query(
+            'SELECT profile_photo_url FROM user_profiles WHERE user_id = $1',
+            [user.id]
+        );
+        const profilePhotoUrl = profileResult.rows[0]?.profile_photo_url || null;
+
         // Sanitize user response - remove password_hash and other sensitive fields
         const userResponse = sanitizeUserForSelf({
             id: user.id,
             username: user.username,
             email: user.email,
             fullName: user.full_name,
+            profilePicture: profilePhotoUrl,
             bio: user.bio,
             currentLocation: user.current_location,
             hometown: user.hometown,
@@ -378,8 +386,11 @@ export const getProfile = async (req: Request, res: Response) => {
         }
 
         const userResult = await query(
-            `SELECT id, username, email, full_name, bio, current_location, hometown, phone, role, account_status, email_verified, created_at, updated_at, last_login 
-             FROM users WHERE id = $1`,
+            `SELECT u.id, u.username, u.email, u.full_name, u.bio, u.current_location, u.hometown, u.phone, u.role, u.account_status, u.email_verified, u.created_at, u.updated_at, u.last_login,
+                    up.profile_photo_url
+             FROM users u
+             LEFT JOIN user_profiles up ON u.id = up.user_id
+             WHERE u.id = $1`,
             [req.user.userId]
         );
 
@@ -400,6 +411,7 @@ export const getProfile = async (req: Request, res: Response) => {
                     username: user.username,
                     email: user.email,
                     fullName: user.full_name,
+                    profilePicture: user.profile_photo_url || null,
                     bio: user.bio,
                     currentLocation: user.current_location,
                     hometown: user.hometown,

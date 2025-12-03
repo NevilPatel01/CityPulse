@@ -7,18 +7,20 @@ describe('Profile End-to-End Tests', () => {
   let app: any;
   let authToken: string;
   let userId: number;
+  let username: string;
 
   beforeAll(async () => {
     app = createApp();
     
     // Create a test user and get auth token
+    username = `testuser${Date.now()}`;
     const signupResponse = await request(app)
-      .post('/api/auth/signup')
+      .post('/api/auth/register')
       .send({
         fullName: 'Test User',
-        username: 'testuser',
-        email: 'test@example.com',
-        password: 'password123'
+        username: username,
+        email: `test${Date.now()}@example.com`,
+        password: 'Password123!'
       });
     
     expect(signupResponse.status).toBe(201);
@@ -35,13 +37,13 @@ describe('Profile End-to-End Tests', () => {
   describe('GET /api/profile/:username', () => {
     it('should get profile for existing user', async () => {
       const response = await request(app)
-        .get('/api/profile/testuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.user).toHaveProperty('id');
-      expect(response.body.data.user).toHaveProperty('username', 'testuser');
+      expect(response.body.data.user).toHaveProperty('username', username);
       expect(response.body.data.user).toHaveProperty('fullName', 'Test User');
       expect(response.body.data.user).toHaveProperty('citiesVisited');
       expect(response.body.data.user).toHaveProperty('stats');

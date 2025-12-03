@@ -88,7 +88,7 @@ export const useNotifications = () => {
         // Check cache (skip if forced or cache is stale)
         const now = Date.now();
         const timeSinceLastFetch = now - lastFetchRef.current;
-        if (!force && timeSinceLastFetch < CACHE_DURATION && notifications.length > 0) {
+        if (!force && timeSinceLastFetch < CACHE_DURATION && notifications && notifications.length > 0) {
             console.log('💾 Using cached notifications');
             return;
         }
@@ -99,11 +99,13 @@ export const useNotifications = () => {
             setError(null);
 
             const response = await getNotifications(50, 0, false);
-            if (response.success) {
-                setNotifications(response.data.notifications);
-                setUnreadCount(response.data.unreadCount);
+            if (response.success && response.data) {
+                const notifications = response.data.notifications || [];
+                const unreadCount = response.data.unreadCount || 0;
+                setNotifications(notifications);
+                setUnreadCount(unreadCount);
                 lastFetchRef.current = now;
-                console.log('✅ Notifications fetched:', response.data.notifications.length);
+                console.log('✅ Notifications fetched:', notifications.length);
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to fetch notifications';
@@ -113,7 +115,8 @@ export const useNotifications = () => {
             isFetchingRef.current = false;
             if (!silent) setIsLoading(false);
         }
-    }, [isAuthenticated, notifications.length]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated]);
 
     // Fetch unread count only (lighter operation for polling)
     const fetchUnreadCount = useCallback(async () => {
@@ -121,8 +124,8 @@ export const useNotifications = () => {
 
         try {
             const response = await getUnreadCount();
-            if (response.success) {
-                setUnreadCount(response.data.unreadCount);
+            if (response.success && response.data) {
+                setUnreadCount(response.data.unreadCount || 0);
             }
         } catch (err) {
             console.error('Fetch unread count error:', err);

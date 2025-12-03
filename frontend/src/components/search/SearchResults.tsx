@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { SearchResult } from '../../services/searchService';
 import ResultCard from './ResultCard';
 import { LoadingInline } from '../ui/LoadingSpinner';
@@ -14,7 +14,36 @@ interface SearchResultsProps {
     view: 'grid' | 'list';
 }
 
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
 const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view }) => {
+    // Combine and shuffle all results (recommendations, cities) while keeping users separate
+    const { mixedResults, userResults } = useMemo(() => {
+        if (!results) return { mixedResults: [], userResults: [] };
+        
+        // Combine recommendations and cities (these are "content" items that should be mixed)
+        const contentItems = [
+            ...results.recommendations,
+            ...results.cities
+        ];
+        
+        // Shuffle the combined content items
+        const shuffled = shuffleArray(contentItems);
+        
+        return {
+            mixedResults: shuffled,
+            userResults: results.users
+        };
+    }, [results]);
+
     if (loading) {
         return <LoadingInline message="Searching..." />;
     }
@@ -49,13 +78,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
 
     return (
         <div className="space-y-8">
-            {/* Recommendations Section */}
-            {results.recommendations.length > 0 && (
-                <section aria-labelledby="recommendations-heading">
+            {/* Mixed Content Section (Recommendations + Cities shuffled together) */}
+            {mixedResults.length > 0 && (
+                <section aria-labelledby="content-heading">
                     <div className="flex items-center gap-2 mb-4">
-                        <h2 id="recommendations-heading" className="text-xl font-bold text-primary">Recommendations</h2>
+                        <h2 id="content-heading" className="text-xl font-bold text-primary">Discover</h2>
                         <span className="px-3 py-1 bg-pulse text-pulse-fg text-sm font-semibold rounded-full">
-                            {results.recommendations.length}
+                            {mixedResults.length}
                         </span>
                     </div>
                     <div className={
@@ -63,9 +92,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
                             ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
                             : 'space-y-4'
                     }>
-                        {results.recommendations.map((item) => (
+                        {mixedResults.map((item, index) => (
                             <ResultCard
-                                key={`rec-${item.id}`}
+                                key={`${item.type}-${item.id}-${index}`}
                                 item={item}
                                 view={view}
                             />
@@ -74,13 +103,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
                 </section>
             )}
 
-            {/* Users Section */}
-            {results.users.length > 0 && (
+            {/* Users Section - kept separate as they are different from content */}
+            {userResults.length > 0 && (
                 <section aria-labelledby="users-heading">
                     <div className="flex items-center gap-2 mb-4">
                         <h2 id="users-heading" className="text-xl font-bold text-primary">Travel Buddies</h2>
                         <span className="px-3 py-1 bg-accent-teal text-pulse-fg text-sm font-semibold rounded-full">
-                            {results.users.length}
+                            {userResults.length}
                         </span>
                     </div>
                     <div className={
@@ -88,34 +117,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, loading, view })
                             ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
                             : 'space-y-4'
                     }>
-                        {results.users.map((item) => (
+                        {userResults.map((item) => (
                             <ResultCard
                                 key={`user-${item.id}`}
-                                item={item}
-                                view={view}
-                            />
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* Cities Section */}
-            {results.cities.length > 0 && (
-                <section aria-labelledby="cities-heading">
-                    <div className="flex items-center gap-2 mb-4">
-                        <h2 id="cities-heading" className="text-xl font-bold text-primary">Cities</h2>
-                        <span className="px-3 py-1 bg-accent-amber text-pulse-fg text-sm font-semibold rounded-full">
-                            {results.cities.length}
-                        </span>
-                    </div>
-                    <div className={
-                        view === 'grid'
-                            ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
-                            : 'space-y-4'
-                    }>
-                        {results.cities.map((item) => (
-                            <ResultCard
-                                key={`city-${item.id}`}
                                 item={item}
                                 view={view}
                             />

@@ -82,6 +82,25 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                 `;
                 break;
 
+            case 'engagement':
+                // Top users by engagement (count of completed achievements/badges)
+                queryString = `
+                    SELECT 
+                        u.id,
+                        u.username,
+                        u.full_name,
+                        up.profile_photo_url,
+                        COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) AS unique_badges
+                    FROM users u
+                    LEFT JOIN user_profiles up ON u.id = up.user_id
+                    LEFT JOIN user_achievements ua ON u.id = ua.user_id
+                    WHERE u.account_status = 'active'
+                    GROUP BY u.id, u.username, u.full_name, up.profile_photo_url
+                    ORDER BY unique_badges DESC
+                    LIMIT $1
+                `;
+                break;
+
             default:
                 // Default: all-around leaderboard (achievements + points)
                 queryString = `
@@ -191,7 +210,10 @@ export const getMyLeaderboardPosition = async (req: Request, res: Response) => {
             [achievementsCount, totalPoints]
         );
 
-        const rank = parseInt(rankResult.rows[0].rank) || 0;
+        // If user has zero achievements and zero points, do not show a misleading rank
+        const rank = (achievementsCount === 0 && totalPoints === 0)
+            ? null
+            : (parseInt(rankResult.rows[0].rank) || 0);
 
         res.json({
             success: true,

@@ -309,8 +309,8 @@ describe('Token Refresh and Change Password', () => {
         });
 
         it('should reject request with expired token', async () => {
-            // Generate expired token (1 second expiry)
-            const expiredToken = generateTestToken(testUser.id, '1ms');
+            // Generate expired token (1ms expiry)
+            const expiredToken = generateTestToken(testUser.id, 'user', '1ms');
             
             // Wait for token to expire
             await new Promise(resolve => setTimeout(resolve, 10));

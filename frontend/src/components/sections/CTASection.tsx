@@ -28,51 +28,7 @@ export const CTASection: React.FC = () => {
             >
               Join CityPulse Today
             </Button>
-            <Button
-              size='lg'
-              variant='outline'
-              className='border-subtle text-primary hover:bg-white hover:bg-opacity-10 px-8 py-4 text-lg'
-            >
-              My Profile Demo
-            </Button>
-            <Button
-              size='lg'
-              variant='outline'
-              className='border-subtle text-primary hover:bg-white hover:bg-opacity-10 px-8 py-4 text-lg'
-            >
-              Travel Buddies Demo
-            </Button>
-          </div>
-
-          {/* User Profile Examples */}
-          <div className='mt-8 pt-6 border-t border-subtle'>
-            <p className='text-muted text-sm mb-4'>
-              View example user profiles:
-            </p>
-            <div className='flex flex-wrap gap-3 justify-center'>
-              <Button
-                size='sm'
-                variant='ghost'
-                className='text-pulse hover:bg-pulse hover:bg-opacity-10'
-              >
-                @sarahchen
-              </Button>
-              <Button
-                size='sm'
-                variant='ghost'
-                className='text-pulse hover:bg-pulse hover:bg-opacity-10'
-              >
-                @marcorodriguez
-              </Button>
-              <Button
-                size='sm'
-                variant='ghost'
-                className='text-pulse hover:bg-pulse hover:bg-opacity-10'
-              >
-                @private_user
-              </Button>
-            </div>
-          </div>
+          </div>          
         </div>
       </div>
     </section>

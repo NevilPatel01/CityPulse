@@ -58,9 +58,9 @@ export const getRecommendations = async (req: Request, res: Response) => {
 
         const whereClause = whereConditions.join(' AND ');
 
-        // Get recommendations with user and category info
+        // Get recommendations with user and category info (using DISTINCT ON to prevent duplicates from city joins)
         const recommendationsQuery = `
-            SELECT 
+            SELECT DISTINCT ON (r.id, r.created_at)
                 r.id,
                 r.title,
                 r.description,
@@ -94,7 +94,7 @@ export const getRecommendations = async (req: Request, res: Response) => {
             LEFT JOIN recommendation_cities rec_cities ON r.id = rec_cities.recommendation_id
             LEFT JOIN cities c ON rec_cities.city_id = c.id
             WHERE ${whereClause}
-            ORDER BY r.created_at DESC
+            ORDER BY r.created_at DESC, r.id DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `;
 
@@ -102,9 +102,9 @@ export const getRecommendations = async (req: Request, res: Response) => {
 
         const recommendations = await query(recommendationsQuery, queryParams);
 
-        // Get total count for pagination
+        // Get total count for pagination (using DISTINCT to match main query)
         const countQuery = `
-            SELECT COUNT(*) as total
+            SELECT COUNT(DISTINCT r.id) as total
             FROM recommendations r
             LEFT JOIN users u ON r.user_id = u.id
             LEFT JOIN recommendation_cities rec_cities ON r.id = rec_cities.recommendation_id

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getFeed } from '../services/feedService';
 import type { FeedPost, FeedResponse } from '../services/feedService';
 import { useToast } from './useToast';
@@ -14,11 +14,20 @@ interface FeedState {
     hasMore: boolean;
     page: number;
     error: string | null;
+    totalAvailable: number;
 }
 
 /**
+ * Generate a unique ID for a feed post
+ * Format: "rec_123" for recommendations, "trip_456" for trips
+ */
+const getPostUniqueId = (post: FeedPost): string => {
+    return post.content_type === 'trip' ? `trip_${post.id}` : `rec_${post.id}`;
+};
+
+/**
  * Custom hook for managing personalized feed state
- * Handles pagination, location filtering, and infinite scroll
+ * Handles pagination, location filtering, infinite scroll, and no-duplicate cycling
  */
 export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions = {}) => {
     const { showWarning, showError } = useToast();
@@ -27,9 +36,16 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
         loading: true,
         hasMore: true,
         page: 1,
-        error: null
+        error: null,
+        totalAvailable: 0
     });
     const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    
+    // Track seen post IDs to avoid duplicates until all posts are shown
+    const seenIdsRef = useRef<Set<string>>(new Set());
+    
+    // Debounce flag to prevent multiple simultaneous loads
+    const isLoadingRef = useRef<boolean>(false);
 
     /**
      * Request user's location
@@ -69,25 +85,40 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
      * Load initial feed
      */
     const loadInitialFeed = useCallback(async () => {
+        if (isLoadingRef.current) return;
+        isLoadingRef.current = true;
+        
         try {
             setState(prev => ({ ...prev, loading: true, error: null }));
+
+            // Reset seen IDs on initial load
+            seenIdsRef.current.clear();
 
             const response: FeedResponse = await getFeed(1, limit, location ? {
                 latitude: location.latitude,
                 longitude: location.longitude,
                 radius: 50
-            } : undefined);
+            } : undefined, []);
+
+            // Track seen post IDs
+            response.data.forEach(post => {
+                seenIdsRef.current.add(getPostUniqueId(post));
+            });
+
+            const totalAvailable = response.pagination.total || response.data.length;
 
             setState({
                 posts: response.data,
                 loading: false,
-                hasMore: response.pagination.hasMore,
+                hasMore: true, // Always true to enable infinite scroll cycling
                 page: 1,
-                error: null
+                error: null,
+                totalAvailable
             });
 
             console.log('[Feed] Initial feed loaded:', response.data.length, 'posts');
-            console.log('[Feed] Debug:', response.debug);
+            console.log('[Feed] Total available:', totalAvailable);
+            console.log('[Feed] Seen IDs:', seenIdsRef.current.size);
         } catch (error) {
             console.error('[Feed] Error loading initial feed:', error);
             setState(prev => ({
@@ -96,51 +127,91 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
                 error: error instanceof Error ? error.message : 'Failed to load feed'
             }));
             showError('Failed to load feed');
+        } finally {
+            isLoadingRef.current = false;
         }
     }, [limit, location, showError]);
 
     /**
      * Load more posts for infinite scroll
+     * When all posts are seen, reset and start cycling from beginning
      */
     const loadMore = useCallback(async () => {
-        if (state.loading || !state.hasMore) return;
+        // Prevent multiple simultaneous loads
+        if (state.loading || isLoadingRef.current) {
+            console.log('[Feed] Skipping load - already loading');
+            return;
+        }
+        
+        isLoadingRef.current = true;
 
         try {
             setState(prev => ({ ...prev, loading: true }));
 
-            const nextPage = state.page + 1;
-            const response: FeedResponse = await getFeed(nextPage, limit, location ? {
-                latitude: location.latitude,
-                longitude: location.longitude,
-                radius: 50
-            } : undefined);
+            const excludeIds = Array.from(seenIdsRef.current);
+
+            // Check if we've seen all posts - if so, reset and cycle
+            const shouldReset = seenIdsRef.current.size >= state.totalAvailable && state.totalAvailable > 0;
+            
+            if (shouldReset) {
+                console.log('[Feed] All posts seen (' + seenIdsRef.current.size + '/' + state.totalAvailable + '), resetting to cycle through again');
+                seenIdsRef.current.clear();
+            }
+
+            const response: FeedResponse = await getFeed(
+                1, // Always page 1 since we use excludeIds for pagination
+                limit, 
+                location ? {
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    radius: 50
+                } : undefined,
+                shouldReset ? [] : excludeIds
+            );
+
+            // Track new post IDs
+            response.data.forEach(post => {
+                seenIdsRef.current.add(getPostUniqueId(post));
+            });
+
+            const totalAvailable = response.pagination.total || state.totalAvailable;
 
             setState(prev => ({
+                // When cycling, append at end (don't replace) to prevent flickering
                 posts: [...prev.posts, ...response.data],
                 loading: false,
-                hasMore: response.pagination.hasMore,
-                page: nextPage,
-                error: null
+                hasMore: true, // Always true for infinite cycling
+                page: prev.page + 1,
+                error: null,
+                totalAvailable
             }));
 
-            console.log('[Feed] Loaded page', nextPage, ':', response.data.length, 'posts');
+            console.log('[Feed] Loaded more:', response.data.length, 'posts. Total in view:', state.posts.length + response.data.length);
+            console.log('[Feed] Seen IDs count:', seenIdsRef.current.size, '/', totalAvailable);
         } catch (error) {
             console.error('[Feed] Error loading more posts:', error);
             setState(prev => ({ ...prev, loading: false }));
             showError('Failed to load more posts');
+        } finally {
+            isLoadingRef.current = false;
         }
-    }, [state.loading, state.hasMore, state.page, limit, location, showError]);
+    }, [state.loading, state.totalAvailable, state.posts.length, limit, location, showError]);
 
     /**
      * Refresh feed (pull to refresh or manual refresh)
      */
     const refresh = useCallback(async () => {
+        // Clear seen IDs on refresh
+        seenIdsRef.current.clear();
+        isLoadingRef.current = false;
+        
         setState({
             posts: [],
             loading: true,
             hasMore: true,
             page: 1,
-            error: null
+            error: null,
+            totalAvailable: 0
         });
         await loadInitialFeed();
     }, [loadInitialFeed]);
@@ -203,6 +274,8 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
         loading: state.loading,
         hasMore: state.hasMore,
         error: state.error,
+        totalAvailable: state.totalAvailable,
+        seenCount: seenIdsRef.current.size,
         loadMore,
         refresh,
         updatePost,

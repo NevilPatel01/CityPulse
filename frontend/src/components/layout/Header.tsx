@@ -64,14 +64,6 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      {/* Skip Link for Accessibility */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-pulse focus:text-white focus:rounded focus:shadow-lg"
-      >
-        Skip to main content
-      </a>
-
       <header className='sticky top-0 z-40 border-b border-subtle backdrop-blur-glass bg-surface-glass/95 supports-[backdrop-filter]:bg-surface-glass/80'>
         <div className='container mx-auto px-4 py-3 sm:py-4'>
           {/* Authenticated User Layout - Logo, Search (Desktop only), User Dropdown */}
@@ -94,9 +86,9 @@ export const Header: React.FC = () => {
                 <SearchBar />
               </div>
 
-              {/* Mobile Search Bar - Icon button */}
-              <div className="md:hidden flex-shrink-0">
-                <SearchBar isMobile={true} />
+              {/* Mobile Search Bar - removed (bottom navbar already has search) */}
+              <div className="md:hidden flex-shrink-0 hidden">
+                {/* <SearchBar isMobile={true} /> */}
               </div>
 
               {/* Mobile: Spacer to push notification and user dropdown to the right */}

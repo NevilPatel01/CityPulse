@@ -6,8 +6,6 @@ export interface LeaderboardEntry {
   username: string;
   full_name: string;
   profile_photo_url?: string;
-  achievements_count: number;
-  total_points: number;
   unique_badges?: number;
 }
 
@@ -35,8 +33,8 @@ export interface MyLeaderboardPosition {
  * @param limit - Number of results (default: 10, max: 100)
  */
 export const getLeaderboard = async (
-  type: 'all' | 'achievements' | 'points' | 'badges' = 'all',
-  limit: number = 10
+  type: 'engagement' = 'engagement',
+  limit: number = 3
 ): Promise<LeaderboardResponse> => {
   const response = await apiRequest<LeaderboardResponse>(
     `/api/leaderboard?type=${type}&limit=${limit}`

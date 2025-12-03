@@ -210,16 +210,17 @@ async function searchRecommendations(filters: SearchFilters) {
 
     // Date range filter
     if (filters.dateFrom || filters.dateTo) {
-        const dateConditions: string[] = [];
+        const createdDateConditions: string[] = [];
+        const bestTimeConditions: string[] = [];
         
         if (filters.dateType === 'created' || filters.dateType === 'both') {
             if (filters.dateFrom) {
-                dateConditions.push(`r.created_at >= $${paramIndex}`);
+                createdDateConditions.push(`r.created_at >= $${paramIndex}`);
                 queryParams.push(filters.dateFrom);
                 paramIndex++;
             }
             if (filters.dateTo) {
-                dateConditions.push(`r.created_at <= $${paramIndex}`);
+                createdDateConditions.push(`r.created_at <= $${paramIndex}`);
                 queryParams.push(filters.dateTo);
                 paramIndex++;
             }
@@ -227,19 +228,37 @@ async function searchRecommendations(filters: SearchFilters) {
         
         if (filters.dateType === 'best_time' || filters.dateType === 'both') {
             if (filters.dateFrom) {
-                dateConditions.push(`r.best_time_to_visit >= $${paramIndex}`);
+                bestTimeConditions.push(`r.best_time_to_visit >= $${paramIndex}`);
                 queryParams.push(filters.dateFrom);
                 paramIndex++;
             }
             if (filters.dateTo) {
-                dateConditions.push(`r.best_time_to_visit <= $${paramIndex}`);
+                bestTimeConditions.push(`r.best_time_to_visit <= $${paramIndex}`);
                 queryParams.push(filters.dateTo);
                 paramIndex++;
             }
         }
         
-        if (dateConditions.length > 0) {
-            whereConditions.push(`(${dateConditions.join(' OR ')})`);
+        // Build the date filter condition properly
+        // For each date type, conditions within the same type should be AND (range)
+        // Between different types, they should be OR (match either)
+        const dateGroups: string[] = [];
+        
+        if (createdDateConditions.length > 0) {
+            dateGroups.push(`(${createdDateConditions.join(' AND ')})`);
+        }
+        if (bestTimeConditions.length > 0) {
+            dateGroups.push(`(${bestTimeConditions.join(' AND ')})`);
+        }
+        
+        if (dateGroups.length > 0) {
+            if (filters.dateType === 'both') {
+                // For 'both', either condition should match
+                whereConditions.push(`(${dateGroups.join(' OR ')})`);
+            } else {
+                // For single type, use the one condition group
+                whereConditions.push(dateGroups[0]);
+            }
         }
     }
 
@@ -266,8 +285,10 @@ async function searchRecommendations(filters: SearchFilters) {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    const havingClause = filters.minRating !== undefined 
-        ? `HAVING AVG(rr.rating) >= ${filters.minRating}` 
+    // For minRating filter: only include items that have ratings AND meet the minimum
+    // Use COALESCE to convert NULL to 0, and COUNT to ensure there are actual ratings
+    const havingClause = filters.minRating !== undefined && filters.minRating > 0
+        ? `HAVING COALESCE(AVG(rr.rating), 0) >= ${filters.minRating} AND COUNT(rr.id) > 0` 
         : '';
 
     queryParams.push(filters.limit!, filters.offset!);
@@ -578,9 +599,13 @@ export const getSearchFilters = async (req: Request, res: Response) => {
  * Helper function to format price range
  */
 function formatPriceRange(min: number | null, max: number | null): string {
-    // Show FREE if both are 0
-    if (min === 0 && max === 0) return 'FREE';
-    if (!min && !max) return 'Free';
+    // Treat null as 0 for display purposes
+    const minVal = min ?? 0;
+    const maxVal = max ?? 0;
+    
+    // Show FREE if both are 0 or null
+    if (minVal === 0 && maxVal === 0) return 'FREE';
+    if (!min && !max) return 'FREE';
     if (!min) return `Up to $${max}`;
     if (!max) return `From $${min}`;
     if (min === max) return `$${min}`;
