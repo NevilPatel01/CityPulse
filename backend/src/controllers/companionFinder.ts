@@ -13,7 +13,7 @@ export const findTravelCompanions = async (req: Request, res: Response) => {
         const { city_id, start_date, end_date, limit = 20 } = req.query;
 
         let query = `
-            SELECT DISTINCT
+            SELECT 
                 u.id,
                 u.username,
                 u.full_name,
@@ -28,15 +28,14 @@ export const findTravelCompanions = async (req: Request, res: Response) => {
                 (SELECT json_agg(json_build_object(
                     'name', c.name,
                     'country', c.country
-                ))
-                FROM trip_cities tc
-                JOIN cities c ON tc.city_id = c.id
-                WHERE tc.trip_id = t.id
-                ORDER BY tc.visit_order
+                ) ORDER BY tc2.visit_order)
+                FROM trip_cities tc2
+                JOIN cities c ON tc2.city_id = c.id
+                WHERE tc2.trip_id = t.id
                 ) as cities,
                 -- Check if already connected as buddies
                 (SELECT status FROM travel_buddy_connections 
-                    WHERE ((user_id = $1 AND buddy_id = u.id) OR (user_id = u.id AND buddy_id = $1))
+                    WHERE ((requester_id = $1 AND requested_id = u.id) OR (requester_id = u.id AND requested_id = $1))
                     LIMIT 1) as buddy_status,
                 -- Check if already invited to this trip
                 (SELECT status FROM trip_companions 
@@ -45,13 +44,12 @@ export const findTravelCompanions = async (req: Request, res: Response) => {
             FROM trips t
             JOIN users u ON t.user_id = u.id
             LEFT JOIN user_profiles up ON u.id = up.user_id
-            LEFT JOIN trip_cities tc ON t.id = tc.trip_id
             WHERE t.user_id != $1
             AND t.status IN ('planning', 'active')
             AND (t.privacy = 'public' OR (
                 t.privacy = 'buddies_only' AND EXISTS (
                     SELECT 1 FROM travel_buddy_connections tbc
-                    WHERE ((tbc.user_id = $1 AND tbc.buddy_id = u.id) OR (tbc.user_id = u.id AND tbc.buddy_id = $1))
+                    WHERE ((tbc.requester_id = $1 AND tbc.requested_id = u.id) OR (tbc.requester_id = u.id AND tbc.requested_id = $1))
                     AND tbc.status = 'accepted'
                 )
             ))
@@ -63,7 +61,10 @@ export const findTravelCompanions = async (req: Request, res: Response) => {
         // Filter by city
         if (city_id) {
             paramCount++;
-            query += ` AND tc.city_id = $${paramCount}`;
+            query += ` AND EXISTS (
+                SELECT 1 FROM trip_cities tc
+                WHERE tc.trip_id = t.id AND tc.city_id = $${paramCount}
+            )`;
             params.push(city_id);
         }
 
@@ -241,7 +242,7 @@ export const getUsersGoingToCity = async (req: Request, res: Response) => {
                 tc.departure_date,
                 -- Check buddy status
                 (SELECT status FROM travel_buddy_connections 
-                    WHERE ((user_id = $1 AND buddy_id = u.id) OR (user_id = u.id AND buddy_id = $1))
+                    WHERE ((requester_id = $1 AND requested_id = u.id) OR (requester_id = u.id AND requested_id = $1))
                     LIMIT 1) as buddy_status
             FROM trip_cities tc
             JOIN trips t ON tc.trip_id = t.id
@@ -253,7 +254,7 @@ export const getUsersGoingToCity = async (req: Request, res: Response) => {
             AND (t.privacy = 'public' OR (
                 t.privacy = 'buddies_only' AND EXISTS (
                     SELECT 1 FROM travel_buddy_connections tbc
-                    WHERE ((tbc.user_id = $1 AND tbc.buddy_id = u.id) OR (tbc.user_id = u.id AND tbc.buddy_id = $1))
+                    WHERE ((tbc.requester_id = $1 AND tbc.requested_id = u.id) OR (tbc.requester_id = u.id AND tbc.requested_id = $1))
                     AND tbc.status = 'accepted'
                 )
             ))

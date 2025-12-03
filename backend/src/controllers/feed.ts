@@ -9,7 +9,7 @@ import pool from '../lib/database';
 export const getFeed = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 10, latitude, longitude, radius } = req.query;
 
         if (!userId) {
             return res.status(401).json({
@@ -20,10 +20,12 @@ export const getFeed = async (req: Request, res: Response) => {
 
         const offset = (Number(page) - 1) * Number(limit);
         const totalLimit = Number(limit);
+        const locationFilter = !!(latitude && longitude && radius);
+        let paramIndex = 3; // Start after userId ($1) and limit ($2)
 
         // Get personalized recommendations with scoring
         // Priority: 1. Buddy recommendations (2x), 2. Recent engagement (1.5x), 3. Recent posts (1x)
-        const recommendationsQuery = `
+        let recommendationsQuery = `
             SELECT 
                 r.id,
                 r.title,
@@ -70,7 +72,24 @@ export const getFeed = async (req: Request, res: Response) => {
                     AND (r.likes_count + r.views_count * 0.1) > 5 
                     THEN 1.5
                     ELSE 1.0
-                END as personalization_score
+                END as personalization_score,
+                -- Source field: buddy, trending, or interest
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 FROM travel_buddy_connections tbc
+                        WHERE ((tbc.requester_id = $1 AND tbc.requested_id = r.user_id)
+                            OR (tbc.requester_id = r.user_id AND tbc.requested_id = $1))
+                        AND tbc.status = 'accepted'
+                    ) THEN 'buddy'
+                    WHEN r.created_at >= NOW() - INTERVAL '7 days' 
+                    AND (r.likes_count * 2 + COALESCE((SELECT COUNT(*) FROM recommendation_saves WHERE recommendation_id = r.id), 0) * 3 + r.views_count * 0.1) > 10
+                    THEN 'trending'
+                    WHEN EXISTS (
+                        SELECT 1 FROM user_interests ui
+                        WHERE ui.user_id = $1 AND ui.category_id = r.category_id
+                    ) THEN 'interest'
+                    ELSE 'trending'
+                END as source
             FROM recommendations r
             JOIN users u ON r.user_id = u.id
             JOIN user_profiles up ON u.id = up.user_id
@@ -78,6 +97,25 @@ export const getFeed = async (req: Request, res: Response) => {
             LEFT JOIN recommendation_cities rec_city ON r.id = rec_city.recommendation_id
             LEFT JOIN cities c ON rec_city.city_id = c.id
             WHERE r.status = 'active'
+        `;
+
+        const queryParams: any[] = [userId, totalLimit];
+        
+        if (locationFilter) {
+            recommendationsQuery += ` AND (
+                c.latitude IS NOT NULL AND c.longitude IS NOT NULL AND
+                (6371 * acos(
+                    cos(radians($${paramIndex})) * 
+                    cos(radians(c.latitude)) * 
+                    cos(radians(c.longitude) - radians($${paramIndex + 1})) + 
+                    sin(radians($${paramIndex})) * 
+                    sin(radians(c.latitude))
+                )) <= $${paramIndex + 2}
+            )`;
+            queryParams.push(Number(latitude), Number(longitude), Number(radius));
+        }
+
+        recommendationsQuery += `
             ORDER BY 
                 personalization_score DESC,
                 r.created_at DESC
@@ -137,7 +175,7 @@ export const getFeed = async (req: Request, res: Response) => {
         `;
 
         const [recommendationsResult, tripsResult] = await Promise.all([
-            pool.query(recommendationsQuery, [userId, totalLimit]),
+            pool.query(recommendationsQuery, queryParams),
             pool.query(tripsQuery, [userId, Math.floor(totalLimit / 2)])
         ]);
 
@@ -157,6 +195,11 @@ export const getFeed = async (req: Request, res: Response) => {
         })
          .slice(0, totalLimit);
 
+        // Count sources for debug info
+        const buddyCount = combinedResults.filter((r: any) => r.source === 'buddy').length;
+        const trendingCount = combinedResults.filter((r: any) => r.source === 'trending').length;
+        const interestCount = combinedResults.filter((r: any) => r.source === 'interest').length;
+
         res.status(200).json({
             success: true,
             data: combinedResults,
@@ -169,7 +212,11 @@ export const getFeed = async (req: Request, res: Response) => {
             debug: {
                 recommendationsCount: recommendationsResult.rows.length,
                 tripsCount: tripsResult.rows.length,
-                totalCount: combinedResults.length
+                totalCount: combinedResults.length,
+                buddyCount,
+                trendingCount,
+                interestCount,
+                locationFilter
             }
         });
 
@@ -240,9 +287,25 @@ export const getTrendingRecommendations = async (req: Request, res: Response) =>
         const params = userId ? [userId, Number(limit), offset] : [Number(limit), offset];
         const result = await pool.query(query, params);
 
+        // Get total count for pagination
+        const countQuery = `
+            SELECT COUNT(*) as total
+            FROM recommendations r
+            WHERE r.status = 'active'
+            AND r.created_at >= NOW() - INTERVAL '${Number(days)} days'
+        `;
+        const countResult = await pool.query(countQuery);
+        const total = parseInt(countResult.rows[0].total);
+
         res.status(200).json({
             success: true,
-            data: result.rows
+            data: result.rows,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                hasMore: offset + result.rows.length < total
+            }
         });
 
     } catch (error) {

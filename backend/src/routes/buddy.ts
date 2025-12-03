@@ -46,10 +46,12 @@ router.get('/find', findBuddies);
 router.get('/discover', discoverBuddies);  // Smart network-based discovery
 
 // Buddy request routes
-router.post('/request', buddyLimiter, sendBuddyRequest);
+router.post('/send-request', buddyLimiter, sendBuddyRequest);
+router.post('/request', buddyLimiter, sendBuddyRequest); // Keep old route for compatibility
 router.get('/requests/received', getReceivedBuddyRequests);
 router.get('/requests/sent', getSentBuddyRequests);
 router.post('/requests/:requestId/accept', buddyLimiter, acceptBuddyRequest);
+router.post('/accept-request', buddyLimiter, acceptBuddyRequest); // Accept by request ID in body
 router.post('/requests/:requestId/decline', buddyLimiter, declineBuddyRequest);
 router.delete('/requests/:requestId', buddyLimiter, cancelBuddyRequest);
 

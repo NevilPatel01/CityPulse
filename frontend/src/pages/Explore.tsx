@@ -17,7 +17,7 @@ import {
 } from '../services/feedService';
 import type { UserStats, ActiveBuddy, FeedPost } from '../services/feedService';
 import type { Trip } from '../types/trip';
-import { Loader2, RefreshCw, TrendingUp, Users } from 'lucide-react';
+import { Loader2, RefreshCw, TrendingUp, Users, Rss, MapPin, Heart, Camera, Plane } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Explore Components
@@ -252,8 +252,28 @@ const FeedSection = ({
                         <h3 className="text-lg font-semibold text-primary">{title}</h3>
                     </div>
                 )}
-                <div className="text-center py-8 bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl">
-                    <p className="text-sm text-muted">{emptyMessage}</p>
+                <div className="text-center py-12 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-teal-500/10 border border-subtle rounded-2xl backdrop-blur-sm">
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                        {Icon ? <Icon className="w-10 h-10 text-white/70" /> : <Camera className="w-10 h-10 text-white/70" />}
+                    </div>
+                    <div className="space-y-3 px-6">
+                        <h3 className="text-lg font-medium text-white/90">Discover Amazing Places</h3>
+                        <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{emptyMessage}</p>
+                        <div className="flex flex-wrap gap-2 justify-center mt-4">
+                            <span className="px-3 py-1 bg-white/10 text-white/80 text-xs rounded-full flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                Explore
+                            </span>
+                            <span className="px-3 py-1 bg-white/10 text-white/80 text-xs rounded-full flex items-center gap-1">
+                                <Heart className="w-3 h-3" />
+                                Connect
+                            </span>
+                            <span className="px-3 py-1 bg-white/10 text-white/80 text-xs rounded-full flex items-center gap-1">
+                                <Plane className="w-3 h-3" />
+                                Travel
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -472,7 +492,8 @@ export default function Explore() {
                                     }`}
                                 >
                                     <TrendingUp size={16} />
-                                    <span>Top Places This Month</span>
+                                    <span className="hidden sm:inline">Top Places This Month</span>
+                                    <span className="sm:hidden">Top</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('friends-updates')}
@@ -483,7 +504,8 @@ export default function Explore() {
                                     }`}
                                 >
                                     <Users size={16} />
-                                    <span>Friends' Updates</span>
+                                    <span className="hidden sm:inline">Friends' Updates</span>
+                                    <span className="sm:hidden">Friends</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('feed')}
@@ -493,7 +515,9 @@ export default function Explore() {
                                             : 'bg-white/5 text-muted hover:bg-white/10 hover:text-primary'
                                     }`}
                                 >
-                                    <span>Your Feed</span>
+                                    <Rss size={16} />
+                                    <span className="hidden sm:inline">Your Feed</span>
+                                    <span className="sm:hidden">Feed</span>
                                 </button>
                             </div>
                         </div>
@@ -619,38 +643,42 @@ export default function Explore() {
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-500 delay-150">
                             {/* Tab Navigation */}
                             <div className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl p-3 sticky top-20 z-10 shadow-lg">
-                                <div className="flex gap-3">
+                                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
                                     <button
                                         onClick={() => setActiveTab('top-places')}
-                                        className={`px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 ${
+                                        className={`px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                                             activeTab === 'top-places'
                                                 ? 'bg-pulse text-white shadow-lg shadow-pulse/20'
                                                 : 'bg-white/5 text-muted hover:bg-white/10 hover:text-primary'
                                         }`}
                                     >
                                         <TrendingUp size={18} />
-                                        <span>Top Places This Month</span>
+                                        <span className="hidden lg:inline">Top Places This Month</span>
+                                        <span className="lg:hidden">Top</span>
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('friends-updates')}
-                                        className={`px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 ${
+                                        className={`px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                                             activeTab === 'friends-updates'
                                                 ? 'bg-pulse text-white shadow-lg shadow-pulse/20'
                                                 : 'bg-white/5 text-muted hover:bg-white/10 hover:text-primary'
                                         }`}
                                     >
                                         <Users size={18} />
-                                        <span>Friends' Updates</span>
+                                        <span className="hidden lg:inline">Friends' Updates</span>
+                                        <span className="lg:hidden">Friends</span>
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('feed')}
-                                        className={`px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 ${
+                                        className={`px-6 py-3 rounded-xl font-medium text-sm transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                                             activeTab === 'feed'
                                                 ? 'bg-pulse text-white shadow-lg shadow-pulse/20'
                                                 : 'bg-white/5 text-muted hover:bg-white/10 hover:text-primary'
                                         }`}
                                     >
-                                        <span>Your Feed</span>
+                                        <Rss size={18} />
+                                        <span className="hidden lg:inline">Your Feed</span>
+                                        <span className="lg:hidden">Feed</span>
                                     </button>
                                 </div>
                             </div>
@@ -708,9 +736,30 @@ export default function Explore() {
                                                 <Loader2 className="animate-spin text-pulse" size={40} />
                                             </div>
                                         ) : filteredPosts.length === 0 ? (
-                                            <div className="text-center py-16 bg-surface-glass backdrop-blur-glass border border-subtle rounded-2xl">
-                                                <p className="text-muted mb-4 text-lg">No posts in your feed yet</p>
-                                                <p className="text-sm text-muted mb-6">Start following buddies or explore recommendations</p>
+                                            <div className="text-center py-16 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-teal-500/10 border border-subtle rounded-2xl backdrop-blur-sm">
+                                                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                                                    <Rss className="w-12 h-12 text-white/70" />
+                                                </div>
+                                                <div className="space-y-4 px-6">
+                                                    <h3 className="text-xl font-semibold text-white/90">Your Feed is Empty</h3>
+                                                    <p className="text-sm text-white/70 max-w-md mx-auto leading-relaxed">
+                                                        Start following travel buddies or explore amazing recommendations to see personalized content here
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-2 justify-center mt-6">
+                                                        <span className="px-4 py-2 bg-white/10 text-white/80 text-sm rounded-full flex items-center gap-2">
+                                                            <Users className="w-4 h-4" />
+                                                            Find Buddies
+                                                        </span>
+                                                        <span className="px-4 py-2 bg-white/10 text-white/80 text-sm rounded-full flex items-center gap-2">
+                                                            <MapPin className="w-4 h-4" />
+                                                            Explore Places
+                                                        </span>
+                                                        <span className="px-4 py-2 bg-white/10 text-white/80 text-sm rounded-full flex items-center gap-2">
+                                                            <Heart className="w-4 h-4" />
+                                                            Like Content
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         ) : (
                                             <>

@@ -162,16 +162,38 @@ async function searchRecommendations(filters: SearchFilters) {
         paramIndex++;
     }
 
-    // Price range filter
-    if (filters.priceMin !== undefined) {
-        whereConditions.push(`(r.price_range_min >= $${paramIndex} OR r.price_range_min IS NULL)`);
-        queryParams.push(filters.priceMin);
-        paramIndex++;
-    }
-    if (filters.priceMax !== undefined) {
-        whereConditions.push(`(r.price_range_max <= $${paramIndex} OR r.price_range_max IS NULL)`);
-        queryParams.push(filters.priceMax);
-        paramIndex++;
+    // Price range filter - check if price range overlaps with requested range
+    // A range overlaps if: (rec_min <= filter_max) AND (rec_max >= filter_min)
+    if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
+        const priceParts: string[] = [];
+        
+        if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
+            // Both min and max specified - check overlap
+            queryParams.push(filters.priceMin, filters.priceMax);
+            priceParts.push(`(
+                (r.price_range_min IS NULL AND r.price_range_max IS NULL) OR
+                (r.price_range_min <= $${paramIndex + 1} AND (r.price_range_max >= $${paramIndex} OR r.price_range_max IS NULL))
+            )`);
+            paramIndex += 2;
+        } else if (filters.priceMin !== undefined) {
+            // Only min specified - include if max >= min
+            queryParams.push(filters.priceMin);
+            priceParts.push(`(
+                r.price_range_max IS NULL OR r.price_range_max >= $${paramIndex}
+            )`);
+            paramIndex++;
+        } else if (filters.priceMax !== undefined) {
+            // Only max specified - include if min <= max
+            queryParams.push(filters.priceMax);
+            priceParts.push(`(
+                r.price_range_min IS NULL OR r.price_range_min <= $${paramIndex}
+            )`);
+            paramIndex++;
+        }
+        
+        if (priceParts.length > 0) {
+            whereConditions.push(priceParts.join(' AND '));
+        }
     }
 
     // Minimum rating filter

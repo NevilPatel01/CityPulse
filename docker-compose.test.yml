@@ -1,0 +1,18 @@
+services:
+  postgres-test:
+    build:
+      context: ./backend/sql
+      dockerfile: Dockerfile.postgres
+    container_name: citypulse-postgres-test
+    environment:
+      POSTGRES_USER: citypulse_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: citypulse_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U citypulse_user -d citypulse_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped

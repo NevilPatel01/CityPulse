@@ -346,7 +346,7 @@ export function RecommendationCard({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              navigate(`/city/${recommendation.city_name}`);
+              navigate(`/city/${recommendation.city_name.split(',')[0].trim()}`);
             }}
                 className="text-sm text-white hover:text-pulse transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >

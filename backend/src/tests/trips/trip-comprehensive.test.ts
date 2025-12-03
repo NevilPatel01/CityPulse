@@ -123,7 +123,7 @@ describe('Trip Planning Comprehensive Tests', () => {
                     estimated_cost: 50.00,
                     location_name: 'Test Location'
                 })
-                .expect(200);
+                .expect(201);
 
             expect(response.body.success).toBe(true);
             expect(response.body.data.title).toBe('Morning Activity');
@@ -599,7 +599,7 @@ describe('Trip Planning Comprehensive Tests', () => {
     describe('Companion Finder Algorithm', () => {
         it('should find potential companions based on trip details', async () => {
             const response = await request(app)
-                .get('/api/companion-finder')
+                .get('/api/trips/find/companions')
                 .set('Authorization', `Bearer ${organizerToken}`)
                 .query({
                     city_id: testCity.id,

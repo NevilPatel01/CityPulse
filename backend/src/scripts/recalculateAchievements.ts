@@ -56,7 +56,7 @@ async function recalculateAchievements() {
 
             // Travel buddies connected
             const buddyResult = await query(
-                'SELECT COUNT(*) as count FROM buddies WHERE (user_id = $1 OR buddy_id = $1) AND status = $2',
+                'SELECT COUNT(*) as count FROM travel_buddy_connections WHERE (requester_id = $1 OR requested_id = $1) AND status = $2',
                 [user.id, 'accepted']
             );
             userStats.travel_buddies_connected = parseInt(buddyResult.rows[0].count);

@@ -304,7 +304,18 @@ const TripDetailPage = () => {
         {/* Hero Section */}
         <div className="trip-hero">
           {trip.cover_image_url ? (
-            <img src={trip.cover_image_url} alt={trip.title} className="trip-cover" />
+            <img 
+              src={trip.cover_image_url} 
+              alt={trip.title} 
+              className="trip-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const placeholder = e.currentTarget.parentElement?.querySelector('.trip-cover-placeholder');
+                if (placeholder) {
+                  (placeholder as HTMLElement).style.display = 'flex';
+                }
+              }}
+            />
           ) : (
             <div className="trip-cover-placeholder">
               <Plane className="placeholder-icon" />

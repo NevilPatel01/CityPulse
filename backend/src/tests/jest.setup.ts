@@ -24,6 +24,7 @@ if (process.env.TEST_DATABASE_URL) {
 }
 
 import { verifyDatabaseConnection, cleanupTestDataByPattern } from './helpers/test-helpers';
+import { closePool } from '../lib/database';
 
 // Set longer timeout for integration tests
 jest.setTimeout(30000);
@@ -51,6 +52,15 @@ afterAll(async () => {
     // Final cleanup of all test data
     await cleanupTestDataByPattern('%test_%');
     console.log('✅ Test cleanup complete\n');
+    
+    // Close database pool to prevent open handles
+    try {
+        await closePool();
+        console.log('✅ Database pool closed\n');
+    } catch (error) {
+        console.error('⚠️ Error closing database pool:', error);
+    }
+    
     console.log('🎉 Test Suite Finished!\n');
 });
 

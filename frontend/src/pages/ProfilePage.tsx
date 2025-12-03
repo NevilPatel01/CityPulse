@@ -701,7 +701,7 @@ export default function ProfilePage() {
                       <span 
                         key={index} 
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-primary hover:border-pulse/40 hover:bg-pulse/10 transition-all duration-300 cursor-pointer"
-                            onClick={() => navigate(`/city/${city}`)}
+                            onClick={() => navigate(`/city/${city.split(',')[0].trim()}`)}
                       >
                             <MapPin size={10} className="text-pulse" />
                         {city}

@@ -426,7 +426,7 @@ describe('Notification System API', () => {
         afterEach(async () => {
             // Clean up buddy relationships
             await query(
-                'DELETE FROM buddies WHERE user_id IN ($1, $2) OR buddy_id IN ($1, $2)',
+                'DELETE FROM travel_buddy_connections WHERE requester_id IN ($1, $2) OR requested_id IN ($1, $2)',
                 [user1.id, user2.id]
             );
         });

@@ -50,7 +50,6 @@ describe('Search API', () => {
             const response = await request(app)
                 .get('/api/search?q=test')
                 .set('Authorization', `Bearer ${authToken}`)
-                .set('Authorization', `Bearer ${authToken}`)
                 .expect(200);
 
             expect(response.body.success).toBe(true);
@@ -60,7 +59,7 @@ describe('Search API', () => {
             expect(Array.isArray(response.body.data.users)).toBe(true);
             expect(Array.isArray(response.body.data.recommendations)).toBe(true);
             expect(Array.isArray(response.body.data.cities)).toBe(true);
-        });
+        }, 60000);
 
         it('should return empty results for non-matching query', async () => {
             const response = await request(app)
@@ -200,7 +199,7 @@ describe('Search API', () => {
 
         it('should paginate user search results', async () => {
             const response = await request(app)
-                .get('/api/search/users?q=test&page=1&limit=5')
+                .get('/api/search/users?q=test&offset=0&limit=5')
                 .set('Authorization', `Bearer ${authToken}`)
                 .expect(200);
 

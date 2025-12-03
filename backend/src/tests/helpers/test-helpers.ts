@@ -145,10 +145,10 @@ export const createGoogleTestUser = async (overrides: any = {}) => {
 /**
  * Generate JWT token for authenticated requests
  */
-export const generateTestToken = (userId: number, expiresIn: string | number = '1h'): string => {
-    const secret = process.env.JWT_SECRET || 'test-secret';
+export const generateTestToken = (userId: number, role: string = 'user', expiresIn: string | number = '1h'): string => {
+    const secret = process.env.JWT_SECRET || 'dev-jwt-secret-key-will-change-in-production';
     return jwt.sign(
-        { userId, role: 'user', email: `user${userId}@test.com`, username: `user${userId}` },
+        { userId, role, email: `user${userId}@test.com`, username: `user${userId}` },
         secret,
         {
             expiresIn,
@@ -161,10 +161,10 @@ export const generateTestToken = (userId: number, expiresIn: string | number = '
 /**
  * Generate refresh token
  */
-export const generateTestRefreshToken = (userId: number): string => {
-    const secret = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret';
+export const generateTestRefreshToken = (userId: number, role: string = 'user'): string => {
+    const secret = process.env.JWT_REFRESH_SECRET || 'dev-jwt-secret-key-will-change-in-production';
     return jwt.sign(
-        { userId, role: 'user', email: `user${userId}@test.com`, username: `user${userId}` },
+        { userId, role, email: `user${userId}@test.com`, username: `user${userId}` },
         secret,
         {
             expiresIn: '7d',

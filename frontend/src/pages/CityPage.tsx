@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  MapPin, Users, TrendingUp, Compass, Filter, User
+  MapPin, Users, TrendingUp, Compass, Filter
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiRequest, apiConfig } from '../config/api';
 import { Header } from '../components/layout/Header';
+import Avatar from '../components/ui/Avatar';
 
 interface City {
   id: number;
@@ -334,17 +335,12 @@ export default function CityPage() {
                             className='absolute bottom-4 right-4 z-10'
                             title={`View ${rec.creator.fullName}'s profile`}
                           >
-                            {rec.creator.profilePhoto ? (
-                              <img
-                                src={getImageUrl(rec.creator.profilePhoto) || ''}
-                                alt={rec.creator.fullName}
-                                className='w-8 h-8 rounded-full object-cover border-2 border-pulse hover:border-pulse/80 transition-colors'
-                              />
-                            ) : (
-                              <div className='w-8 h-8 rounded-full bg-pulse/20 flex items-center justify-center border-2 border-pulse hover:border-pulse/80 transition-colors'>
-                                <User className='w-4 h-4 text-pulse' />
-                              </div>
-                            )}
+                            <Avatar
+                              src={rec.creator.profilePhoto}
+                              name={rec.creator.fullName}
+                              size="sm"
+                              className="border-2 border-pulse hover:border-pulse/80 transition-colors"
+                            />
                           </Link>
                         )}
                       </div>
@@ -445,17 +441,12 @@ export default function CityPage() {
                             className='absolute bottom-4 right-4 z-10'
                             title={`View ${rec.creator.fullName}'s profile`}
                           >
-                            {rec.creator.profilePhoto ? (
-                              <img
-                                src={getImageUrl(rec.creator.profilePhoto) || ''}
-                                alt={rec.creator.fullName}
-                                className='w-8 h-8 rounded-full object-cover border-2 border-pulse hover:border-pulse/80 transition-colors'
-                              />
-                            ) : (
-                              <div className='w-8 h-8 rounded-full bg-pulse/20 flex items-center justify-center border-2 border-pulse hover:border-pulse/80 transition-colors'>
-                                <User className='w-4 h-4 text-pulse' />
-                              </div>
-                            )}
+                            <Avatar
+                              src={rec.creator.profilePhoto}
+                              name={rec.creator.fullName}
+                              size="sm"
+                              className="border-2 border-pulse hover:border-pulse/80 transition-colors"
+                            />
                           </Link>
                         )}
                       </div>

@@ -137,7 +137,7 @@ volumes:
   uploads_data:
     driver: local
   nginx_logs:
-    external: true
+    driver: local
 
 networks:
   citypulse-network:

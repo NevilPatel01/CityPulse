@@ -25,6 +25,20 @@ export const toggleBookmark = async (req: Request, res: Response) => {
 
         await client.query('BEGIN');
 
+        // Check if recommendation exists
+        const recommendationCheck = await client.query(
+            'SELECT id FROM recommendations WHERE id = $1',
+            [recommendationId]
+        );
+
+        if (recommendationCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found'
+            });
+        }
+
         // Check if bookmark exists
         const existingBookmark = await client.query(
             'SELECT id FROM recommendation_saves WHERE user_id = $1 AND recommendation_id = $2',
@@ -283,7 +297,7 @@ export const reportRecommendation = async (req: Request, res: Response) => {
             [userId, 'recommendation', recommendationId, reason, description]
         );
 
-        res.status(201).json({
+        res.status(200).json({
             success: true,
             message: 'Report submitted successfully. Our team will review it.'
         });

@@ -60,6 +60,9 @@ export const getUserAchievements = async (req: Request, res: Response) => {
 
         const userId = userResult.rows[0].id;
 
+        // Check if viewing own achievements
+        const isOwnProfile = req.user && req.user.userId === userId;
+        
         // Get user achievements with progress
         const achievementsResult = await query(
             `SELECT 
@@ -71,7 +74,7 @@ export const getUserAchievements = async (req: Request, res: Response) => {
                 a.target_value,
                 ua.current_progress,
                 ua.is_completed,
-                ua.completed_at,
+                ${isOwnProfile ? 'ua.completed_at,' : ''}
                 ROUND((ua.current_progress::DECIMAL / a.target_value) * 100, 2) as progress_percentage
             FROM achievements a
             LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = $1
@@ -175,8 +178,10 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
 
             case 'cities_visited':
                 const cityResult = await query(
-                    `SELECT jsonb_array_length(COALESCE(cities_visited, '[]'::jsonb)) as count 
-                     FROM user_profiles WHERE user_id = $1`,
+                    `SELECT COUNT(DISTINCT rc.city_id) as count
+                     FROM recommendations r
+                     JOIN recommendation_cities rc ON r.id = rc.recommendation_id
+                     WHERE r.user_id = $1`,
                     [userId]
                 );
                 currentValue = cityResult.rows.length > 0 ? parseInt(cityResult.rows[0].count || '0') : 0;
@@ -326,6 +331,51 @@ export const getRecentAchievements = async (req: Request, res: Response) => {
     }
 };
 
+// Manual achievement check endpoint (for testing)
+export const checkAchievements = async (req: Request, res: Response) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const userId = req.user.userId;
+        
+        // Check all achievement types
+        const achievementTypes = [
+            'recommendations_created',
+            'cities_visited', 
+            'travel_buddies_connected',
+            'ratings_received',
+            'likes_received'
+        ];
+
+        const newlyEarned = [];
+        
+        for (const type of achievementTypes) {
+            const earned = await checkAndAwardAchievements(userId, type);
+            newlyEarned.push(...earned);
+        }
+
+        res.json({
+            success: true,
+            data: {
+                newlyEarned,
+                message: `Checked all achievements. ${newlyEarned.length} new achievements earned.`
+            }
+        });
+
+    } catch (error) {
+        console.error('Check achievements error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
 // Get achievement statistics
 export const getAchievementStats = async (req: Request, res: Response) => {
     try {
@@ -386,6 +436,76 @@ export const getAchievementStats = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error('Get achievement stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Unlock a specific achievement (for testing purposes)
+export const unlockAchievement = async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    const { achievementId } = req.body;
+    
+    if (!userId) {
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication required'
+        });
+    }
+
+    if (!achievementId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Achievement ID is required'
+        });
+    }
+
+    try {
+        // Check if achievement exists
+        const achievementCheck = await query(
+            'SELECT id, name FROM achievements WHERE id = $1',
+            [achievementId]
+        );
+
+        if (achievementCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Achievement not found'
+            });
+        }
+
+        // Check if user already has this achievement
+        const existingAchievement = await query(
+            'SELECT id FROM user_achievements WHERE user_id = $1 AND achievement_id = $2',
+            [userId, achievementId]
+        );
+
+        if (existingAchievement.rows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'Achievement already unlocked'
+            });
+        }
+
+        // Unlock the achievement
+        await query(
+            `INSERT INTO user_achievements (user_id, achievement_id, is_completed, completed_at, current_progress)
+             VALUES ($1, $2, TRUE, NOW(), 100)`,
+            [userId, achievementId]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Achievement unlocked successfully',
+            data: {
+                achievement_name: achievementCheck.rows[0].name,
+                unlocked_at: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Error unlocking achievement:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

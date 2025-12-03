@@ -246,11 +246,10 @@ describe('Feed System', () => {
 
     describe('GET /api/feed/active-buddies', () => {
         beforeEach(async () => {
-            // Update last_active for user2
-            await query(
-                'UPDATE users SET last_active = NOW() WHERE id = $1',
-                [user2.id]
-            );
+            // Create a recent recommendation for user2 to set last_active
+            await createTestRecommendation(user2.id, {
+                title: 'Recent Activity Test'
+            });
         });
 
         it('should get active buddies', async () => {
@@ -302,14 +301,15 @@ describe('Feed System', () => {
                 [user1.id, user3.id]
             );
 
-            await query(
-                'UPDATE users SET last_active = NOW() - INTERVAL \'1 hour\' WHERE id = $1',
-                [user2.id]
-            );
-            await query(
-                'UPDATE users SET last_active = NOW() WHERE id = $1',
-                [user3.id]
-            );
+            // Create recommendations with different timestamps to simulate activity
+            await createTestRecommendation(user2.id, {
+                title: 'Older Activity'
+            });
+            // Wait a bit to ensure different timestamps
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await createTestRecommendation(user3.id, {
+                title: 'Recent Activity'
+            });
 
             const response = await request(app)
                 .get('/api/feed/active-buddies')

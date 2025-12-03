@@ -5,11 +5,12 @@ import { Button } from '../components/ui/button';
 import { ImageCarousel } from '../components/recommendations/ImageCarousel';
 import { PhotoUpload } from '../components/recommendations/PhotoUpload';
 import { Header } from '../components/layout/Header';
+import Avatar from '../components/ui/Avatar';
 import { useAuth } from '../hooks/useAuth';
 import { useSafeToast } from '../hooks/useSafeToast';
 import { apiRequest, apiConfig } from '../config/api';
 import { ReportModal } from '../components/modals/ReportModal';
-import { reportPost, toggleBookmark, checkBookmarkStatus } from '../services/feedService';
+import { reportPost, toggleBookmark, checkBookmarkStatus, recordShare } from '../services/feedService';
 
 interface Recommendation {
   id: number;
@@ -74,6 +75,8 @@ export function RecommendationDetailPage() {
   const [savesCount, setSavesCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [viewsCount, setViewsCount] = useState(0);
+  const [sharesCount, setSharesCount] = useState(0);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [showRatingActions, setShowRatingActions] = useState(false);
   const [userRatings, setUserRatings] = useState<Array<{
@@ -142,6 +145,8 @@ export function RecommendationDetailPage() {
         setLikesCount(data.data.likes_count);
         setIsLiked(data.data.user_has_liked || false);
         setSavesCount(data.data.saves_count || 0);
+        setViewsCount(data.data.views_count);
+        setSharesCount(data.data.shares_count || 0);
         // Set user's rating if they've already rated
         if (data.data.user_rating_value) {
           setUserRating(data.data.user_rating_value);
@@ -178,6 +183,40 @@ export function RecommendationDetailPage() {
       void fetchUserRatings();
     }
   }, [id, fetchUserRatings]);
+
+  // Track view count - only once per session to avoid inflating views
+  useEffect(() => {
+    const trackView = async () => {
+      if (!id || !recommendation) return;
+      
+      // Check if already viewed in this session
+      const viewedKey = `viewed_recommendation_${id}`;
+      const hasViewed = sessionStorage.getItem(viewedKey);
+      
+      if (hasViewed) return;
+      
+      try {
+        // Record view in backend
+        await apiRequest(`/api/recommendations/${id}/view`, { method: 'POST' });
+        
+        // Mark as viewed in session
+        sessionStorage.setItem(viewedKey, 'true');
+        
+        // Increment local count
+        setViewsCount(prev => prev + 1);
+      } catch (error) {
+        console.error('Error tracking view:', error);
+        // Silently fail - view tracking is not critical
+      }
+    };
+    
+    // Track view after a short delay to ensure it's a real view
+    const timer = setTimeout(() => {
+      void trackView();
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [id, recommendation]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -374,12 +413,26 @@ export function RecommendationDetailPage() {
   };
 
   const handleShare = async () => {
+    if (!id) return;
+    
     const url = window.location.href;
     
     try {
+      // Copy to clipboard
       await navigator.clipboard.writeText(url);
       setLinkCopied(true);
       showSuccess('Link copied to clipboard!');
+      
+      // Optimistically increment share count
+      setSharesCount(prev => prev + 1);
+      
+      // Record share in backend
+      try {
+        await recordShare(Number(id), 'link');
+      } catch (shareError) {
+        console.error('Error recording share:', shareError);
+        // Don't revert count - user still shared the link
+      }
       
       setTimeout(() => {
         setLinkCopied(false);
@@ -542,7 +595,7 @@ export function RecommendationDetailPage() {
               
               <div className="flex flex-wrap items-center gap-3 text-muted mb-4">
                 <Link
-                  to={`/city/${recommendation.city_name}`}
+                  to={`/city/${recommendation.city_name.split(',')[0].trim()}`}
                   className="inline-flex items-center gap-1 hover:text-pulse transition-colors"
                 >
                   <MapPin className="w-4 h-4" />
@@ -687,11 +740,11 @@ export function RecommendationDetailPage() {
                     ) : (
                       <Share2 className="w-6 h-6 text-primary hover:text-pulse hover:scale-110 transition-all" />
                     )}
-                    <span className="text-xs font-medium text-primary">{recommendation.shares_count || 0}</span>
+                    <span className="text-xs font-medium text-primary">{sharesCount}</span>
                   </button>
                   <div className="flex flex-col items-center gap-1">
                     <Eye className="w-6 h-6 text-primary" />
-                    <span className="text-xs font-medium text-primary">{recommendation.views_count}</span>
+                    <span className="text-xs font-medium text-primary">{viewsCount}</span>
                   </div>
                 </div>
                 
@@ -767,19 +820,11 @@ export function RecommendationDetailPage() {
                     {userRatings.map((rating) => (
                       <div key={`${rating.user_id}-${rating.created_at}`} className="flex items-start gap-3 p-3 bg-surface-glass/50 rounded-lg hover:bg-surface-glass transition-colors">
                         <Link to={`/profile/${rating.username}`}>
-                          {rating.profile_picture_url ? (
-                            <img
-                              src={rating.profile_picture_url.startsWith('http') ? rating.profile_picture_url : `${apiConfig.baseUrl}${rating.profile_picture_url}`}
-                              alt={rating.full_name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-pulse to-orange-600 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-bold text-white">
-                                {rating.full_name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
+                          <Avatar
+                            src={rating.profile_picture_url}
+                            name={rating.full_name}
+                            size="md"
+                          />
                         </Link>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
@@ -899,19 +944,11 @@ export function RecommendationDetailPage() {
                 to={`/profile/${recommendation.username}`}
                 className="flex items-center gap-3 group"
               >
-                {recommendation.profile_picture_url ? (
-                  <img
-                    src={recommendation.profile_picture_url.startsWith('http') ? recommendation.profile_picture_url : `${apiConfig.baseUrl}${recommendation.profile_picture_url}`}
-                    alt={recommendation.full_name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-gradient-to-br from-pulse to-orange-600 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-white">
-                      {recommendation.full_name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
+                <Avatar
+                  src={recommendation.profile_picture_url}
+                  name={recommendation.full_name}
+                  size="lg"
+                />
                 <div>
                   <p className="font-semibold text-primary group-hover:text-pulse transition-colors">
                     {recommendation.full_name}

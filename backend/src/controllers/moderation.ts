@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../lib/database';
+import { query } from '../lib/database';
 
 /**
  * Get dashboard statistics for moderator
@@ -19,7 +19,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM moderator_actions WHERE moderator_id = $1 AND created_at > NOW() - INTERVAL '30 days') as my_actions_30d
     `;
 
-        const result = await pool.query(statsQuery, [moderatorId]);
+        const result = await query(statsQuery, [moderatorId]);
 
         res.json({
             success: true,
@@ -111,8 +111,8 @@ export const getContentReports = async (req: Request, res: Response) => {
     `;
 
         const [reportsResult, countResult] = await Promise.all([
-            pool.query(reportsQuery, queryParams),
-            pool.query(countQuery, queryParams.slice(0, -2))
+            query(reportsQuery, queryParams),
+            query(countQuery, queryParams.slice(0, -2))
         ]);
 
         const total = parseInt(countResult.rows[0].total);
@@ -171,8 +171,8 @@ export const updateReportStatus = async (req: Request, res: Response) => {
     `;
 
         const result = status === 'pending'
-            ? await pool.query(updateQuery, [status, reportId])
-            : await pool.query(updateQuery, [status, moderatorId, reportId]);
+            ? await query(updateQuery, [status, reportId])
+            : await query(updateQuery, [status, moderatorId, reportId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -183,14 +183,14 @@ export const updateReportStatus = async (req: Request, res: Response) => {
 
         // Log moderator action (skip if reopening to pending)
         if (status !== 'pending') {
-        await pool.query(
+        await query(
             `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
         VALUES ($1, $2, $3, $4, $5, $6)`,
             [moderatorId, 'report_status_update', 'content_report', reportId, `Status changed to ${status}`, notes || null]
         );
         } else {
             // Log as report reopened
-            await pool.query(
+            await query(
                 `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
             VALUES ($1, $2, $3, $4, $5, $6)`,
                 [moderatorId, 'report_status_update', 'content_report', reportId, 'Report reopened for review', notes || null]
@@ -231,7 +231,7 @@ export const removeContent = async (req: Request, res: Response) => {
 
         // Soft delete based on content type
         if (contentType === 'recommendation') {
-            const result = await pool.query(
+            const result = await query(
                 `UPDATE recommendations SET status = 'removed', report_reason = $1 WHERE id = $2 RETURNING user_id, title`,
                 [reason, contentId]
             );
@@ -241,7 +241,7 @@ export const removeContent = async (req: Request, res: Response) => {
             contentOwnerId = result.rows[0].user_id;
             contentTitle = result.rows[0].title;
         } else if (contentType === 'trip') {
-            const result = await pool.query(
+            const result = await query(
                 `UPDATE trips SET status = 'cancelled' WHERE id = $1 RETURNING user_id, title`,
                 [contentId]
             );
@@ -251,7 +251,7 @@ export const removeContent = async (req: Request, res: Response) => {
             contentOwnerId = result.rows[0].user_id;
             contentTitle = result.rows[0].title;
         } else if (contentType === 'profile') {
-            const result = await pool.query(
+            const result = await query(
                 `UPDATE users SET account_status = 'suspended' WHERE id = $1 RETURNING id, username`,
                 [contentId]
             );
@@ -268,7 +268,7 @@ export const removeContent = async (req: Request, res: Response) => {
         }
 
         // Log moderator action
-        await pool.query(
+        await query(
             `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason)
         VALUES ($1, $2, $3, $4, $5)`,
             [moderatorId, 'content_removal', contentType, contentId, reason]
@@ -276,7 +276,7 @@ export const removeContent = async (req: Request, res: Response) => {
 
         // Notify user if enabled
         if (notifyUser && contentOwnerId) {
-            await pool.query(
+            await query(
                 `INSERT INTO notifications (user_id, title, message, notification_type, related_id, related_user_id)
         VALUES ($1, $2, $3, $4, $5, $6)`,
                 [
@@ -327,7 +327,7 @@ export const issueWarning = async (req: Request, res: Response) => {
         }
 
         // Insert warning
-        const warningResult = await pool.query(
+        const warningResult = await query(
             `INSERT INTO user_warnings (user_id, moderator_id, warning_type, message, is_active)
         VALUES ($1, $2, $3, $4, true)
        RETURNING *`,
@@ -335,7 +335,7 @@ export const issueWarning = async (req: Request, res: Response) => {
         );
 
         // Get active warnings count
-        const warningCountResult = await pool.query(
+        const warningCountResult = await query(
             `SELECT COUNT(*) as count FROM user_warnings WHERE user_id = $1 AND is_active = true`,
             [userId]
         );
@@ -347,19 +347,19 @@ export const issueWarning = async (req: Request, res: Response) => {
 
         if (severity === 'high' && activeWarnings >= 2) {
             accountStatus = 'banned';
-            await pool.query(`UPDATE users SET account_status = 'banned' WHERE id = $1`, [userId]);
+            await query(`UPDATE users SET account_status = 'banned' WHERE id = $1`, [userId]);
         } else if (severity === 'medium' && activeWarnings >= 3) {
             accountStatus = 'suspended';
             suspensionDays = 7;
-            await pool.query(`UPDATE users SET account_status = 'suspended' WHERE id = $1`, [userId]);
+            await query(`UPDATE users SET account_status = 'suspended' WHERE id = $1`, [userId]);
         } else if (severity === 'low' && activeWarnings >= 5) {
             accountStatus = 'suspended';
             suspensionDays = 3;
-            await pool.query(`UPDATE users SET account_status = 'suspended' WHERE id = $1`, [userId]);
+            await query(`UPDATE users SET account_status = 'suspended' WHERE id = $1`, [userId]);
         }
 
         // Log moderator action
-        await pool.query(
+        await query(
             `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
         VALUES ($1, $2, $3, $4, $5, $6)`,
             [moderatorId, 'warning_issued', 'user', userId, warningType, `Severity: ${severity}, Active warnings: ${activeWarnings}`]
@@ -373,7 +373,7 @@ export const issueWarning = async (req: Request, res: Response) => {
             notificationMessage += ` Your account has been suspended for ${suspensionDays} days.`;
         }
 
-        await pool.query(
+        await query(
             `INSERT INTO notifications (user_id, title, message, notification_type, related_user_id)
        VALUES ($1, $2, $3, $4, $5)`,
             [userId, 'Warning Issued', notificationMessage, 'system', moderatorId]
@@ -413,20 +413,20 @@ export const suspendUser = async (req: Request, res: Response) => {
             });
         }
 
-        await pool.query(
+        await query(
             `UPDATE users SET account_status = 'suspended' WHERE id = $1`,
             [userId]
         );
 
         // Log moderator action
-        await pool.query(
+        await query(
             `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason, notes)
         VALUES ($1, $2, $3, $4, $5, $6)`,
             [moderatorId, 'user_suspension', 'user', userId, reason, `Duration: ${days} days`]
         );
 
         // Notify user
-        await pool.query(
+        await query(
             `INSERT INTO notifications (user_id, title, message, notification_type, related_user_id)
         VALUES ($1, $2, $3, $4, $5)`,
             [
@@ -467,20 +467,20 @@ export const banUser = async (req: Request, res: Response) => {
             });
         }
 
-        await pool.query(
+        await query(
             `UPDATE users SET account_status = 'banned' WHERE id = $1`,
             [userId]
         );
 
         // Log moderator action
-        await pool.query(
+        await query(
             `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason)
         VALUES ($1, $2, $3, $4, $5)`,
             [moderatorId, 'user_ban', 'user', userId, reason]
         );
 
         // Notify user
-        await pool.query(
+        await query(
             `INSERT INTO notifications (user_id, title, message, notification_type, related_user_id)
         VALUES ($1, $2, $3, $4, $5)`,
             [
@@ -514,26 +514,26 @@ export const reinstateUser = async (req: Request, res: Response) => {
         const { userId } = req.params;
         const { reason } = req.body;
 
-        await pool.query(
+        await query(
             `UPDATE users SET account_status = 'active' WHERE id = $1`,
             [userId]
         );
 
         // Deactivate all warnings
-        await pool.query(
+        await query(
             `UPDATE user_warnings SET is_active = false WHERE user_id = $1`,
             [userId]
         );
 
         // Log moderator action
-        await pool.query(
+        await query(
             `INSERT INTO moderator_actions (moderator_id, action_type, target_type, target_id, reason)
         VALUES ($1, $2, $3, $4, $5)`,
             [moderatorId, 'user_reinstatement', 'user', userId, reason || 'Account reinstated']
         );
 
         // Notify user
-        await pool.query(
+        await query(
             `INSERT INTO notifications (user_id, title, message, notification_type, related_user_id)
         VALUES ($1, $2, $3, $4, $5)`,
             [
@@ -575,7 +575,7 @@ export const getUserWarnings = async (req: Request, res: Response) => {
         ORDER BY uw.created_at DESC
     `;
 
-        const result = await pool.query(warningsQuery, [userId]);
+        const result = await query(warningsQuery, [userId]);
 
         res.json({
             success: true,
@@ -633,8 +633,8 @@ export const getModeratorActions = async (req: Request, res: Response) => {
         const countQuery = `SELECT COUNT(*) as total FROM moderator_actions`;
 
         const [actionsResult, countResult] = await Promise.all([
-            pool.query(actionsQuery, [limit, offset]),
-            pool.query(countQuery)
+            query(actionsQuery, [limit, offset]),
+            query(countQuery)
         ]);
 
         const total = parseInt(countResult.rows[0].total);
@@ -695,7 +695,7 @@ export const getReportedUsers = async (req: Request, res: Response) => {
         LIMIT $1 OFFSET $2
     `;
 
-        const result = await pool.query(usersQuery, [limit, offset]);
+        const result = await query(usersQuery, [limit, offset]);
 
         res.json({
             success: true,

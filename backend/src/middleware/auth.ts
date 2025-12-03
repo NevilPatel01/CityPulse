@@ -69,6 +69,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         // Add user info to request
         req.user = {
             ...decoded,
+            role: user.role, // Use role from database instead of JWT
             accountStatus: user.account_status,
             emailVerified: user.email_verified
         };
@@ -114,6 +115,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         if (user && user.account_status === 'active') {
             req.user = {
                 ...decoded,
+                role: user.role,
                 accountStatus: user.account_status,
                 emailVerified: user.email_verified
             };
@@ -186,7 +188,7 @@ export const optionalAuthenticateToken = async (req: Request, res: Response, nex
 
                 // Get user details from database
                 const userResult = await query(
-                    'SELECT id, username, email, account_status, email_verified FROM users WHERE id = $1',
+                    'SELECT id, username, email, role, account_status, email_verified FROM users WHERE id = $1',
                     [decoded.userId]
                 );
 
@@ -194,6 +196,7 @@ export const optionalAuthenticateToken = async (req: Request, res: Response, nex
                     const user = userResult.rows[0];
                     req.user = {
                         ...decoded,
+                        role: user.role,
                         accountStatus: user.account_status,
                         emailVerified: user.email_verified
                     };

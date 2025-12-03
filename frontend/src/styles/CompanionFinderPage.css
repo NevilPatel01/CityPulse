@@ -352,6 +352,12 @@
   box-shadow: 0 8px 24px rgba(255, 153, 0, 0.15);
 }
 
+.trip-image-container {
+  position: relative;
+  width: 100%;
+  height: 200px;
+}
+
 .trip-cover {
   width: 100%;
   height: 200px;
@@ -365,6 +371,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.trip-cover-placeholder.hidden {
+  display: none;
 }
 
 .placeholder-icon {
@@ -448,7 +458,17 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  object-fit: cover;
+  background: linear-gradient(135deg, var(--pulse) 0%, var(--accent-orange) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.creator-initial {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
 }
 
 /* Loading & Empty States */

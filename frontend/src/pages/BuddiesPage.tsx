@@ -33,7 +33,7 @@ interface User {
   buddies_count?: number;
   recommendations_count?: number;
   buddy_status?: 'pending' | 'accepted' | null;
-  interests?: string[];
+  interests?: Array<{id: number; name: string}>;
 }
 
 interface InterestCategory {
@@ -614,7 +614,7 @@ export default function BuddiesPage() {
                         <div className="flex flex-wrap gap-2 mb-3">
                           {user.interests.slice(0, 3).map((interest, idx) => (
                             <span key={idx} className="px-2 py-1 bg-pulse/10 text-pulse text-xs rounded-full border border-pulse/20">
-                              {interest}
+                              {typeof interest === 'object' ? interest.name : interest}
                             </span>
                           ))}
                           {user.interests.length > 3 && (

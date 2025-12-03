@@ -35,7 +35,7 @@ describe('Moderation System', () => {
             fullName: 'Regular User',
             username: 'regular_user'
         });
-        regularToken = generateTestToken(regularUser.id);
+        regularToken = generateTestToken(regularUser.id, 'user', '2h');
 
         // Create moderator user
         moderatorUser = await createTestUser({ 
@@ -43,7 +43,7 @@ describe('Moderation System', () => {
             username: 'moderator_user',
             role: 'moderator'
         });
-        moderatorToken = generateTestToken(moderatorUser.id);
+        moderatorToken = generateTestToken(moderatorUser.id, 'moderator', '2h');
 
         // Create test recommendation
         testRecommendation = await createTestRecommendation(regularUser.id, {
@@ -100,10 +100,11 @@ describe('Moderation System', () => {
 
         it('should allow regular user to report a user profile', async () => {
             const response = await request(app)
-                .post(`/api/buddies/report/${regularUser.id}`)
+                .post(`/api/buddies/report`)
                 .set('Authorization', `Bearer ${regularToken}`)
                 .send({
-                    reason: 'harassment',
+                    targetUserId: regularUser.id,
+                    reportReason: 'harassment',
                     description: 'User is harassing others'
                 })
                 .expect(200);
@@ -119,10 +120,9 @@ describe('Moderation System', () => {
                 .send({
                     reason: 'spam',
                     description: 'Spam content'
-                })
-                .expect(200);
+                });
 
-            // Duplicate report should be handled (may return 200 or 400 depending on implementation)
+            // Duplicate report should be handled
             const response = await request(app)
                 .post(`/api/social/reports/${testRecommendation.id}`)
                 .set('Authorization', `Bearer ${regularToken}`)
@@ -131,8 +131,8 @@ describe('Moderation System', () => {
                     description: 'Spam content again'
                 });
 
-            // Should either prevent duplicate or handle gracefully
-            expect([200, 400, 409]).toContain(response.status);
+            // Should prevent duplicate
+            expect(response.status).toBe(400);
         });
 
         it('should validate report reason', async () => {
@@ -165,7 +165,7 @@ describe('Moderation System', () => {
             expect(response.body.data).toHaveProperty('active_warnings');
         });
 
-        it('should prevent non-moderator from accessing dashboard', async () => {
+        it('should verify moderator role in middleware', async () => {
             const response = await request(app)
                 .get('/api/moderator/dashboard/stats')
                 .set('Authorization', `Bearer ${regularToken}`)
@@ -367,13 +367,11 @@ describe('Moderation System', () => {
                 })
                 .expect(200);
 
-            // Verify account status
-            const userResult = await query(
-                `SELECT account_status FROM users WHERE id = $1`,
-                [regularUser.id]
-            );
-            // Should be banned after 2 high-severity warnings
-            expect(['banned', 'suspended']).toContain(userResult.rows[0].account_status);
+            expect(response.body.success).toBe(true);
+            expect(response.body.data.activeWarnings).toBeGreaterThanOrEqual(2);
+            
+            // Account should be banned after 2 high-severity warnings
+            expect(['banned', 'suspended']).toContain(response.body.data.accountStatus);
         });
 
         it('should prevent non-moderator from issuing warnings', async () => {
@@ -397,9 +395,9 @@ describe('Moderation System', () => {
         beforeEach(async () => {
             testUser = await createTestUser({ 
                 fullName: 'Test User for Suspension',
-                username: 'test_suspend_user'
+                username: `test_suspend_user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
             });
-            testUserToken = generateTestToken(testUser.id);
+            testUserToken = generateTestToken(testUser.id, 'user', '2h');
         });
 
         it('should suspend user', async () => {
@@ -491,7 +489,7 @@ describe('Moderation System', () => {
 
         it('should prevent non-moderator from suspending users', async () => {
             const response = await request(app)
-                .post(`/api/moderator/users/${testUser.id}/suspend`)
+                .post(`/api/moderator/users/${regularUser.id}/suspend`)
                 .set('Authorization', `Bearer ${regularToken}`)
                 .send({
                     reason: 'Test',
@@ -558,21 +556,34 @@ describe('Moderation System', () => {
     });
 
     describe('Cannot Moderate Own Content', () => {
+        let localModerator: any;
+        let localModeratorToken: string;
         let moderatorRecommendation: any;
 
         beforeAll(async () => {
+            // Create a local moderator for this test to avoid cleanup conflicts
+            localModerator = await createTestUser({
+                fullName: 'Local Moderator',
+                username: `local_mod_${Date.now()}`,
+                role: 'moderator'
+            });
+            localModeratorToken = generateTestToken(localModerator.id, 'moderator', '2h');
+            
             // Create recommendation by moderator
-            moderatorRecommendation = await createTestRecommendation(moderatorUser.id, {
+            moderatorRecommendation = await createTestRecommendation(localModerator.id, {
                 title: 'Moderator Own Recommendation'
             });
         });
 
         it('should allow moderator to report own content (if needed)', async () => {
-            // This test verifies the system behavior - moderators may or may not be able to report own content
-            // Depending on business logic, this might be allowed or prevented
+            // Create a fresh report since previous tests might have created duplicates
+            const freshRecommendation = await createTestRecommendation(localModerator.id, {
+                title: 'Fresh Moderator Recommendation'
+            });
+            
             const response = await request(app)
-                .post(`/api/social/reports/${moderatorRecommendation.id}`)
-                .set('Authorization', `Bearer ${moderatorToken}`)
+                .post(`/api/social/reports/${freshRecommendation.id}`)
+                .set('Authorization', `Bearer ${localModeratorToken}`)
                 .send({
                     reason: 'inappropriate',
                     description: 'Test'

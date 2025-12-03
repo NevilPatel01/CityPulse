@@ -57,6 +57,12 @@ describe('Social Features', () => {
         });
 
         it('should unbookmark a previously bookmarked recommendation', async () => {
+            // Clean up any existing bookmark first
+            await query(
+                'DELETE FROM recommendation_saves WHERE user_id = $1 AND recommendation_id = $2',
+                [user2.id, recommendation1.id]
+            );
+
             // First bookmark
             await request(app)
                 .post(`/api/social/bookmarks/${recommendation1.id}`)
@@ -89,9 +95,9 @@ describe('Social Features', () => {
 
     describe('GET /api/social/bookmarks/:recommendationId/status', () => {
         beforeEach(async () => {
-            // Clean up bookmarks
+            // Clean up bookmarks (using recommendation_saves table)
             await query(
-                'DELETE FROM recommendation_bookmarks WHERE user_id = $1',
+                'DELETE FROM recommendation_saves WHERE user_id = $1',
                 [user2.id]
             );
         });
@@ -125,14 +131,14 @@ describe('Social Features', () => {
 
     describe('GET /api/social/bookmarks', () => {
         beforeEach(async () => {
-            // Clean up and create fresh bookmarks
+            // Clean up and create fresh bookmarks (using recommendation_saves table)
             await query(
-                'DELETE FROM recommendation_bookmarks WHERE user_id = $1',
+                'DELETE FROM recommendation_saves WHERE user_id = $1',
                 [user2.id]
             );
 
             await query(
-                'INSERT INTO recommendation_bookmarks (user_id, recommendation_id) VALUES ($1, $2)',
+                'INSERT INTO recommendation_saves (user_id, recommendation_id) VALUES ($1, $2)',
                 [user2.id, recommendation1.id]
             );
         });
@@ -144,10 +150,11 @@ describe('Social Features', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(Array.isArray(response.body.data)).toBe(true);
-            expect(response.body.data.length).toBeGreaterThan(0);
-            expect(response.body.data[0]).toHaveProperty('title');
-            expect(response.body.data[0]).toHaveProperty('bookmarked_at');
+            expect(response.body.data).toHaveProperty('posts');
+            expect(Array.isArray(response.body.data.posts)).toBe(true);
+            expect(response.body.data.posts.length).toBeGreaterThan(0);
+            expect(response.body.data.posts[0]).toHaveProperty('title');
+            expect(response.body.data.posts[0]).toHaveProperty('bookmarked_at');
         });
 
         it('should support pagination', async () => {
@@ -157,7 +164,7 @@ describe('Social Features', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(response.body.pagination).toBeDefined();
+            expect(response.body.data.pagination).toBeDefined();
         });
     });
 
@@ -167,32 +174,32 @@ describe('Social Features', () => {
                 .post(`/api/social/shares/${recommendation1.id}`)
                 .set('Authorization', `Bearer ${token2}`)
                 .send({ platform: 'twitter' })
-                .expect(200);
+                .expect(201);
 
             expect(response.body.success).toBe(true);
         });
 
         it('should increment shares count', async () => {
-            // Get initial count
+            // Get initial count from recommendation_shares table
             const initialResult = await query(
-                'SELECT shares_count FROM recommendations WHERE id = $1',
+                'SELECT COUNT(*) as count FROM recommendation_shares WHERE recommendation_id = $1',
                 [recommendation1.id]
             );
-            const initialCount = initialResult.rows[0].shares_count;
+            const initialCount = parseInt(initialResult.rows[0].count);
 
             // Record share
             await request(app)
                 .post(`/api/social/shares/${recommendation1.id}`)
                 .set('Authorization', `Bearer ${token2}`)
                 .send({ platform: 'facebook' })
-                .expect(200);
+                .expect(201);
 
             // Get updated count
             const updatedResult = await query(
-                'SELECT shares_count FROM recommendations WHERE id = $1',
+                'SELECT COUNT(*) as count FROM recommendation_shares WHERE recommendation_id = $1',
                 [recommendation1.id]
             );
-            const updatedCount = updatedResult.rows[0].shares_count;
+            const updatedCount = parseInt(updatedResult.rows[0].count);
 
             expect(updatedCount).toBe(initialCount + 1);
         });
@@ -205,7 +212,7 @@ describe('Social Features', () => {
                     .post(`/api/social/shares/${recommendation1.id}`)
                     .set('Authorization', `Bearer ${token2}`)
                     .send({ platform })
-                    .expect(200);
+                    .expect(201);
 
                 expect(response.body.success).toBe(true);
             }
@@ -213,6 +220,14 @@ describe('Social Features', () => {
     });
 
     describe('POST /api/social/reports/:recommendationId', () => {
+        beforeEach(async () => {
+            // Clean up reports before each test
+            await query(
+                'DELETE FROM content_reports WHERE reporter_id = $1',
+                [user2.id]
+            );
+        });
+
         it('should report a recommendation', async () => {
             const response = await request(app)
                 .post(`/api/social/reports/${recommendation1.id}`)
@@ -241,11 +256,20 @@ describe('Social Features', () => {
         it('should accept all valid report reasons', async () => {
             const reasons = ['spam', 'inappropriate', 'misleading', 'offensive', 'copyright', 'other'];
 
-            for (const reason of reasons) {
+            // Use different recommendations for each reason to avoid duplicate reports
+            const recommendations = [recommendation1, recommendation2, recommendation1, recommendation2, recommendation1, recommendation2];
+            
+            for (let i = 0; i < reasons.length; i++) {
+                // Clean up any existing report for this recommendation
+                await query(
+                    'DELETE FROM content_reports WHERE reporter_id = $1 AND reported_content_id = $2',
+                    [user2.id, recommendations[i].id]
+                );
+                
                 const response = await request(app)
-                    .post(`/api/social/reports/${recommendation1.id}`)
+                    .post(`/api/social/reports/${recommendations[i].id}`)
                     .set('Authorization', `Bearer ${token2}`)
-                    .send({ reason })
+                    .send({ reason: reasons[i] })
                     .expect(200);
 
                 expect(response.body.success).toBe(true);

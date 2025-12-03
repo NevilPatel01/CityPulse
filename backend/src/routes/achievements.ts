@@ -5,7 +5,9 @@ import {
     getUserAchievements,
     getMyAchievementProgress,
     getRecentAchievements,
-    getAchievementStats
+    getAchievementStats,
+    checkAchievements,
+    unlockAchievement
 } from '../controllers/achievements';
 
 const router = Router();
@@ -18,5 +20,7 @@ router.get('/user/:username', authenticateToken, getUserAchievements);
 // Protected routes
 router.get('/my/progress', authenticateToken, getMyAchievementProgress);
 router.get('/my/stats', authenticateToken, getAchievementStats);
+router.post('/check', authenticateToken, checkAchievements);
+router.post('/unlock', authenticateToken, unlockAchievement);
 
 export default router;

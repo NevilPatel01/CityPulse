@@ -115,7 +115,7 @@ export const getTripById = async (req: Request, res: Response) => {
         if (trip.privacy === 'buddies_only') {
             const buddyCheck = await pool.query(
                 `SELECT 1 FROM travel_buddy_connections 
-                    WHERE ((user_id = $1 AND buddy_id = $2) OR (user_id = $2 AND buddy_id = $1))
+                    WHERE ((requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1))
                     AND status = 'accepted'`,
                 [userId, trip.user_id]
             );

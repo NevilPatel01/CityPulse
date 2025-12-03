@@ -9,7 +9,8 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
     const client = await pool.connect();
 
     try {
-        const { targetUserId, message } = req.body;
+        const { targetUserId, buddyId, message } = req.body;
+        const actualTargetUserId = targetUserId || buddyId; // Support both parameter names
         const requesterId = req.user?.userId;
 
         if (!requesterId) {
@@ -20,7 +21,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         }
 
         // Validate target user
-        if (!targetUserId || requesterId === targetUserId) {
+        if (!actualTargetUserId || requesterId === actualTargetUserId) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid target user'
@@ -32,7 +33,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         // Check if target user exists
         const targetUserResult = await client.query(
             'SELECT id, username FROM users WHERE id = $1 AND account_status = $2',
-            [targetUserId, 'active']
+            [actualTargetUserId, 'active']
         );
 
         if (targetUserResult.rows.length === 0) {
@@ -46,7 +47,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         // Check if requester is blocked by target user
         const blockCheck = await client.query(
             'SELECT id FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2',
-            [targetUserId, requesterId]
+            [actualTargetUserId, requesterId]
         );
 
         if (blockCheck.rows.length > 0) {
@@ -60,7 +61,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         // Check if requester has blocked target user
         const reverseBlockCheck = await client.query(
             'SELECT id FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2',
-            [requesterId, targetUserId]
+            [requesterId, actualTargetUserId]
         );
 
         if (reverseBlockCheck.rows.length > 0) {
@@ -74,7 +75,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         // Check if buddy request already exists
         const existingRequest = await client.query(
             'SELECT id, status FROM travel_buddy_connections WHERE (requester_id = $1 AND requested_id = $2) OR (requester_id = $2 AND requested_id = $1)',
-            [requesterId, targetUserId]
+            [requesterId, actualTargetUserId]
         );
 
         if (existingRequest.rows.length > 0) {
@@ -97,7 +98,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
         // Check target user's privacy settings
         const privacyCheck = await client.query(
             'SELECT travel_buddy_requests_enabled FROM user_profiles WHERE user_id = $1',
-            [targetUserId]
+            [actualTargetUserId]
         );
 
         if (privacyCheck.rows.length > 0 && !privacyCheck.rows[0].travel_buddy_requests_enabled) {
@@ -113,7 +114,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
             `INSERT INTO travel_buddy_connections (requester_id, requested_id, request_message, status)
                 VALUES ($1, $2, $3, $4)
                 RETURNING id, requester_id, requested_id, request_message, status, requested_at`,
-            [requesterId, targetUserId, message || null, 'pending']
+            [requesterId, actualTargetUserId, message || null, 'pending']
         );
 
         const buddyRequest = insertResult.rows[0];
@@ -126,7 +127,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
 
         // Create notification for target user
         await createNotification(client, {
-            userId: targetUserId,
+            userId: actualTargetUserId,
             title: 'New Buddy Request',
             message: `${requesterInfo.rows[0].full_name} (@${requesterInfo.rows[0].username}) sent you a buddy request`,
             notificationType: 'buddy_request',
@@ -141,6 +142,7 @@ export const sendBuddyRequest = async (req: Request, res: Response) => {
             success: true,
             message: 'Buddy request sent successfully',
             data: {
+                id: buddyRequest.id,
                 request: buddyRequest
             }
         });
@@ -254,7 +256,7 @@ export const acceptBuddyRequest = async (req: Request, res: Response) => {
     const client = await pool.connect();
 
     try {
-        const { requestId } = req.params;
+        const requestId = req.params.requestId || req.body.requestId;
         const userId = req.user?.userId;
 
         if (!userId) {

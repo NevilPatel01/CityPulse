@@ -5,7 +5,7 @@ import pool from '../lib/database';
 export const getNotifications = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.userId;
-        const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+        const { limit = 50, offset = 0, unread, type } = req.query;
 
         if (!userId) {
             return res.status(401).json({
@@ -36,12 +36,19 @@ export const getNotifications = async (req: Request, res: Response) => {
         `;
 
         const params: any[] = [userId];
+        let paramIndex = 2;
 
-        if (unreadOnly === 'true') {
+        if (unread === 'true') {
             query += ` AND n.is_read = false`;
         }
 
-        query += ` ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`;
+        if (type) {
+            query += ` AND n.notification_type = $${paramIndex}`;
+            params.push(type);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY n.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
         params.push(parseInt(limit as string), parseInt(offset as string));
 
         const result = await pool.query(query, params);
@@ -52,13 +59,17 @@ export const getNotifications = async (req: Request, res: Response) => {
             [userId]
         );
 
+        // Return simple array if no notifications
+        if (result.rows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
         res.json({
             success: true,
-            data: {
-                notifications: result.rows,
-                unreadCount: parseInt(unreadResult.rows[0].unread_count),
-                total: result.rows.length
-            }
+            data: result.rows
         });
 
     } catch (error) {
@@ -117,7 +128,7 @@ export const markAsRead = async (req: Request, res: Response) => {
         }
 
         const result = await pool.query(
-            'UPDATE notifications SET is_read = true, read_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING id',
+            'UPDATE notifications SET is_read = true, read_at = NOW() WHERE id = $1 AND user_id = $2 RETURNING *',
             [notificationId, userId]
         );
 
@@ -130,6 +141,7 @@ export const markAsRead = async (req: Request, res: Response) => {
 
         res.json({
             success: true,
+            data: result.rows[0],
             message: 'Notification marked as read'
         });
 
@@ -154,13 +166,16 @@ export const markAllAsRead = async (req: Request, res: Response) => {
             });
         }
 
-        await pool.query(
+        const result = await pool.query(
             'UPDATE notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND is_read = false',
             [userId]
         );
 
         res.json({
             success: true,
+            data: {
+                updatedCount: result.rowCount
+            },
             message: 'All notifications marked as read'
         });
 
@@ -224,13 +239,16 @@ export const deleteAllRead = async (req: Request, res: Response) => {
             });
         }
 
-        await pool.query(
+        const result = await pool.query(
             'DELETE FROM notifications WHERE user_id = $1 AND is_read = true',
             [userId]
         );
 
-        res.json({
+        return res.json({
             success: true,
+            data: {
+                deletedCount: result.rowCount || 0
+            },
             message: 'All read notifications deleted'
         });
 

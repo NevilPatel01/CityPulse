@@ -151,6 +151,13 @@ router.post(
     submitRating
 );
 
+router.post(
+    '/:id/rate',
+    recommendationLimiter,
+    authenticateToken,
+    submitRating
+); // Alternative route for rating
+
 router.get(
     '/:id/ratings/me',
     recommendationLimiter,

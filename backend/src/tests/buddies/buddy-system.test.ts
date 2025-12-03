@@ -10,7 +10,6 @@ import {
     createTestUser,
     generateTestToken,
     cleanupAllTestData,
-    testDataTracker
 } from '../helpers/test-helpers';
 import { describe, beforeAll, afterAll, afterEach, beforeEach, expect, it } from '@jest/globals';
 

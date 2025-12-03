@@ -37,11 +37,11 @@ router.get('/', notificationLimiter, getNotifications);
 router.get('/unread-count', notificationLimiter, getUnreadCount);
 
 // Mark as read
-router.patch('/:notificationId/read', notificationLimiter, markAsRead);
-router.patch('/read-all', notificationLimiter, markAllAsRead);
+router.put('/:notificationId/read', notificationLimiter, markAsRead);
+router.put('/mark-all-read', notificationLimiter, markAllAsRead);
 
 // Delete notifications
+router.delete('/delete-all-read', notificationLimiter, deleteAllRead);
 router.delete('/:notificationId', notificationLimiter, deleteNotification);
-router.delete('/read/all', notificationLimiter, deleteAllRead);
 
 export default router;

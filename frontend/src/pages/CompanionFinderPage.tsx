@@ -346,17 +346,25 @@ const CompanionFinderPage = () => {
                 <div className="trips-grid">
                   {trips.map((trip) => (
                     <div key={trip.id} className="trip-discover-card" onClick={() => navigate(`/trips/${trip.id}`)}>
-                      {trip.cover_image_url || trip.cover_photo_url ? (
-                        <img
-                          src={trip.cover_image_url || trip.cover_photo_url}
-                          alt={trip.title}
-                          className="trip-cover"
-                        />
-                      ) : (
-                        <div className="trip-cover-placeholder">
+                      <div className="trip-image-container">
+                        {trip.cover_image_url || trip.cover_photo_url ? (
+                          <img
+                            src={trip.cover_image_url || trip.cover_photo_url}
+                            alt={trip.title}
+                            className="trip-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.parentElement?.querySelector('.trip-cover-placeholder');
+                              if (placeholder) {
+                                (placeholder as HTMLElement).style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div className={`trip-cover-placeholder ${trip.cover_image_url || trip.cover_photo_url ? 'hidden' : ''}`}>
                           <Globe className="placeholder-icon" />
                         </div>
-                      )}
+                      </div>
                       
                       <div className="trip-card-content">
                         <h4>{trip.title}</h4>
@@ -378,9 +386,6 @@ const CompanionFinderPage = () => {
                           <div className="highlights">
                             {trip.highlights.slice(0, 3).map((highlight) => (
                               <div key={highlight.id} className="highlight-chip">
-                                {highlight.photo_url && (
-                                  <img src={highlight.photo_url} alt={highlight.title} className="highlight-thumb" />
-                                )}
                                 <span>{highlight.title}</span>
                               </div>
                             ))}
@@ -388,11 +393,11 @@ const CompanionFinderPage = () => {
                         )}
 
                         <div className="trip-creator">
-                          <img
-                            src={trip.creator_photo || '/default-avatar.png'}
-                            alt={trip.creator_username}
-                            className="creator-avatar"
-                          />
+                          <div className="creator-avatar">
+                            <span className="creator-initial">
+                              {(trip.creator_username || 'U').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
                           <span>by @{trip.creator_username}</span>
                         </div>
                       </div>
