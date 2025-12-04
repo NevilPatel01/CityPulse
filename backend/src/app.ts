@@ -57,8 +57,41 @@ export const createApp = (): express.Express => {
             },
         },
         crossOriginEmbedderPolicy: false,      // Disable to allow cross-origin images
-        crossOriginResourcePolicy: { policy: "cross-origin" } // Allow cross-origin resource access
+        crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource access
+        hsts: {
+            maxAge: 31536000, // 1 year in seconds
+            includeSubDomains: true,
+            preload: true
+        },
+        noSniff: true, // X-Content-Type-Options: nosniff
+        xssFilter: true, // X-XSS-Protection: 1; mode=block (legacy but still useful)
+        frameguard: { action: 'deny' } // X-Frame-Options: DENY
     }));
+
+    // Add additional security headers manually
+    app.use((req, res, next) => {
+        // X-Content-Type-Options: Prevent MIME type sniffing
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        
+        // Strict-Transport-Security: Force HTTPS (HSTS)
+        if (process.env.NODE_ENV === 'production') {
+            res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
+        
+        // X-Frame-Options: Prevent clickjacking
+        res.setHeader('X-Frame-Options', 'DENY');
+        
+        // X-XSS-Protection: Enable browser XSS filter (legacy support)
+        res.setHeader('X-XSS-Protection', '1; mode=block');
+        
+        // Referrer-Policy: Control referrer information
+        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        
+        // Permissions-Policy: Disable unnecessary browser features
+        res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        
+        next();
+    });
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     console.log('[APP] Setting up CORS with frontend URL:', frontendUrl);

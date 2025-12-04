@@ -628,9 +628,9 @@ describe('Security Tests - Comprehensive Suite', () => {
 
             // Feed might return 200 or 500 (if there's a SQL error or no data)
             if (response.status === 200 && response.body.data) {
-                const trips = response.body.data.filter((item: any) => item.content_type === 'trip');
-                const foundPrivateTrip = trips.find((t: any) => t.id === testTrip.id);
-                expect(foundPrivateTrip).toBeUndefined();
+            const trips = response.body.data.filter((item: any) => item.content_type === 'trip');
+            const foundPrivateTrip = trips.find((t: any) => t.id === testTrip.id);
+            expect(foundPrivateTrip).toBeUndefined();
             } else {
                 // If feed fails, that's okay - the important thing is that private trips aren't exposed
                 // We can't verify this if the feed endpoint is broken, but that's a separate issue

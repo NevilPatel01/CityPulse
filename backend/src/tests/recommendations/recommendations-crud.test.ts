@@ -53,7 +53,7 @@ afterEach(async () => {
 
 afterAll(async () => {
     try {
-        await cleanupAllTestData();
+    await cleanupAllTestData();
     } catch (error: any) {
         // Ignore errors if pool is already closed (happens when tests run in parallel)
         if (error?.message?.includes('pool') || error?.message?.includes('ended')) {
