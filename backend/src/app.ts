@@ -232,6 +232,7 @@ export const createApp = (): express.Express => {
     app.use('/profile', profileRoutes);
     app.use('/recommendations', recommendationRoutes);
     app.use('/search', searchRoutes);
+    app.use('/search', searchHistoryRoutes);
     app.use('/advanced-search', advancedSearchRoutes);
     app.use('/buddies', buddyRoutes);
     app.use('/notifications', notificationRoutes);
