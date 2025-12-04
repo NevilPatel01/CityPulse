@@ -46,7 +46,6 @@ interface InterestCategory {
 
 interface DiscoverFilters {
   location: string;
-  distance: number;
   interests: number[];
 }
 
@@ -70,7 +69,6 @@ export default function BuddiesPage() {
   const [interestCategories, setInterestCategories] = useState<InterestCategory[]>([]);
   const [filters, setFilters] = useState<DiscoverFilters>({
     location: '',
-    distance: 50,
     interests: []
   });
   const [showSendRequestModal, setShowSendRequestModal] = useState(false);
@@ -84,7 +82,6 @@ export default function BuddiesPage() {
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (filters.location) params.append('location', filters.location);
-      if (filters.distance) params.append('distance', filters.distance.toString());
       if (filters.interests.length > 0) {
         params.append('interests', filters.interests.join(','));
       }
@@ -106,11 +103,11 @@ export default function BuddiesPage() {
   useEffect(() => {
     const loadInterests = async () => {
       try {
-        const response = await apiRequest<{ success: boolean; data: { categories: InterestCategory[] } }>(
+        const response = await apiRequest<{ success: boolean; data: InterestCategory[] }>(
           buildApiUrl('api/recommendations/categories'),
           { method: 'GET' }
         );
-        setInterestCategories(response.data.categories);
+        setInterestCategories(response.data);
       } catch (error) {
         console.error('Failed to load interests:', error);
       }
@@ -263,7 +260,6 @@ export default function BuddiesPage() {
   const clearFilters = () => {
     setFilters({
       location: '',
-      distance: 50,
       interests: []
     });
     setSearchQuery('');
@@ -465,26 +461,6 @@ export default function BuddiesPage() {
               />
             </div>
 
-            {/* Distance Filter */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-primary mb-2">
-                Distance: {filters.distance}km
-              </label>
-              <input
-                type="range"
-                min="10"
-                max="500"
-                step="10"
-                value={filters.distance}
-                onChange={(e) => setFilters(prev => ({ ...prev, distance: parseInt(e.target.value) }))}
-                className="w-full h-2 bg-surface-glass rounded-lg appearance-none cursor-pointer accent-pulse"
-              />
-              <div className="flex justify-between text-xs text-muted mt-1">
-                <span>10km</span>
-                <span>500km</span>
-              </div>
-            </div>
-
             {/* Interests Filter */}
             <div>
               <label className="text-sm font-medium text-primary mb-3 flex items-center gap-2">
@@ -519,13 +495,6 @@ export default function BuddiesPage() {
                 )}
               </div>
             </div>
-
-            <Button
-              onClick={loadDiscoverUsers}
-              className="w-full mt-6 bg-pulse hover:bg-pulse/80"
-            >
-              Apply Filters
-            </Button>
           </CardContent>
         </Card>
       </div>

@@ -28,7 +28,7 @@
 - [x] Secure routes with JWT middleware
 - [x] Parameterized SQL queries to prevent SQLi
 - [x] Frontend validation and form accessibility
-- [ ] Security tests: SQLi, XSS (OWASP ZAP)
+- [x] Security tests: SQLi, XSS (OWASP ZAP)
 - [x] Profile photo and cover photo management
 - [x] Social media linking functionality
 - [x] API endpoints for profile CRUD operations
@@ -42,7 +42,7 @@
 - [x] photo upload for recommendations
 - [x] Frontend forms for recommendation creation
 - [x] Basic search functionality implementation
-- [ ] Integration tests for recommendation endpoints and E2E Test
+- [x] Integration tests for recommendation endpoints and E2E Test
 
 ### Milestone 2
 #### Week 4 (Sept 29)
@@ -66,10 +66,10 @@
 #### Week 6 (Oct 13)
 - [x] Break Week: Catch-up, bug fixes, and refactoring
 - [x] CI: GitHub Actions auto-run unit + integration + E2E tests (Note: Pipeline configured but test execution needs to be added to workflow)
-- [ ] Add E2E test and Unit Test suite for remaining Test Cases (Social features, Feed, Comprehensive E2E)
+- [x] Add E2E test and Unit Test suite for remaining Test Cases (Social features, Feed, Comprehensive E2E)
 
 #### Week 7 (Oct 20)
-- [ ] Submit progress report + demo video
+- [x] Submit progress report + demo video
 - [x] Deploy initial progress to hosting platform
 - [x] Production environment setup
 - [x] Database deployment and migration
@@ -117,24 +117,24 @@
 - [x] Security audit and penetration testing
 
 #### Week 12 (Nov 17)
-- [ ] Final polish: responsive layout, accessibility checks (Lighthouse/Axe)
-- [ ] Recommendation algorithm optimization
+- [x] Final polish: responsive layout, accessibility checks (Lighthouse/Axe)
+- [x] Recommendation algorithm optimization
 - [x] Search history and saved searches (Search_History, Saved_Searches tables) - Backend API and Frontend UI implemented
-  - [x] Search history dropdown with auto-complete suggestions (shows matching history items while typing)
-  - [x] Full search history sidebar with date grouping (Today, Yesterday, This Week, Older)
-  - [x] Click history items to re-run searches with saved filters
-  - [x] Delete individual history items or clear all history
-  - [x] Keyboard navigation support (arrow keys, Enter, Escape)
-  - [x] Integrated into SearchInput, SearchBar, and AdvancedSearch components
-  - [x] Custom useSearchHistory hook for state management
+- [x] Search history dropdown with auto-complete suggestions (shows matching history items while typing)
+- [x] Full search history sidebar with date grouping (Today, Yesterday, This Week, Older)
+- [x] Click history items to re-run searches with saved filters
+- [x] Delete individual history items or clear all history
+- [x] Keyboard navigation support (arrow keys, Enter, Escape)
+- [x] Integrated into SearchInput, SearchBar, and AdvancedSearch components
+- [x] Custom useSearchHistory hook for state management
 - [x] User favorites system (User_Favourites table) - Implemented via recommendation_saves
-- [ ] GitHub Actions: final test automation 
-- [ ] critical bug fixes 
+- [x] GitHub Actions: final test automation 
+- [x] critical bug fixes 
 - [x] Test E2E and Unit Test of all the features - Comprehensive test suites added
-- [ ] Run final CI/CD, test coverage reports, accessibility scan
-- [ ] Accessibility compliance testing (WAVE, axe DevTools)
-- [ ] Production deployment finalization
-- [ ] Final deployment and tag release version
+- [x] Run final CI/CD, test coverage reports, accessibility scan
+- [x] Accessibility compliance testing (WAVE, axe DevTools)
+- [x] Production deployment finalization
+- [x] Final deployment and tag release version
 
 #### Week 13 (Dec 1)
 - [ ] Write final report (include test, deployment, screenshots)

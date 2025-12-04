@@ -974,6 +974,8 @@ export const discoverBuddies = async (req: Request, res: Response) => {
         const userId = req.user?.userId;
         const { 
             search, 
+            location,
+            interests,
             page = 1, 
             limit = 20 
         } = req.query;
@@ -1092,6 +1094,28 @@ export const discoverBuddies = async (req: Request, res: Response) => {
             paramIndex++;
         }
 
+        // Add location filter
+        if (location) {
+            queryText += ` AND u.current_location ILIKE $${paramIndex}`;
+            queryParams.push(`%${location}%`);
+            paramIndex++;
+        }
+
+        // Add interests filter (by category ID)
+        if (interests) {
+            const interestsStr = typeof interests === 'string' ? interests : interests.toString();
+            const interestsArray = interestsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            
+            if (interestsArray.length > 0) {
+                queryText += ` AND EXISTS (
+                    SELECT 1 FROM user_interests ui
+                    WHERE ui.user_id = u.id AND ui.category_id = ANY($${paramIndex})
+                )`;
+                queryParams.push(interestsArray);
+                paramIndex++;
+            }
+        }
+
         // Order by: connection_level (friends of friends first), then by mutual connections count, then by creation date
         queryText += ` ORDER BY 
             connection_level ASC, 
@@ -1144,6 +1168,28 @@ export const discoverBuddies = async (req: Request, res: Response) => {
             )`;
             countParams.push(`%${search}%`);
             countParamIndex++;
+        }
+
+        // Add location filter to count query
+        if (location) {
+            countQuery += ` AND u.current_location ILIKE $${countParamIndex}`;
+            countParams.push(`%${location}%`);
+            countParamIndex++;
+        }
+
+        // Add interests filter to count query (by category ID)
+        if (interests) {
+            const interestsStr = typeof interests === 'string' ? interests : interests.toString();
+            const interestsArray = interestsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            
+            if (interestsArray.length > 0) {
+                countQuery += ` AND EXISTS (
+                    SELECT 1 FROM user_interests ui
+                    WHERE ui.user_id = u.id AND ui.category_id = ANY($${countParamIndex})
+                )`;
+                countParams.push(interestsArray);
+                countParamIndex++;
+            }
         }
 
         const countResult = await pool.query(countQuery, countParams);
