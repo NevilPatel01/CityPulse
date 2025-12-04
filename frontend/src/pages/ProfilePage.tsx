@@ -28,9 +28,11 @@ import type { FeedPost } from '../services/feedService';
 import { 
   Camera, MapPin, Home, Instagram, Facebook, Mail, Globe, 
   ChevronDown, ChevronUp, Users, Heart, 
-  Calendar, Shield, MessageCircle, UserPlus, UserMinus, X, Send, RotateCcw
+  Calendar, Shield, MessageCircle, UserPlus, UserMinus, X, Send, RotateCcw, Flag
 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
+import { ReportModal } from '../components/modals/ReportModal';
+import { reportProfile } from '../services/feedService';
 
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -41,6 +43,7 @@ export default function ProfilePage() {
   const [showBuddyRequestModal, setShowBuddyRequestModal] = useState(false);
   const [buddyRequestMessage, setBuddyRequestMessage] = useState('');
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   
   useAuthGuard({ requireAuth: true });
   
@@ -571,7 +574,7 @@ export default function ProfilePage() {
                   {/* Top row: Avatar space + Button on right */}
                   <div className="flex justify-end pt-3">
                     {/* Action Button - Right side */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       {isOwnProfile ? (
                         <button
                           onClick={handleEditProfile}
@@ -582,41 +585,77 @@ export default function ProfilePage() {
                       ) : (
                         <>
                           {isBuddyConnected ? (
-                            <button 
-                              onClick={() => setShowBuddyModal(true)}
-                              className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-green-600 hover:bg-green-700 border border-green-500 flex items-center gap-1.5 transition-all duration-300 shadow-md shadow-green-600/20"
-                              title="Manage Travel Buddy"
-                            >
-                              <Users size={14} />
-                              Buddy
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => setShowBuddyModal(true)}
+                                className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-green-600 hover:bg-green-700 border border-green-500 flex items-center gap-1.5 transition-all duration-300 shadow-md shadow-green-600/20"
+                                title="Manage Travel Buddy"
+                              >
+                                <Users size={14} />
+                                Buddy
+                              </button>
+                              <button
+                                onClick={() => setShowReportModal(true)}
+                                className="p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 transition-all duration-300 shadow-md shadow-red-500/20"
+                                title="Report Profile"
+                              >
+                                <Flag size={18} />
+                              </button>
+                            </>
                           ) : isPendingBuddy ? (
                             isPendingRequestSent ? (
-                              <button 
-                                onClick={handleCancelRequest}
-                                className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-orange-600 hover:bg-orange-700 border border-orange-500 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-orange-600/20"
-                                title="Cancel Buddy Request"
-                              >
-                                <RotateCcw size={14} />
-                                Request Sent
-                              </button>
+                              <>
+                                <button 
+                                  onClick={handleCancelRequest}
+                                  className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-orange-600 hover:bg-orange-700 border border-orange-500 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-orange-600/20"
+                                  title="Cancel Buddy Request"
+                                >
+                                  <RotateCcw size={14} />
+                                  Request Sent
+                                </button>
+                                <button
+                                  onClick={() => setShowReportModal(true)}
+                                  className="p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 transition-all duration-300 shadow-md shadow-red-500/20"
+                                  title="Report Profile"
+                                >
+                                  <Flag size={18} />
+                                </button>
+                              </>
                             ) : (
-                              <button 
-                                className="px-4 py-2 rounded-xl text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default"
-                                title="Request Pending"
-                                disabled
-                              >
-                                Pending
-                              </button>
+                              <>
+                                <button 
+                                  className="px-4 py-2 rounded-xl text-muted text-sm font-semibold bg-white/5 border border-white/20 cursor-default"
+                                  title="Request Pending"
+                                  disabled
+                                >
+                                  Pending
+                                </button>
+                                <button
+                                  onClick={() => setShowReportModal(true)}
+                                  className="p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 transition-all duration-300 shadow-md shadow-red-500/20"
+                                  title="Report Profile"
+                                >
+                                  <Flag size={18} />
+                                </button>
+                              </>
                             )
                           ) : (
-                            <button 
-                              onClick={handleAddBuddy}
-                              className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20"
-                            >
-                              <UserPlus size={14} />
-                              Add Buddy
-                            </button>
+                            <>
+                              <button 
+                                onClick={handleAddBuddy}
+                                className="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-pulse hover:bg-pulse/90 transition-all duration-300 flex items-center gap-1.5 shadow-md shadow-pulse/20"
+                              >
+                                <UserPlus size={14} />
+                                Add Buddy
+                              </button>
+                              <button
+                                onClick={() => setShowReportModal(true)}
+                                className="p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 transition-all duration-300 shadow-md shadow-red-500/20"
+                                title="Report Profile"
+                              >
+                                <Flag size={18} />
+                              </button>
+                            </>
                           )}
                         </>
                       )}
@@ -1085,6 +1124,33 @@ export default function ProfilePage() {
           </div>
         </div>
       </Modal>
+
+      {/* Report Profile Modal */}
+      {showReportModal && profile && (
+        <ReportModal
+          title="Report Profile"
+          type="profile"
+          onClose={() => setShowReportModal(false)}
+          onSubmit={async (reason, description) => {
+            try {
+              if (!profile.id) {
+                showError('Unable to report profile - user ID not found');
+                return;
+              }
+              await reportProfile(
+                profile.id,
+                reason as 'spam' | 'inappropriate' | 'misleading' | 'offensive' | 'harassment' | 'impersonation' | 'other',
+                description
+              );
+              showSuccess('Profile reported successfully. Our team will review it.');
+              setShowReportModal(false);
+            } catch (error: unknown) {
+              console.error('Error reporting profile:', error);
+              showError((error as { message?: string })?.message || 'Failed to report profile. Please try again.');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

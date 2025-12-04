@@ -5,13 +5,18 @@ import {
   Trash2, AlertTriangle, Ban, UserX, CheckCircle2, FileCheck, 
   Clock, User, Filter, Calendar, X, RotateCcw, Hash, Info
 } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
 import {
   getDashboardStats,
   getContentReports,
   updateReportStatus,
   removeContent,
   getReportedUsers,
-  getModeratorActions
+  getModeratorActions,
+  issueWarning,
+  suspendUser,
+  banUser,
+  reinstateUser
 } from '../services/moderationService';
 import type {
   DashboardStats,
@@ -32,16 +37,22 @@ const ModeratorDashboard: React.FC = () => {
   const [filterContentType, setFilterContentType] = useState('all');
   const [actionFilter, setActionFilter] = useState('all'); // For action history filtering
   const [page] = useState(1);
+  
+  // User action modals state
+  const [selectedUser, setSelectedUser] = useState<ReportedUser | null>(null);
+  const [actionModalType, setActionModalType] = useState<'warn' | 'suspend' | 'ban' | 'reinstate' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Helper to get redirect URL based on content type
-  const getContentUrl = (contentType: string, contentId: number) => {
-    switch (contentType) {
+  const getContentUrl = (report: ContentReport) => {
+    switch (report.reported_content_type) {
       case 'recommendation':
-        return `/recommendations/${contentId}`;
+        return `/recommendations/${report.reported_content_id}`;
       case 'trip':
-        return `/trips/${contentId}`;
+        return `/trips/${report.reported_content_id}`;
       case 'profile':
-        return `/profile/${contentId}`;
+        // Use username for profile links instead of ID
+        return report.content_owner_username ? `/profile/${report.content_owner_username}` : null;
       default:
         return null;
     }
@@ -69,8 +80,12 @@ const ModeratorDashboard: React.FC = () => {
   const loadReports = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getContentReports(page, 20, filterStatus, filterContentType) as { data: { reports: ContentReport[] } };
-      setReports(response.data.reports);
+      // Don't load profile reports in Review Reports tab - they belong in User Management
+      const contentTypeFilter = filterContentType === 'profile' ? 'all' : filterContentType;
+      const response = await getContentReports(page, 20, filterStatus, contentTypeFilter) as { data: { reports: ContentReport[] } };
+      // Filter out profile reports - they should only appear in User Management tab
+      const filteredReports = response.data.reports.filter(report => report.reported_content_type !== 'profile');
+      setReports(filteredReports);
     } catch (error) {
       console.error('Failed to load reports:', error);
     } finally {
@@ -107,6 +122,13 @@ const ModeratorDashboard: React.FC = () => {
   }, [loadDashboardStats]);
 
   useEffect(() => {
+    // Reset profile filter if set when viewing reports tab (profiles only in User Management)
+    if (activeTab === 'reports' && filterContentType === 'profile') {
+      setFilterContentType('all');
+    }
+  }, [activeTab, filterContentType]);
+
+  useEffect(() => {
     if (activeTab === 'reports') {
       loadReports();
     } else if (activeTab === 'users') {
@@ -141,9 +163,101 @@ const ModeratorDashboard: React.FC = () => {
       loadReports();
       loadDashboardStats();
       alert('Content removed successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to remove content:', error);
-      alert('Failed to remove content');
+      const errorMessage = (error as { message?: string; error?: string })?.message || (error as { message?: string; error?: string })?.error || 'Failed to remove content';
+      alert(errorMessage);
+      // If content already removed or not found, refresh reports to filter it out
+      if (errorMessage.includes('already been') || errorMessage.includes('not found')) {
+        loadReports();
+      }
+    }
+  };
+
+  // User action handlers
+  const handleOpenActionModal = (user: ReportedUser, actionType: 'warn' | 'suspend' | 'ban' | 'reinstate') => {
+    setSelectedUser(user);
+    setActionModalType(actionType);
+  };
+
+  const handleCloseActionModal = () => {
+    setSelectedUser(null);
+    setActionModalType(null);
+  };
+
+  const handleIssueWarning = async (warningType: string, message: string, severity: 'low' | 'medium' | 'high') => {
+    if (!selectedUser) return;
+    
+    try {
+      setIsSubmitting(true);
+      await issueWarning(selectedUser.id, warningType, message, severity);
+      alert('Warning issued successfully');
+      handleCloseActionModal();
+      loadReportedUsers();
+      loadDashboardStats();
+    } catch (error: unknown) {
+      console.error('Failed to issue warning:', error);
+      alert((error as { message?: string; error?: string })?.message || (error as { message?: string; error?: string })?.error || 'Failed to issue warning');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSuspendUser = async (reason: string, days: number) => {
+    if (!selectedUser) return;
+    
+    try {
+      setIsSubmitting(true);
+      await suspendUser(selectedUser.id, reason, days);
+      alert('User suspended successfully');
+      handleCloseActionModal();
+      loadReportedUsers();
+      loadDashboardStats();
+    } catch (error: unknown) {
+      console.error('Failed to suspend user:', error);
+      alert((error as { message?: string; error?: string })?.message || (error as { message?: string; error?: string })?.error || 'Failed to suspend user');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBanUser = async (reason: string) => {
+    if (!selectedUser) return;
+    
+    if (!confirm(`Are you sure you want to permanently ban ${selectedUser.username}? This action cannot be undone easily.`)) {
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      await banUser(selectedUser.id, reason);
+      alert('User banned successfully');
+      handleCloseActionModal();
+      loadReportedUsers();
+      loadDashboardStats();
+    } catch (error: unknown) {
+      console.error('Failed to ban user:', error);
+      alert((error as { message?: string; error?: string })?.message || (error as { message?: string; error?: string })?.error || 'Failed to ban user');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReinstateUser = async (reason?: string) => {
+    if (!selectedUser) return;
+    
+    try {
+      setIsSubmitting(true);
+      await reinstateUser(selectedUser.id, reason);
+      alert('User reinstated successfully');
+      handleCloseActionModal();
+      loadReportedUsers();
+      loadDashboardStats();
+    } catch (error: unknown) {
+      console.error('Failed to reinstate user:', error);
+      alert((error as { message?: string; error?: string })?.message || (error as { message?: string; error?: string })?.error || 'Failed to reinstate user');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -386,7 +500,6 @@ const ModeratorDashboard: React.FC = () => {
                 >
                   <option value="all">All Types</option>
                   <option value="recommendation">Recommendations</option>
-                  <option value="profile">Profiles</option>
                   <option value="trip">Trips</option>
                   <option value="comment">Comments</option>
                 </select>
@@ -539,7 +652,7 @@ const ModeratorDashboard: React.FC = () => {
                         <div 
                           className="bg-surface-glass/50 border border-subtle/30 rounded-lg p-2.5 cursor-pointer hover:bg-surface-glass/70 transition-colors group flex-1 flex flex-col"
                           onClick={() => {
-                            const url = getContentUrl(report.reported_content_type, report.reported_content_id);
+                            const url = getContentUrl(report);
                             if (url) {
                               navigate(url);
                             }
@@ -607,14 +720,25 @@ const ModeratorDashboard: React.FC = () => {
                     <div key={user.id} className="bg-surface-glass backdrop-blur-glass border border-subtle rounded-xl p-4 hover:bg-surface-glass/70 transition-all shadow-lg hover:shadow-xl">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <img
-                            src={getFullImageUrl(user.profile_photo_url) || '/default-avatar.png'}
-                            alt={user.username}
-                            className="w-12 h-12 rounded-full border border-subtle object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/default-avatar.png';
-                            }}
-                          />
+                          <div className="relative w-12 h-12 rounded-full border border-subtle overflow-hidden flex-shrink-0">
+                            {user.profile_photo_url ? (
+                              <img
+                                src={getFullImageUrl(user.profile_photo_url) || ''}
+                                alt={user.username}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  const placeholder = (e.target as HTMLImageElement).parentElement?.querySelector('.avatar-placeholder') as HTMLElement;
+                                  if (placeholder) placeholder.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div 
+                              className={`avatar-placeholder absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-pulse to-purple-600 text-white font-semibold text-sm ${user.profile_photo_url ? 'hidden' : 'flex'}`}
+                            >
+                              {user.username ? user.username.charAt(0).toUpperCase() : '?'}
+                            </div>
+                          </div>
                           <div>
                             <h3 className="font-semibold text-primary">{user.username}</h3>
                             <p className="text-sm text-gray-300">{user.email}</p>
@@ -628,12 +752,59 @@ const ModeratorDashboard: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <button
-                          onClick={() => window.location.href = `/profile/${user.username}`}
-                          className="px-4 py-2 text-sm bg-pulse text-white rounded hover:bg-pulse/80 transition-colors"
-                        >
-                          View Profile
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
+                          <button
+                            onClick={() => window.open(`/profile/${user.username}`, '_blank')}
+                            className="px-3 py-1.5 text-xs bg-pulse text-white rounded hover:bg-pulse/80 transition-colors flex items-center gap-1"
+                            title="View Profile"
+                          >
+                            <ExternalLink size={14} />
+                            View
+                          </button>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            {(user.account_status === 'active' || user.account_status === 'suspended') && (
+                              <>
+                                <button
+                                  onClick={() => handleOpenActionModal(user, 'warn')}
+                                  className="px-3 py-1.5 text-xs bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/30 rounded transition-colors flex items-center gap-1"
+                                  title="Issue Warning"
+                                >
+                                  <AlertTriangle size={14} />
+                                  Warn
+                                </button>
+                                <button
+                                  onClick={() => handleOpenActionModal(user, 'suspend')}
+                                  className="px-3 py-1.5 text-xs bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/30 rounded transition-colors flex items-center gap-1"
+                                  title="Suspend User"
+                                >
+                                  <Clock size={14} />
+                                  Suspend
+                                </button>
+                                <button
+                                  onClick={() => handleOpenActionModal(user, 'ban')}
+                                  className="px-3 py-1.5 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30 rounded transition-colors flex items-center gap-1"
+                                  title="Ban User"
+                                >
+                                  <Ban size={14} />
+                                  Ban
+                                </button>
+                              </>
+                            )}
+                            
+                            {(user.account_status === 'suspended' || user.account_status === 'banned') && (
+                              <button
+                                onClick={() => handleOpenActionModal(user, 'reinstate')}
+                                className="px-3 py-1.5 text-xs bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/30 rounded transition-colors flex items-center gap-1"
+                                title="Reinstate User"
+                              >
+                                <CheckCircle2 size={14} />
+                                Reinstate
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -908,7 +1079,282 @@ const ModeratorDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* User Action Modals */}
+      {selectedUser && actionModalType && (
+        <>
+          {/* Issue Warning Modal */}
+          {actionModalType === 'warn' && (
+            <UserActionModal
+              isOpen={true}
+              onClose={handleCloseActionModal}
+              user={selectedUser}
+              actionType="warn"
+              onSubmit={(formData) => {
+                handleIssueWarning(
+                  formData.warningType || 'other',
+                  formData.message || '',
+                  formData.severity || 'low'
+                );
+              }}
+              isSubmitting={isSubmitting}
+            />
+          )}
+
+          {/* Suspend User Modal */}
+          {actionModalType === 'suspend' && (
+            <UserActionModal
+              isOpen={true}
+              onClose={handleCloseActionModal}
+              user={selectedUser}
+              actionType="suspend"
+              onSubmit={(formData) => {
+                handleSuspendUser(
+                  formData.reason || '',
+                  parseInt(formData.days || '7')
+                );
+              }}
+              isSubmitting={isSubmitting}
+            />
+          )}
+
+          {/* Ban User Modal */}
+          {actionModalType === 'ban' && (
+            <UserActionModal
+              isOpen={true}
+              onClose={handleCloseActionModal}
+              user={selectedUser}
+              actionType="ban"
+              onSubmit={(formData) => {
+                handleBanUser(formData.reason || '');
+              }}
+              isSubmitting={isSubmitting}
+            />
+          )}
+
+          {/* Reinstate User Modal */}
+          {actionModalType === 'reinstate' && (
+            <UserActionModal
+              isOpen={true}
+              onClose={handleCloseActionModal}
+              user={selectedUser}
+              actionType="reinstate"
+              onSubmit={(formData) => {
+                handleReinstateUser(formData.reason);
+              }}
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </>
+      )}
     </div>
+  );
+};
+
+// User Action Modal Component
+interface UserActionFormData {
+  warningType?: string;
+  message?: string;
+  severity?: 'low' | 'medium' | 'high';
+  reason?: string;
+  days?: string;
+}
+
+interface UserActionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: ReportedUser;
+  actionType: 'warn' | 'suspend' | 'ban' | 'reinstate';
+  onSubmit: (formData: UserActionFormData) => void;
+  isSubmitting: boolean;
+}
+
+const UserActionModal: React.FC<UserActionModalProps> = ({
+  isOpen,
+  onClose,
+  user,
+  actionType,
+  onSubmit,
+  isSubmitting
+}) => {
+  const [formData, setFormData] = useState<UserActionFormData>({});
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({});
+    }
+  }, [isOpen]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  const getModalTitle = () => {
+    switch (actionType) {
+      case 'warn':
+        return `Issue Warning to ${user.username}`;
+      case 'suspend':
+        return `Suspend ${user.username}`;
+      case 'ban':
+        return `Ban ${user.username}`;
+      case 'reinstate':
+        return `Reinstate ${user.username}`;
+      default:
+        return 'User Action';
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()} size="md">
+      <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {actionType === 'warn' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Warning Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.warningType || ''}
+                onChange={(e) => setFormData({ ...formData, warningType: e.target.value })}
+                className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse"
+                required
+              >
+                <option value="">Select warning type</option>
+                <option value="spam">Spam</option>
+                <option value="inappropriate">Inappropriate Content</option>
+                <option value="harassment">Harassment</option>
+                <option value="impersonation">Impersonation</option>
+                <option value="violation">Policy Violation</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Severity <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.severity || 'low'}
+                onChange={(e) => setFormData({ ...formData, severity: e.target.value as 'low' | 'medium' | 'high' })}
+                className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse"
+                required
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Message <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={formData.message || ''}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse resize-none"
+                rows={4}
+                placeholder="Enter warning message..."
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {actionType === 'suspend' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Suspension Duration (days) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={formData.days || '7'}
+                onChange={(e) => setFormData({ ...formData, days: e.target.value })}
+                className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={formData.reason || ''}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse resize-none"
+                rows={4}
+                placeholder="Enter suspension reason..."
+                required
+              />
+            </div>
+          </>
+        )}
+
+        {actionType === 'ban' && (
+          <div>
+            <label className="block text-sm font-medium text-primary mb-2">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={formData.reason || ''}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse resize-none"
+              rows={4}
+              placeholder="Enter ban reason..."
+              required
+            />
+            <p className="mt-2 text-xs text-yellow-400">
+              ⚠️ Warning: This action will permanently ban the user. They will not be able to access their account.
+            </p>
+          </div>
+        )}
+
+        {actionType === 'reinstate' && (
+          <div>
+            <label className="block text-sm font-medium text-primary mb-2">
+              Reason (Optional)
+            </label>
+            <textarea
+              value={formData.reason || ''}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              className="w-full px-4 py-2 bg-base border border-subtle rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-pulse resize-none"
+              rows={4}
+              placeholder="Enter reinstatement reason (optional)..."
+            />
+            <p className="mt-2 text-xs text-green-400">
+              ✓ This will restore the user's account and remove all active warnings.
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-primary font-medium"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={`flex-1 px-4 py-2 rounded-lg transition-colors font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed ${
+              actionType === 'ban'
+                ? 'bg-red-600 hover:bg-red-700'
+                : actionType === 'reinstate'
+                ? 'bg-green-600 hover:bg-green-700'
+                : 'bg-pulse hover:bg-pulse/90'
+            }`}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Processing...' : actionType === 'warn' ? 'Issue Warning' : actionType === 'suspend' ? 'Suspend User' : actionType === 'ban' ? 'Ban User' : 'Reinstate User'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

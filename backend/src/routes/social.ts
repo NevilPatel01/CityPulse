@@ -6,6 +6,7 @@ import {
     checkBookmarkStatus,
     recordShare,
     reportRecommendation,
+    reportProfile,
     setUserInterests,
     getUserInterests,
     getUserStats
@@ -23,6 +24,7 @@ router.post('/shares/:recommendationId', authenticateToken, recordShare);
 
 // Report routes
 router.post('/reports/:recommendationId', authenticateToken, reportRecommendation);
+router.post('/reports/profile/:userId', authenticateToken, reportProfile);
 
 // User interests routes
 router.post('/interests', authenticateToken, setUserInterests);

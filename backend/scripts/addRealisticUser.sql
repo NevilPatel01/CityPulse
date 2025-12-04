@@ -448,47 +448,10 @@ BEGIN
 
     -- =====================================================
     -- SEED ACHIEVEMENTS / BADGES FOR TOP USERS
-    -- Ensures engagement leaderboard has visible tie-breakers
+    -- Based on actual user stats (recommendations, cities visited, likes received)
     -- =====================================================
-    -- Create sample achievements if none exist (idempotent)
-    INSERT INTO achievements (name, description, achievement_type, target_value)
-    SELECT * FROM (
-        VALUES
-            ('Contributor', 'Posted multiple recommendations', 'contributor', 10),
-            ('Explorer', 'Visited multiple cities', 'explorer', 5),
-            ('Foodie', 'Restaurant category contributions', 'foodie', 8)
-    ) AS seed(name, description, achievement_type, target_value)
-    WHERE NOT EXISTS (
-        SELECT 1 FROM achievements a 
-        WHERE a.achievement_type = seed.achievement_type
-    );
-
-    -- Assign 3 distinct achievements to each of the top profiles
-    -- Sarah, Marcus, Isabella get completed badges to surface in leaderboard
-    INSERT INTO user_achievements (user_id, achievement_id, is_completed, current_progress, completed_at)
-    SELECT sarah_user_id, a.id, TRUE, a.target_value, NOW()
-    FROM achievements a
-    WHERE a.achievement_type IN ('contributor','explorer','foodie')
-    ON CONFLICT DO NOTHING;
-
-    INSERT INTO user_achievements (user_id, achievement_id, is_completed, current_progress, completed_at)
-    SELECT marcus_user_id, a.id, TRUE, a.target_value, NOW()
-    FROM achievements a
-    WHERE a.achievement_type IN ('contributor','explorer','foodie')
-    ON CONFLICT DO NOTHING;
-
-    INSERT INTO user_achievements (user_id, achievement_id, is_completed, current_progress, completed_at)
-    SELECT isabella_user_id, a.id, TRUE, a.target_value, NOW()
-    FROM achievements a
-    WHERE a.achievement_type IN ('contributor','explorer','foodie')
-    ON CONFLICT DO NOTHING;
-
-    -- Ensure Aiden also has badges
-    INSERT INTO user_achievements (user_id, achievement_id, is_completed, current_progress, completed_at)
-    SELECT aiden_user_id, a.id, TRUE, a.target_value, NOW()
-    FROM achievements a
-    WHERE a.achievement_type IN ('contributor','explorer','foodie')
-    ON CONFLICT DO NOTHING;
+    -- Note: Achievements are assigned AFTER recommendations are created
+    -- This section will be executed at the end of the script to calculate based on actual data
 
 -- =====================================================
 -- SARAH MARTINEZ - USER PROFILE & RECOMMENDATIONS
@@ -2396,6 +2359,139 @@ BEGIN
     RAISE NOTICE '   • Professional quality: suitable for frontend testing and user interaction';
     RAISE NOTICE '   • Complete referential integrity: cities, photos, categories properly linked';
     RAISE NOTICE '   • Ready for production: all users exceed minimum 4 recommendation requirement';
+
+    -- =====================================================
+    -- ASSIGN ACHIEVEMENTS BASED ON ACTUAL STATS
+    -- =====================================================
+    RAISE NOTICE '';
+    RAISE NOTICE '🏆 Assigning achievements based on actual user stats...';
+    
+    -- Clear any existing achievements for these users
+    DELETE FROM user_achievements WHERE user_id IN (sarah_user_id, marcus_user_id, isabella_user_id, aiden_user_id, zara_user_id);
+    
+    -- Sarah: 9 recommendations, 6 cities, 139 likes
+    -- Unlocks: First Steps, City Explorer, Rising Star, Crowd Favorite
+    INSERT INTO user_achievements (user_id, achievement_id, current_progress, is_completed, completed_at)
+    SELECT sarah_user_id, a.id,
+        CASE 
+            WHEN a.achievement_type = 'recommendations_created' THEN 9
+            WHEN a.achievement_type = 'cities_visited' THEN 6
+            WHEN a.achievement_type = 'likes_received' THEN 139
+            ELSE 0
+        END,
+        CASE 
+            WHEN a.name = 'First Steps' THEN true
+            WHEN a.name = 'City Explorer' THEN true
+            WHEN a.name = 'Rising Star' THEN true
+            WHEN a.name = 'Crowd Favorite' THEN true
+            ELSE false
+        END,
+        CASE 
+            WHEN a.name IN ('First Steps', 'City Explorer', 'Rising Star', 'Crowd Favorite') THEN NOW()
+            ELSE NULL
+        END
+    FROM achievements a
+    WHERE a.name IN ('First Steps', 'City Explorer', 'Globe Trotter', 'Recommendation Pro', 'Rising Star', 'Crowd Favorite');
+    
+    -- Marcus: 9 recommendations, 5 cities, 156 likes
+    -- Unlocks: First Steps, City Explorer, Rising Star, Crowd Favorite
+    INSERT INTO user_achievements (user_id, achievement_id, current_progress, is_completed, completed_at)
+    SELECT marcus_user_id, a.id,
+        CASE 
+            WHEN a.achievement_type = 'recommendations_created' THEN 9
+            WHEN a.achievement_type = 'cities_visited' THEN 5
+            WHEN a.achievement_type = 'likes_received' THEN 156
+            ELSE 0
+        END,
+        CASE 
+            WHEN a.name = 'First Steps' THEN true
+            WHEN a.name = 'City Explorer' THEN true
+            WHEN a.name = 'Rising Star' THEN true
+            WHEN a.name = 'Crowd Favorite' THEN true
+            ELSE false
+        END,
+        CASE 
+            WHEN a.name IN ('First Steps', 'City Explorer', 'Rising Star', 'Crowd Favorite') THEN NOW()
+            ELSE NULL
+        END
+    FROM achievements a
+    WHERE a.name IN ('First Steps', 'City Explorer', 'Globe Trotter', 'Recommendation Pro', 'Rising Star', 'Crowd Favorite');
+    
+    -- Isabella: 9 recommendations, 4 cities, 154 likes
+    -- Unlocks: First Steps, Rising Star, Crowd Favorite
+    INSERT INTO user_achievements (user_id, achievement_id, current_progress, is_completed, completed_at)
+    SELECT isabella_user_id, a.id,
+        CASE 
+            WHEN a.achievement_type = 'recommendations_created' THEN 9
+            WHEN a.achievement_type = 'cities_visited' THEN 4
+            WHEN a.achievement_type = 'likes_received' THEN 154
+            ELSE 0
+        END,
+        CASE 
+            WHEN a.name = 'First Steps' THEN true
+            WHEN a.name = 'Rising Star' THEN true
+            WHEN a.name = 'Crowd Favorite' THEN true
+            ELSE false
+        END,
+        CASE 
+            WHEN a.name IN ('First Steps', 'Rising Star', 'Crowd Favorite') THEN NOW()
+            ELSE NULL
+        END
+    FROM achievements a
+    WHERE a.name IN ('First Steps', 'City Explorer', 'Globe Trotter', 'Recommendation Pro', 'Rising Star', 'Crowd Favorite');
+    
+    -- Aiden: 9 recommendations, 4 cities, 169 likes
+    -- Unlocks: First Steps, Rising Star, Crowd Favorite
+    INSERT INTO user_achievements (user_id, achievement_id, current_progress, is_completed, completed_at)
+    SELECT aiden_user_id, a.id,
+        CASE 
+            WHEN a.achievement_type = 'recommendations_created' THEN 9
+            WHEN a.achievement_type = 'cities_visited' THEN 4
+            WHEN a.achievement_type = 'likes_received' THEN 169
+            ELSE 0
+        END,
+        CASE 
+            WHEN a.name = 'First Steps' THEN true
+            WHEN a.name = 'Rising Star' THEN true
+            WHEN a.name = 'Crowd Favorite' THEN true
+            ELSE false
+        END,
+        CASE 
+            WHEN a.name IN ('First Steps', 'Rising Star', 'Crowd Favorite') THEN NOW()
+            ELSE NULL
+        END
+    FROM achievements a
+    WHERE a.name IN ('First Steps', 'City Explorer', 'Globe Trotter', 'Recommendation Pro', 'Rising Star', 'Crowd Favorite');
+    
+    -- Zara: 7 recommendations, 3 cities, 128 likes
+    -- Unlocks: First Steps, Rising Star, Crowd Favorite
+    INSERT INTO user_achievements (user_id, achievement_id, current_progress, is_completed, completed_at)
+    SELECT zara_user_id, a.id,
+        CASE 
+            WHEN a.achievement_type = 'recommendations_created' THEN 7
+            WHEN a.achievement_type = 'cities_visited' THEN 3
+            WHEN a.achievement_type = 'likes_received' THEN 128
+            ELSE 0
+        END,
+        CASE 
+            WHEN a.name = 'First Steps' THEN true
+            WHEN a.name = 'Rising Star' THEN true
+            WHEN a.name = 'Crowd Favorite' THEN true
+            ELSE false
+        END,
+        CASE 
+            WHEN a.name IN ('First Steps', 'Rising Star', 'Crowd Favorite') THEN NOW()
+            ELSE NULL
+        END
+    FROM achievements a
+    WHERE a.name IN ('First Steps', 'City Explorer', 'Globe Trotter', 'Recommendation Pro', 'Rising Star', 'Crowd Favorite');
+    
+    RAISE NOTICE '✅ Achievements assigned successfully!';
+    RAISE NOTICE '   • Sarah: 4 badges (First Steps, City Explorer, Rising Star, Crowd Favorite)';
+    RAISE NOTICE '   • Marcus: 4 badges (First Steps, City Explorer, Rising Star, Crowd Favorite)';
+    RAISE NOTICE '   • Isabella: 3 badges (First Steps, Rising Star, Crowd Favorite)';
+    RAISE NOTICE '   • Aiden: 3 badges (First Steps, Rising Star, Crowd Favorite)';
+    RAISE NOTICE '   • Zara: 3 badges (First Steps, Rising Star, Crowd Favorite)';
 
 END $$;
 

@@ -10,26 +10,34 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
         const statsQuery = `
         SELECT 
-        (SELECT COUNT(*) FROM content_reports WHERE status = 'pending') as pending_reports,
-        (SELECT COUNT(*) FROM content_reports WHERE status = 'under_review') as under_review_reports,
-        (SELECT COUNT(*) FROM recommendations WHERE status = 'reported') as reported_recommendations,
-        (SELECT COUNT(*) FROM users WHERE account_status = 'suspended') as suspended_users,
-        (SELECT COUNT(*) FROM users WHERE account_status = 'banned') as banned_users,
-        (SELECT COUNT(*) FROM user_warnings WHERE is_active = true) as active_warnings,
-        (SELECT COUNT(*) FROM moderator_actions WHERE moderator_id = $1 AND created_at > NOW() - INTERVAL '30 days') as my_actions_30d
+        (SELECT COUNT(*)::integer FROM content_reports WHERE status = 'pending') as pending_reports,
+        (SELECT COUNT(*)::integer FROM content_reports WHERE status = 'under_review') as under_review_reports,
+        (SELECT COUNT(*)::integer FROM recommendations WHERE status = 'reported') as reported_recommendations,
+        (SELECT COUNT(*)::integer FROM users WHERE account_status = 'suspended') as suspended_users,
+        (SELECT COUNT(*)::integer FROM users WHERE account_status = 'banned') as banned_users,
+        (SELECT COUNT(*)::integer FROM user_warnings WHERE is_active = true) as active_warnings,
+        (SELECT COUNT(*)::integer FROM moderator_actions WHERE moderator_id = $1 AND created_at > NOW() - INTERVAL '30 days') as my_actions_30d
     `;
 
         const result = await query(statsQuery, [moderatorId]);
+
+        if (!result || !result.rows || result.rows.length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to fetch dashboard statistics - no data returned'
+            });
+        }
 
         res.json({
             success: true,
             data: result.rows[0]
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching dashboard stats:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to fetch dashboard statistics'
+            error: 'Failed to fetch dashboard statistics',
+            message: error?.message || 'Unknown error occurred'
         });
     }
 };
@@ -61,6 +69,15 @@ export const getContentReports = async (req: Request, res: Response) => {
             paramIndex++;
         }
 
+        // Always filter out reports for deleted/removed content
+        whereConditions.push(`(
+            (cr.reported_content_type = 'recommendation' AND EXISTS (SELECT 1 FROM recommendations r WHERE r.id = cr.reported_content_id AND r.status != 'removed'))
+            OR
+            (cr.reported_content_type = 'trip' AND EXISTS (SELECT 1 FROM trips t WHERE t.id = cr.reported_content_id AND t.status != 'cancelled'))
+            OR
+            (cr.reported_content_type = 'profile' AND EXISTS (SELECT 1 FROM users reported_user WHERE reported_user.id = cr.reported_content_id))
+        )`);
+
         const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
         const reportsQuery = `
@@ -70,15 +87,15 @@ export const getContentReports = async (req: Request, res: Response) => {
         up.profile_photo_url as reporter_photo,
         m.username as reviewer_username,
         CASE 
-            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT r.title FROM recommendations r WHERE r.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT r.title FROM recommendations r WHERE r.id = cr.reported_content_id AND r.status != 'removed')
             WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_user.username FROM users reported_user WHERE reported_user.id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'trip' THEN (SELECT t.title FROM trips t WHERE t.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'trip' THEN (SELECT t.title FROM trips t WHERE t.id = cr.reported_content_id AND t.status != 'cancelled')
             ELSE 'Unknown'
         END as content_title,
         CASE 
-            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT r.description FROM recommendations r WHERE r.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT r.description FROM recommendations r WHERE r.id = cr.reported_content_id AND r.status != 'removed')
             WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_user.bio FROM users reported_user WHERE reported_user.id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'trip' THEN (SELECT t.description FROM trips t WHERE t.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'trip' THEN (SELECT t.description FROM trips t WHERE t.id = cr.reported_content_id AND t.status != 'cancelled')
             ELSE NULL
         END as content_description,
         CASE 
@@ -88,8 +105,8 @@ export const getContentReports = async (req: Request, res: Response) => {
             ELSE NULL
         END as content_image,
         CASE 
-            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT owner_user.username FROM recommendations r JOIN users owner_user ON r.user_id = owner_user.id WHERE r.id = cr.reported_content_id)
-            WHEN cr.reported_content_type = 'trip' THEN (SELECT owner_user.username FROM trips t JOIN users owner_user ON t.user_id = owner_user.id WHERE t.id = cr.reported_content_id)
+            WHEN cr.reported_content_type = 'recommendation' THEN (SELECT owner_user.username FROM recommendations r JOIN users owner_user ON r.user_id = owner_user.id WHERE r.id = cr.reported_content_id AND r.status != 'removed')
+            WHEN cr.reported_content_type = 'trip' THEN (SELECT owner_user.username FROM trips t JOIN users owner_user ON t.user_id = owner_user.id WHERE t.id = cr.reported_content_id AND t.status != 'cancelled')
             WHEN cr.reported_content_type = 'profile' THEN (SELECT reported_user.username FROM users reported_user WHERE reported_user.id = cr.reported_content_id)
             ELSE NULL
         END as content_owner_username
@@ -115,7 +132,7 @@ export const getContentReports = async (req: Request, res: Response) => {
             query(countQuery, queryParams.slice(0, -2))
         ]);
 
-        const total = parseInt(countResult.rows[0].total);
+        const total = parseInt(countResult.rows[0]?.total || '0', 10);
         const totalPages = Math.ceil(total / limit);
 
         res.json({
@@ -231,6 +248,23 @@ export const removeContent = async (req: Request, res: Response) => {
 
         // Soft delete based on content type
         if (contentType === 'recommendation') {
+            // Check if content exists and is not already removed
+            const checkResult = await query(
+                `SELECT id, user_id, title, status FROM recommendations WHERE id = $1`,
+                [contentId]
+            );
+            
+            if (checkResult.rows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Content not found' });
+            }
+            
+            if (checkResult.rows[0].status === 'removed') {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Content has already been removed' 
+                });
+            }
+            
             const result = await query(
                 `UPDATE recommendations SET status = 'removed', report_reason = $1 WHERE id = $2 RETURNING user_id, title`,
                 [reason, contentId]
@@ -241,6 +275,23 @@ export const removeContent = async (req: Request, res: Response) => {
             contentOwnerId = result.rows[0].user_id;
             contentTitle = result.rows[0].title;
         } else if (contentType === 'trip') {
+            // Check if content exists and is not already cancelled
+            const checkResult = await query(
+                `SELECT id, user_id, title, status FROM trips WHERE id = $1`,
+                [contentId]
+            );
+            
+            if (checkResult.rows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Content not found' });
+            }
+            
+            if (checkResult.rows[0].status === 'cancelled') {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Content has already been cancelled' 
+                });
+            }
+            
             const result = await query(
                 `UPDATE trips SET status = 'cancelled' WHERE id = $1 RETURNING user_id, title`,
                 [contentId]
@@ -339,7 +390,7 @@ export const issueWarning = async (req: Request, res: Response) => {
             `SELECT COUNT(*) as count FROM user_warnings WHERE user_id = $1 AND is_active = true`,
             [userId]
         );
-        const activeWarnings = parseInt(warningCountResult.rows[0].count);
+        const activeWarnings = parseInt(warningCountResult.rows[0]?.count || '0', 10);
 
         // Auto-suspend logic based on severity and count
         let accountStatus = 'active';
@@ -375,7 +426,7 @@ export const issueWarning = async (req: Request, res: Response) => {
 
         await query(
             `INSERT INTO notifications (user_id, title, message, notification_type, related_user_id)
-       VALUES ($1, $2, $3, $4, $5)`,
+        VALUES ($1, $2, $3, $4, $5)`,
             [userId, 'Warning Issued', notificationMessage, 'system', moderatorId]
         );
 
@@ -637,7 +688,7 @@ export const getModeratorActions = async (req: Request, res: Response) => {
             query(countQuery)
         ]);
 
-        const total = parseInt(countResult.rows[0].total);
+        const total = parseInt(countResult.rows[0]?.total || '0', 10);
         const totalPages = Math.ceil(total / limit);
 
         res.json({

@@ -190,6 +190,21 @@ export const reportPost = async (
 };
 
 /**
+ * Report a user profile
+ */
+export const reportProfile = async (
+    userId: number,
+    reason: 'spam' | 'inappropriate' | 'misleading' | 'offensive' | 'harassment' | 'impersonation' | 'other',
+    description?: string
+) => {
+    const url = buildApiUrl(`api/social/reports/profile/${userId}`);
+    return await apiRequest(url, {
+        method: 'POST',
+        body: JSON.stringify({ reason, description })
+    });
+};
+
+/**
  * Set user interests
  */
 export const setUserInterests = async (categoryIds: number[]) => {

@@ -311,6 +311,86 @@ export const reportRecommendation = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Report a user profile
+ * POST /api/social/reports/profile/:userId
+ */
+export const reportProfile = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const { reason, description } = req.body;
+        const reporterId = req.user?.userId;
+
+        if (!reporterId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized'
+            });
+        }
+
+        // Validate reason
+        const validReasons = ['spam', 'inappropriate', 'misleading', 'offensive', 'harassment', 'impersonation', 'other'];
+        if (!reason || !validReasons.includes(reason)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid report reason'
+            });
+        }
+
+        // Prevent users from reporting themselves
+        if (parseInt(userId) === reporterId) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot report your own profile'
+            });
+        }
+
+        // Check if user exists
+        const userCheck = await pool.query(
+            'SELECT id FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Check if user already reported this profile
+        const existingReport = await pool.query(
+            'SELECT id FROM content_reports WHERE reporter_id = $1 AND reported_content_type = $2 AND reported_content_id = $3',
+            [reporterId, 'profile', userId]
+        );
+
+        if (existingReport.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already reported this profile'
+            });
+        }
+
+        await pool.query(
+            `INSERT INTO content_reports (reporter_id, reported_content_type, reported_content_id, report_reason, description)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [reporterId, 'profile', userId, reason, description]
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Report submitted successfully. Our team will review it.'
+        });
+
+    } catch (error) {
+        console.error('Report profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit report'
+        });
+    }
+};
+
 // ============================================================================
 // USER INTERESTS ENDPOINTS
 // ============================================================================

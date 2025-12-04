@@ -3,18 +3,43 @@ import { X } from 'lucide-react';
 
 interface ReportModalProps {
     title?: string;
+    type?: 'content' | 'profile';
     onClose: () => void;
     onSubmit: (reason: string, description?: string) => void;
 }
 
 export const ReportModal: React.FC<ReportModalProps> = ({ 
-    title = "Report Content",
+    title,
+    type = 'content',
     onClose, 
     onSubmit 
 }) => {
     const [reason, setReason] = useState('');
     const [description, setDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const modalTitle = title || (type === 'profile' ? 'Report Profile' : 'Report Content');
+    
+    const contentReasons = [
+        { value: 'spam', label: 'Spam' },
+        { value: 'inappropriate', label: 'Inappropriate content' },
+        { value: 'misleading', label: 'Misleading information' },
+        { value: 'offensive', label: 'Offensive content' },
+        { value: 'copyright', label: 'Copyright violation' },
+        { value: 'other', label: 'Other' }
+    ];
+    
+    const profileReasons = [
+        { value: 'spam', label: 'Spam' },
+        { value: 'inappropriate', label: 'Inappropriate content' },
+        { value: 'misleading', label: 'Misleading information' },
+        { value: 'offensive', label: 'Offensive content' },
+        { value: 'harassment', label: 'Harassment' },
+        { value: 'impersonation', label: 'Impersonation' },
+        { value: 'other', label: 'Other' }
+    ];
+    
+    const reasons = type === 'profile' ? profileReasons : contentReasons;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,7 +66,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-text-primary">{title}</h3>
+                    <h3 className="text-xl font-bold text-text-primary">{modalTitle}</h3>
                     <button
                         onClick={onClose}
                         className="text-text-secondary hover:text-text-primary transition-colors"
@@ -64,12 +89,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                             disabled={isSubmitting}
                         >
                             <option value="">Select a reason</option>
-                            <option value="spam">Spam</option>
-                            <option value="inappropriate">Inappropriate content</option>
-                            <option value="misleading">Misleading information</option>
-                            <option value="offensive">Offensive content</option>
-                            <option value="copyright">Copyright violation</option>
-                            <option value="other">Other</option>
+                            {reasons.map((reasonOption) => (
+                                <option key={reasonOption.value} value={reasonOption.value}>
+                                    {reasonOption.label}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
@@ -82,7 +106,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                             onChange={(e) => setDescription(e.target.value)}
                             className="w-full bg-base border border-white/10 rounded-lg px-4 py-2 text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-pulse/50 focus:border-pulse transition-all"
                             rows={4}
-                            placeholder="Provide more context about why you're reporting this content..."
+                            placeholder={type === 'profile' ? "Provide more context about why you're reporting this profile..." : "Provide more context about why you're reporting this content..."}
                             disabled={isSubmitting}
                         />
                     </div>

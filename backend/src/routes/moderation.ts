@@ -17,7 +17,7 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication and moderator role
+// All routes require authentication and moderator or admin role
 router.use(authenticateToken, requireModerator);
 
 // Dashboard

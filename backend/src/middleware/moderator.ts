@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 
 /**
- * Middleware to check if user has moderator role
+ * Middleware to check if user has moderator or admin role
  * Must be used after auth middleware
+ * Admins have the same permissions as moderators
  */
 export const requireModerator = (
   req: Request,
@@ -16,10 +17,11 @@ export const requireModerator = (
     });
   }
 
-  if (req.user.role !== 'moderator') {
+  // Allow both moderator and admin roles
+  if (req.user.role !== 'moderator' && req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
-      error: 'Moderator access required'
+      error: 'Moderator or admin access required'
     });
   }
 
