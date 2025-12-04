@@ -23,7 +23,6 @@ export interface MyLeaderboardPosition {
   data: {
     rank: number;
     achievements_count: number;
-    total_points: number;
   };
 }
 

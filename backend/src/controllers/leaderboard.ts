@@ -4,7 +4,7 @@ import { query } from '../lib/database';
 /**
  * Get leaderboard - Top users by achievement points
  * GET /api/leaderboard
- * Query params: limit (default: 10), type (default: 'all' - can be 'achievements', 'points', 'badges')
+ * Query params: limit (default: 10), type (default: 'all' - can be 'achievements', 'badges')
  */
 export const getLeaderboard = async (req: Request, res: Response) => {
     try {
@@ -24,8 +24,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                         u.full_name,
                         up.profile_photo_url,
                         COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count,
-                        COUNT(DISTINCT ua.achievement_id) as total_achievements,
-                        COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) as total_points
+                        COUNT(DISTINCT ua.achievement_id) as total_achievements
                     FROM users u
                     LEFT JOIN user_profiles up ON u.id = up.user_id
                     LEFT JOIN user_achievements ua ON u.id = ua.user_id
@@ -33,29 +32,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                     WHERE u.account_status = 'active'
                     GROUP BY u.id, u.username, u.full_name, up.profile_photo_url
                     HAVING COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) > 0
-                    ORDER BY achievements_count DESC, total_points DESC
-                    LIMIT $1
-                `;
-                break;
-
-            case 'points':
-                // Top users by total achievement points
-                queryString = `
-                    SELECT 
-                        u.id,
-                        u.username,
-                        u.full_name,
-                        up.profile_photo_url,
-                        COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count,
-                        COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) as total_points
-                    FROM users u
-                    LEFT JOIN user_profiles up ON u.id = up.user_id
-                    LEFT JOIN user_achievements ua ON u.id = ua.user_id
-                    LEFT JOIN achievements a ON ua.achievement_id = a.id
-                    WHERE u.account_status = 'active'
-                    GROUP BY u.id, u.username, u.full_name, up.profile_photo_url
-                    HAVING COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) > 0
-                    ORDER BY total_points DESC, achievements_count DESC
+                    ORDER BY achievements_count DESC
                     LIMIT $1
                 `;
                 break;
@@ -110,7 +87,6 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                         u.full_name,
                         up.profile_photo_url,
                         COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count,
-                        COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) as total_points,
                         COUNT(DISTINCT a.achievement_type) FILTER (WHERE ua.is_completed = TRUE) as unique_badges
                     FROM users u
                     LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -119,7 +95,7 @@ export const getLeaderboard = async (req: Request, res: Response) => {
                     WHERE u.account_status = 'active'
                     GROUP BY u.id, u.username, u.full_name, up.profile_photo_url
                     HAVING COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) > 0
-                    ORDER BY achievements_count DESC, total_points DESC, unique_badges DESC
+                    ORDER BY achievements_count DESC, unique_badges DESC
                     LIMIT $1
                 `;
         }
@@ -131,7 +107,6 @@ export const getLeaderboard = async (req: Request, res: Response) => {
             rank: index + 1,
             ...user,
             achievements_count: parseInt(user.achievements_count) || 0,
-            total_points: parseInt(user.total_points) || 0,
             unique_badges: parseInt(user.unique_badges) || 0
         }));
 
@@ -172,8 +147,7 @@ export const getMyLeaderboardPosition = async (req: Request, res: Response) => {
         const userStatsResult = await query(
             `
                 SELECT 
-                    COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count,
-                    COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) as total_points
+                    COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count
                 FROM user_achievements ua
                 LEFT JOIN achievements a ON ua.achievement_id = a.id
                 WHERE ua.user_id = $1
@@ -183,7 +157,6 @@ export const getMyLeaderboardPosition = async (req: Request, res: Response) => {
 
         const userStats = userStatsResult.rows[0];
         const achievementsCount = parseInt(userStats.achievements_count) || 0;
-        const totalPoints = parseInt(userStats.total_points) || 0;
 
         // Count how many users have more achievements/points
         const rankResult = await query(
@@ -192,8 +165,7 @@ export const getMyLeaderboardPosition = async (req: Request, res: Response) => {
                 FROM (
                     SELECT 
                         ua.user_id,
-                        COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count,
-                        COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) as total_points
+                        COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) as achievements_count
                     FROM user_achievements ua
                     LEFT JOIN achievements a ON ua.achievement_id = a.id
                     JOIN users u ON ua.user_id = u.id
@@ -201,17 +173,13 @@ export const getMyLeaderboardPosition = async (req: Request, res: Response) => {
                     GROUP BY ua.user_id
                     HAVING 
                         COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) > $1
-                        OR (
-                            COUNT(DISTINCT ua.achievement_id) FILTER (WHERE ua.is_completed = TRUE) = $1
-                            AND COALESCE(SUM(a.target_value) FILTER (WHERE ua.is_completed = TRUE), 0) > $2
-                        )
                 ) as ranked_users
             `,
-            [achievementsCount, totalPoints]
+            [achievementsCount]
         );
 
-        // If user has zero achievements and zero points, do not show a misleading rank
-        const rank = (achievementsCount === 0 && totalPoints === 0)
+        // If user has zero achievements, do not show a misleading rank
+        const rank = achievementsCount === 0
             ? null
             : (parseInt(rankResult.rows[0].rank) || 0);
 
@@ -219,8 +187,7 @@ export const getMyLeaderboardPosition = async (req: Request, res: Response) => {
             success: true,
             data: {
                 rank,
-                achievements_count: achievementsCount,
-                total_points: totalPoints
+                achievements_count: achievementsCount
             }
         });
 

@@ -26,8 +26,7 @@ describe('Leaderboard Page', () => {
             {
               rank: 1,
               username: 'user1',
-              achievements_count: 10,
-              total_points: 100
+              achievements_count: 10
             }
           ]
         }
@@ -40,8 +39,7 @@ describe('Leaderboard Page', () => {
         success: true,
         data: {
           rank: 5,
-          achievements_count: 5,
-          total_points: 50
+          achievements_count: 5
         }
       }
     }).as('getMyPosition');

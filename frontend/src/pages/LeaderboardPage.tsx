@@ -16,7 +16,7 @@ export default function LeaderboardPage() {
   const { showError } = useToast();
   
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [myPosition, setMyPosition] = useState<{ rank: number; achievements_count: number; total_points: number } | null>(null);
+  const [myPosition, setMyPosition] = useState<{ rank: number; achievements_count: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [type] = useState<LeaderboardType>('engagement');
 
@@ -94,7 +94,6 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-muted">{myPosition.achievements_count} Achievements</p>
-                  <p className="text-sm text-muted">{myPosition.total_points} Points</p>
                 </div>
               </div>
             </div>
