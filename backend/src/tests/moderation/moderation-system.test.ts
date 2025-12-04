@@ -282,8 +282,13 @@ describe('Moderation System', () => {
         });
 
         it('should log moderator action when removing content', async () => {
+            // Create a new recommendation for this test since the previous one was already removed
+            const newRecommendation = await createTestRecommendation(regularUser.id, {
+                title: 'Another Test Recommendation for Logging'
+            });
+
             await request(app)
-                .delete(`/api/moderator/content/recommendation/${testRecommendation.id}`)
+                .delete(`/api/moderator/content/recommendation/${newRecommendation.id}`)
                 .set('Authorization', `Bearer ${moderatorToken}`)
                 .send({
                     reason: 'Test removal',
@@ -298,7 +303,7 @@ describe('Moderation System', () => {
                  AND action_type = 'content_removal'
                  AND target_type = 'recommendation'
                  AND target_id = $2`,
-                [moderatorUser.id, testRecommendation.id]
+                [moderatorUser.id, newRecommendation.id]
             );
             expect(actionResult.rows.length).toBeGreaterThan(0);
         });

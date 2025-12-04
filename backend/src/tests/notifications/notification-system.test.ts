@@ -81,13 +81,13 @@ describe('Notification System API', () => {
                 .expect(200);
 
             expect(response.body.success).toBe(true);
-            expect(Array.isArray(response.body.data)).toBe(true);
-            expect(response.body.data.length).toBe(3);
-            expect(response.body.data[0]).toHaveProperty('id');
-            expect(response.body.data[0]).toHaveProperty('title');
-            expect(response.body.data[0]).toHaveProperty('message');
-            expect(response.body.data[0]).toHaveProperty('is_read');
-            expect(response.body.data[0]).toHaveProperty('created_at');
+            expect(Array.isArray(response.body.data.notifications)).toBe(true);
+            expect(response.body.data.notifications.length).toBe(3);
+            expect(response.body.data.notifications[0]).toHaveProperty('id');
+            expect(response.body.data.notifications[0]).toHaveProperty('title');
+            expect(response.body.data.notifications[0]).toHaveProperty('message');
+            expect(response.body.data.notifications[0]).toHaveProperty('is_read');
+            expect(response.body.data.notifications[0]).toHaveProperty('created_at');
         });
 
         it('should order notifications by created_at DESC', async () => {
@@ -96,7 +96,7 @@ describe('Notification System API', () => {
                 .set('Authorization', `Bearer ${token1}`)
                 .expect(200);
 
-            const notifications = response.body.data;
+            const notifications = response.body.data.notifications;
             for (let i = 1; i < notifications.length; i++) {
                 const prev = new Date(notifications[i - 1].created_at);
                 const curr = new Date(notifications[i].created_at);
@@ -110,7 +110,7 @@ describe('Notification System API', () => {
                 .set('Authorization', `Bearer ${token1}`)
                 .expect(200);
 
-            expect(response.body.data.length).toBeLessThanOrEqual(2);
+            expect(response.body.data.notifications.length).toBeLessThanOrEqual(2);
         });
 
         it('should support pagination with offset', async () => {
@@ -119,7 +119,7 @@ describe('Notification System API', () => {
                 .set('Authorization', `Bearer ${token1}`)
                 .expect(200);
 
-            expect(response.body.data.length).toBeLessThanOrEqual(2);
+            expect(response.body.data.notifications.length).toBeLessThanOrEqual(2);
         });
 
         it('should filter by notification type', async () => {
@@ -128,8 +128,8 @@ describe('Notification System API', () => {
                 .set('Authorization', `Bearer ${token1}`)
                 .expect(200);
 
-            if (response.body.data.length > 0) {
-                expect(response.body.data.every((n: any) => n.notification_type === 'buddy_request')).toBe(true);
+            if (response.body.data.notifications.length > 0) {
+                expect(response.body.data.notifications.every((n: any) => n.notification_type === 'buddy_request')).toBe(true);
             }
         });
 
@@ -151,7 +151,7 @@ describe('Notification System API', () => {
                 .set('Authorization', `Bearer ${token1}`)
                 .expect(200);
 
-            expect(response.body.data.every((n: any) => !n.is_read)).toBe(true);
+            expect(response.body.data.notifications.every((n: any) => !n.is_read)).toBe(true);
         });
 
         it('should return empty array when no notifications', async () => {
@@ -160,7 +160,9 @@ describe('Notification System API', () => {
                 .set('Authorization', `Bearer ${token3}`)
                 .expect(200);
 
-            expect(response.body.data).toEqual([]);
+            expect(response.body.data.notifications).toEqual([]);
+            expect(response.body.data.total).toBe(0);
+            expect(response.body.data.unreadCount).toBe(0);
         });
 
         it('should require authentication', async () => {

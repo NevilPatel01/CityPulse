@@ -68,7 +68,7 @@ describe('Profile End-to-End Tests', () => {
       );
 
       const response = await request(app)
-        .get('/api/profile/testuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -89,7 +89,7 @@ describe('Profile End-to-End Tests', () => {
 
       const response = await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send(updateData);
 
       expect(response.status).toBe(200);
@@ -105,7 +105,7 @@ describe('Profile End-to-End Tests', () => {
 
       const response = await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send(updateData);
 
       expect(response.status).toBe(200);
@@ -123,18 +123,18 @@ describe('Profile End-to-End Tests', () => {
     it('should reject duplicate username', async () => {
       // Create another user first
       const anotherUser = await request(app)
-        .post('/api/auth/signup')
+        .post('/api/auth/register')
         .send({
           fullName: 'Another User',
           username: 'anotheruser',
           email: 'another@example.com',
-          password: 'password123'
+          password: 'Password123!'
         });
 
       // Try to update first user's username to second user's username
       const response = await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send({
           username: 'anotheruser'
         });
@@ -150,7 +150,7 @@ describe('Profile End-to-End Tests', () => {
     it('should validate username format', async () => {
       const response = await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send({
           username: 'ab' // Too short
         });
@@ -162,7 +162,7 @@ describe('Profile End-to-End Tests', () => {
     it('should validate social media URLs', async () => {
       const response = await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send({
           instagramUrl: 'invalid-url'
         });
@@ -172,14 +172,14 @@ describe('Profile End-to-End Tests', () => {
     });
   });
 
-  describe('POST /api/profile/upload-photo', () => {
+  describe('POST /api/profile/photo', () => {
     it('should upload profile photo successfully', async () => {
       // Create a mock image file
       const mockImage = Buffer.from('fake-image-data');
       
       const response = await request(app)
-        .post('/api/profile/upload-photo')
-        .set('Authorization', `Bearer ${authToken}`)
+        .post('/api/profile/photo')
+        .set('Cookie', `accessToken=${authToken}`)
         .attach('photo', mockImage, 'test.jpg')
         .field('type', 'profile');
 
@@ -193,8 +193,8 @@ describe('Profile End-to-End Tests', () => {
       const mockImage = Buffer.from('fake-cover-data');
       
       const response = await request(app)
-        .post('/api/profile/upload-photo')
-        .set('Authorization', `Bearer ${authToken}`)
+        .post('/api/profile/photo')
+        .set('Cookie', `accessToken=${authToken}`)
         .attach('photo', mockImage, 'cover.jpg')
         .field('type', 'cover');
 
@@ -208,8 +208,8 @@ describe('Profile End-to-End Tests', () => {
       const mockFile = Buffer.from('fake-text-data');
       
       const response = await request(app)
-        .post('/api/profile/upload-photo')
-        .set('Authorization', `Bearer ${authToken}`)
+        .post('/api/profile/photo')
+        .set('Cookie', `accessToken=${authToken}`)
         .attach('photo', mockFile, 'test.txt')
         .field('type', 'profile');
 
@@ -221,7 +221,7 @@ describe('Profile End-to-End Tests', () => {
       const mockImage = Buffer.from('fake-image-data');
       
       const response = await request(app)
-        .post('/api/profile/upload-photo')
+        .post('/api/profile/photo')
         .attach('photo', mockImage, 'test.jpg')
         .field('type', 'profile');
 
@@ -238,7 +238,7 @@ describe('Profile End-to-End Tests', () => {
       );
 
       const response = await request(app)
-        .get('/api/profile/newtestuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -252,7 +252,7 @@ describe('Profile End-to-End Tests', () => {
       );
 
       const response = await request(app)
-        .get('/api/profile/newtestuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -263,12 +263,12 @@ describe('Profile End-to-End Tests', () => {
   describe('Profile Completion', () => {
     it('should mark profile as incomplete for new user', async () => {
       const newUser = await request(app)
-        .post('/api/auth/signup')
+        .post('/api/auth/register')
         .send({
           fullName: 'Incomplete User',
           username: 'incompleteuser',
           email: 'incomplete@example.com',
-          password: 'password123'
+          password: 'Password123!'
         });
 
       const response = await request(app)
@@ -286,7 +286,7 @@ describe('Profile End-to-End Tests', () => {
     it('should mark profile as complete with all required fields', async () => {
       await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send({
           bio: 'Complete bio',
           currentLocation: 'New York',
@@ -295,7 +295,7 @@ describe('Profile End-to-End Tests', () => {
         });
 
       const response = await request(app)
-        .get('/api/profile/newtestuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -309,13 +309,13 @@ describe('Profile End-to-End Tests', () => {
       // Upload a profile image first
       const mockImage = Buffer.from('fake-image-data');
       await request(app)
-        .post('/api/profile/upload-photo')
-        .set('Authorization', `Bearer ${authToken}`)
+        .post('/api/profile/photo')
+        .set('Cookie', `accessToken=${authToken}`)
         .attach('photo', mockImage, 'test.jpg')
         .field('type', 'profile');
 
       const response = await request(app)
-        .get('/api/profile/newtestuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -325,13 +325,13 @@ describe('Profile End-to-End Tests', () => {
     it('should return full URLs for cover images', async () => {
       const mockImage = Buffer.from('fake-cover-data');
       await request(app)
-        .post('/api/profile/upload-photo')
-        .set('Authorization', `Bearer ${authToken}`)
+        .post('/api/profile/photo')
+        .set('Cookie', `accessToken=${authToken}`)
         .attach('photo', mockImage, 'cover.jpg')
         .field('type', 'cover');
 
       const response = await request(app)
-        .get('/api/profile/newtestuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -349,11 +349,11 @@ describe('Profile End-to-End Tests', () => {
 
       await request(app)
         .put('/api/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', `accessToken=${authToken}`)
         .send(socialData);
 
       const response = await request(app)
-        .get('/api/profile/newtestuser')
+        .get(`/api/profile/${username}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
