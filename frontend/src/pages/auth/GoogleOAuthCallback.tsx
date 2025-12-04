@@ -11,19 +11,11 @@ const GoogleOAuthCallback = () => {
     useEffect(() => {
         // Prevent duplicate processing (React StrictMode runs effects twice)
         if (hasProcessed.current) {
-            console.log('⏭️ OAuth callback already processed, skipping...');
             return;
         }
 
         const code = searchParams.get('code');
-        const state = searchParams.get('state');
         const error = searchParams.get('error');
-
-        console.log('🔧 OAuth callback received:', {
-            code: !!code,
-            state: !!state,
-            error,
-        });
 
         if (error) {
             console.error('❌ OAuth error from Google:', error);
@@ -35,7 +27,6 @@ const GoogleOAuthCallback = () => {
         }
 
         if (code) {
-            console.log('✅ Authorization code received, processing...');
             hasProcessed.current = true;
             handleOAuthCallback(code);
         } else {

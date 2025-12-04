@@ -29,7 +29,6 @@ export function useNotificationSocket(options: NotificationSocketOptions = {}) {
             return;
         }
 
-        console.log('🔌 Connecting to notification server...');
 
         const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001', {
             auth: { token },
@@ -42,16 +41,14 @@ export function useNotificationSocket(options: NotificationSocketOptions = {}) {
         });
 
         socket.on('connect', () => {
-            console.log('✅ Connected to notification server');
             onConnect?.();
         });
 
-        socket.on('connected', (data) => {
-            console.log('📡 Server confirmed connection:', data);
+        socket.on('connected', () => {
+            // Connection confirmed by server
         });
 
         socket.on('notification', (notification) => {
-            console.log('🔔 New notification received:', notification);
             onNotification?.(notification);
 
             // Show browser notification if permission granted
@@ -70,7 +67,6 @@ export function useNotificationSocket(options: NotificationSocketOptions = {}) {
         });
 
         socket.on('disconnect', (reason) => {
-            console.log('❌ Disconnected from notification server:', reason);
             onDisconnect?.();
 
             // Auto-reconnect if disconnected unexpectedly
@@ -101,7 +97,6 @@ export function useNotificationSocket(options: NotificationSocketOptions = {}) {
         }
 
         if (socketRef.current) {
-            console.log('👋 Disconnecting from notification server');
             socketRef.current.disconnect();
             socketRef.current = null;
         }

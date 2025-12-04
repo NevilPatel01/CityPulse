@@ -429,9 +429,7 @@ export const cleanupTestDataByPattern = async (emailPattern: string = '%test_%')
  */
 export const verifyDatabaseConnection = async (): Promise<boolean> => {
     try {
-        console.log('🔍 Attempting database connection with:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':***@'));
         await query('SELECT 1');
-        console.log('✅ Database query successful');
         return true;
     } catch (error) {
         console.error('❌ Database connection failed:', error);

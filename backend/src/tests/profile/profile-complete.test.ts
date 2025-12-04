@@ -251,7 +251,6 @@ describe('Profile Management', () => {
                 }
             } catch (error) {
                 // Skip test if image processing fails
-                console.log('Photo upload test skipped due to image processing requirements');
             }
         });
 

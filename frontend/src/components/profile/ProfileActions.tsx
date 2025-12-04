@@ -13,14 +13,12 @@ export function ProfileActions({ isOwnProfile, onSettings, onShareProfile }: Pro
           url: window.location.href,
         });
       } catch (error) {
-        console.log('Share cancelled');
         console.error(error);
       }
     } else {
       // Fallback: copy to clipboard
       await navigator.clipboard.writeText(window.location.href);
       // TODO: Show toast notification
-      console.log('Profile URL copied to clipboard');
     }
     onShareProfile?.();
   };

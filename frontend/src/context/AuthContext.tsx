@@ -77,12 +77,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             const token = getAuthToken();
             
             if (!token) {
-                console.log('[AUTH] No token found in storage');
                 setIsLoading(false);
                 return;
             }
 
-            console.log('[AUTH] Token found, verifying with server...');
             // Verify token and get user data
             const data = await apiRequest<UserProfileResponse>(
                 apiEndpoints.auth.profile,
@@ -95,7 +93,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 },
             );
 
-            console.log('✅ [AUTH] Token valid, user authenticated:', data.data.user.email);
             setUser(data.data.user);
         } catch (error: unknown) {
             // Token is invalid or expired
@@ -105,17 +102,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             // Don't remove on network errors - user might just be offline
             const errorStatus = (error as { status?: number })?.status;
             if (errorStatus === 401 || errorStatus === 403) {
-                console.log('[AUTH] Token invalid or expired, removing from storage');
                 removeAuthToken();
                 setUser(null);
             } else {
                 // For network errors, keep the token but mark as not authenticated
                 // User can retry when network is back
-                console.log('[AUTH] Network error during auth check, keeping token');
             setUser(null);
             }
         } finally {
-            console.log('🏁 [AUTH] Auth check complete, loading finished');
             setIsLoading(false);
         }
     }, []);
@@ -127,7 +121,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Listen for storage changes from other tabs/windows
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'authToken') {
-                console.log('[AUTH] Storage change detected from another tab/window');
                 // If token was removed (logout), clear user state
                 if (!e.newValue) {
                     setUser(null);
@@ -140,7 +133,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         
         // Listen for custom auth token change events (from same origin)
         const handleAuthTokenChange = (e: CustomEvent) => {
-            console.log('[AUTH] Auth token change event detected');
             if (e.detail.token) {
                 // Token was set, verify it
                 checkAuthStatus();
@@ -172,7 +164,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 body: JSON.stringify({ email, password }),
             });
 
-            console.log('[AUTH] Login successful for:', data.data.user.email);
             
             // Store token using utility function (handles both storages and cross-tab sync)
             storeAuthToken(data.data.accessToken, rememberMe);
@@ -207,7 +198,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 body: JSON.stringify(userData),
             });
 
-            console.log('[AUTH] Registration successful for:', data.data.user.email);
 
             // Store token using utility function (default to sessionStorage for new registrations)
             storeAuthToken(data.data.accessToken, false);
@@ -232,7 +222,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Logout function
     const logout = () => {
-        console.log(' [AUTH] User logging out:', user?.email);
         const userName = user?.fullName || 'User';
         
         // Clear token from all storages using utility function (notifies other tabs)
@@ -251,7 +240,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Update user function
     const updateUser = (userData: Partial<User>) => {
-        console.log(' [AUTH] Updating user data:', userData);
         
         if (user) {
             setUser({ ...user, ...userData });

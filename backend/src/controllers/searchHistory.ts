@@ -69,7 +69,6 @@ export const getSearchHistory = async (req: Request, res: Response) => {
         const limitNum = Math.min(parseInt(limit as string) || 20, 100);
         const offsetNum = parseInt(offset as string) || 0;
 
-        console.log('[SEARCH_HISTORY] Fetching history for user:', userId, 'limit:', limitNum, 'offset:', offsetNum);
 
         // Check if table exists first
         try {
@@ -95,7 +94,6 @@ export const getSearchHistory = async (req: Request, res: Response) => {
                         search_date TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                     )
                 `);
-                console.log('[SEARCH_HISTORY] Created search_history table');
             }
         } catch (tableError) {
             console.error('[SEARCH_HISTORY] Error checking/creating table:', tableError);

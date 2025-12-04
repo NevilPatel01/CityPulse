@@ -53,7 +53,6 @@ export const setAuthToken = (token: string, rememberMe: boolean = false): void =
     localStorage.setItem('authToken', token);
     // Also sync to sessionStorage for immediate use in this tab
     sessionStorage.setItem('authToken', token);
-    console.log('[AUTH STORAGE] Token stored in localStorage (Remember Me enabled)');
   } else {
     // Store in sessionStorage for session-only login
     // Note: sessionStorage is tab-specific, so cross-tab sync won't work via storage events
@@ -61,7 +60,6 @@ export const setAuthToken = (token: string, rememberMe: boolean = false): void =
     // The token in localStorage will be cleared when the user explicitly logs out
     sessionStorage.setItem('authToken', token);
     localStorage.setItem('authToken', token); // Enable cross-tab access
-    console.log('[AUTH STORAGE] Token stored in sessionStorage and localStorage (session-only, cross-tab enabled)');
   }
   
   // Dispatch custom event to notify other tabs/windows of the auth state change
@@ -85,7 +83,6 @@ export const removeAuthToken = (): void => {
     detail: { token: null } 
   }));
   
-  console.log('[AUTH STORAGE] Token removed from all storage');
 };
 
 /**

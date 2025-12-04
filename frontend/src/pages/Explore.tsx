@@ -436,7 +436,6 @@ export default function Explore() {
                 if (now - lastLoad < 500) return; // 500ms debounce
                 if (feedLoading) return;
                 lastLoad = now;
-                console.log('[InfiniteScroll] Triggering loadMore');
                 loadMore();
             };
         })();

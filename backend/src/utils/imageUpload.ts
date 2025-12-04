@@ -110,7 +110,6 @@ const deleteOldFiles = async (dirPath: string): Promise<void> => {
     try {
         const files = await fs.readdir(dirPath);
         await Promise.all(files.map(file => fs.unlink(path.join(dirPath, file))));
-        console.log(`Deleted ${files.length} old file(s) from: ${dirPath}`);
     } catch (error: any) {
         if (error.code !== 'ENOENT') {
             console.error('Error deleting old files:', error);
@@ -203,7 +202,6 @@ export const deleteOldImage = async (imagePath: string): Promise<void> => {
             : imagePath;
         const fullPath = path.join(getUploadsBaseDir(), relativePath);
         await fs.unlink(fullPath);
-        console.log(`Deleted old image: ${imagePath}`);
     } catch (error) {
         console.error('Error deleting old image:', error);
         // Don't throw error, just log it
@@ -216,7 +214,6 @@ export const deleteOldImage = async (imagePath: string): Promise<void> => {
 export const deleteFolder = async (folderPath: string): Promise<void> => {
     try {
         await fs.rm(folderPath, { recursive: true, force: true });
-        console.log(`Deleted folder: ${folderPath}`);
     } catch (error) {
         console.error('Error deleting folder:', error);
     }

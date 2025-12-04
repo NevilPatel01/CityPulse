@@ -94,7 +94,6 @@ export const register = async (req: Request, res: Response) => {
                 `INSERT INTO user_profiles (user_id) VALUES ($1)`,
                 [user.id]
             );
-            console.log(`[AUTH] User profiles record created for user: ${user.id}`);
         } catch (profileError) {
             console.error(`[AUTH] Error creating user_profiles record:`, profileError);
             // Continue with registration even if profile creation fails
@@ -185,7 +184,6 @@ export const login = async (req: Request, res: Response) => {
                         [user.id]
                     );
                     
-                    console.log(`[REACTIVATION] User ${user.username} (${user.id}) reactivated their account (${daysSinceDeactivation} days after deactivation)`);
                     
                     // Update user object for token generation
                     user.account_status = 'active';
@@ -499,7 +497,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
     try {
         const { code, redirectUri, googleId: directGoogleId, email: directEmail, name: directName, picture: directPicture, accessToken } = req.body;
 
-        console.log('🔧 Google OAuth request received with authorization code');
 
         let googleId: string;
         let email: string;
@@ -536,7 +533,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
             }
 
             const tokenData = await tokenResponse.json() as { access_token: string; token_type: string };
-            console.log('✅ Token exchange successful');
 
             // Get user info from Google
             const userInfoResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenData.access_token}`);
@@ -550,7 +546,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
             }
 
             const googleUser = await userInfoResponse.json() as { id: string; email: string; name: string; picture?: string };
-            console.log('✅ User info retrieved:', googleUser.email);
 
             googleId = googleUser.id;
             email = googleUser.email;
@@ -562,7 +557,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
             email = directEmail;
             name = directName;
             picture = directPicture;
-            console.log('✅ Using direct user data for testing');
         } else {
             return res.status(400).json({
                 success: false,
@@ -592,7 +586,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
         if (existingUserResult.rows.length > 0) {
             // User exists - update Google info if needed
             user = existingUserResult.rows[0];
-            console.log('✅ Existing user found:', user.id);
 
             // Check if account is deactivated and handle reactivation
             if (user.account_status === 'pending_deletion' && user.deactivated_at) {
@@ -613,7 +606,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
                         [googleId, user.id]
                     );
                     
-                    console.log(`[GOOGLE REACTIVATION] User ${user.username} (${user.id}) reactivated via Google OAuth (${daysSinceDeactivation} days after deactivation)`);
                     
                     // Update user object
                     user.account_status = 'active';
@@ -640,7 +632,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
 
         } else {
             // Create new user
-            console.log('🔧 Creating new user from Google OAuth');
 
             // Extract username from email (before @)
             const username = normalizedEmail.split('@')[0] + '_' + Math.random().toString(36).substring(2, 8);
@@ -664,7 +655,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
             );
 
             user = userResult.rows[0];
-            console.log('New user created:', user.id);
 
             // Create user_profiles record for new Google OAuth user
             try {
@@ -672,7 +662,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
                     `INSERT INTO user_profiles (user_id) VALUES ($1)`,
                     [user.id]
                 );
-                console.log(`[GOOGLE_AUTH] User profiles record created for user: ${user.id}`);
             } catch (profileError) {
                 console.error(`[GOOGLE_AUTH] Error creating user_profiles record:`, profileError);
                 // Continue with authentication even if profile creation fails
@@ -702,7 +691,6 @@ export const googleOAuth = async (req: Request, res: Response) => {
         // Set cookies
         setTokenCookies(res, jwtAccessToken, refreshToken);
 
-        console.log('Google OAuth authentication successful for user:', user.id);
 
         res.json({
             success: true,
@@ -736,7 +724,6 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
         // Convert email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        console.log('🔐 Password reset requested for:', normalizedEmail);
 
         // Check if user exists
         const userResult = await query(
@@ -746,7 +733,6 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
         // Always return success to prevent email enumeration
         if (userResult.rows.length === 0) {
-            console.log('Password reset requested for non-existent email:', normalizedEmail);
             return res.json({
                 success: true,
                 message: 'If an account with this email exists, you will receive a password reset code.'
@@ -757,8 +743,6 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
         // Allow Google OAuth users to set backup passwords
         if (user.is_google_user) {
-            console.log('Password reset requested for Google OAuth user:', normalizedEmail);
-            console.log('Allowing backup password setup for OAuth user');
         }
 
         // Clean up any existing unused reset tokens for this user
@@ -772,8 +756,6 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
         const resetToken = generateResetToken();
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
 
-        console.log('🔑 [RESET] Generated security code:', securityCode);
-        console.log('🔑 [RESET] Generated reset token:', resetToken);
 
         // Store reset token in database
         await query(
@@ -783,12 +765,10 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
             [user.id, normalizedEmail, securityCode, resetToken, expiresAt]
         );
 
-        console.log('[RESET] Token stored in database successfully');
 
         // Send email with security code
         try {
             await sendPasswordResetEmail(normalizedEmail, securityCode, user.username);
-            console.log('Password reset email sent to:', normalizedEmail);
         } catch (emailError) {
             console.error('Failed to send password reset email:', emailError);
             // Clean up the token if email fails
@@ -808,7 +788,6 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
             resetToken // Frontend needs this to proceed to verification step
         });
 
-        console.log('📤 [RESET] Response sent with resetToken:', resetToken);
 
     } catch (error) {
         console.error('❌ Password reset request error:', error);
@@ -824,7 +803,6 @@ export const verifyResetCode = async (req: Request, res: Response) => {
     try {
         const { resetToken, securityCode } = req.body;
 
-        console.log('🔐 Verifying reset code for token:', resetToken?.substring(0, 8) + '...');
 
         // Find the reset token
         const tokenResult = await query(
@@ -871,7 +849,6 @@ export const verifyResetCode = async (req: Request, res: Response) => {
             });
         }
 
-        console.log('Security code verified for user:', resetData.user_id);
 
         res.json({
             success: true,
@@ -893,7 +870,6 @@ export const resetPassword = async (req: Request, res: Response) => {
     try {
         const { resetToken, newPassword } = req.body;
 
-        console.log('🔐 Resetting password for token:', resetToken?.substring(0, 8) + '...');
 
         // Find the reset token
         const tokenResult = await query(
@@ -977,7 +953,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
     try {
         const { token } = req.body;
 
-        console.log('📧 Verifying email with token:', token?.substring(0, 8) + '...');
 
         // Find the verification token
         const tokenResult = await query(
@@ -1020,7 +995,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
             [verificationData.id]
         );
 
-        console.log('✅ Email verified for user:', verificationData.user_id);
 
         res.json({
             success: true,
@@ -1095,7 +1069,6 @@ export const resendVerificationEmail = async (req: Request, res: Response) => {
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
         await sendVerificationEmail(user.email, user.username, verificationUrl);
 
-        console.log('✅ Verification email resent to:', user.email);
 
         res.json({
             success: true,

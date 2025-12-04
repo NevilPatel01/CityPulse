@@ -76,7 +76,6 @@ export const useInfiniteScroll = ({
             
             // If target is visible, not loading, and has more data, load more
             if (target.isIntersecting && !isLoading && hasMore) {
-                console.log('[InfiniteScroll] Target visible, triggering load more...');
                 lastLoadTimeRef.current = now;
                 onLoadMore();
             }
@@ -87,7 +86,6 @@ export const useInfiniteScroll = ({
     useEffect(() => {
         const element = observerTarget.current;
         if (!element) {
-            console.log('[InfiniteScroll] No observer target element');
             return;
         }
 
@@ -98,7 +96,6 @@ export const useInfiniteScroll = ({
         });
 
         observer.observe(element);
-        console.log('[InfiniteScroll] Observer attached to element');
 
         return () => {
             if (element) {

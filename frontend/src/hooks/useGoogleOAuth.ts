@@ -39,18 +39,14 @@ export const useGoogleOAuth = () => {
      */
     const initiateGoogleOAuth = useCallback(() => {
         try {
-            console.log('[OAUTH] Initiating Google OAuth flow...');
             setState({ isLoading: true, error: null });
 
             const authUrl = getGoogleAuthUrl();
-            console.log('[OAUTH] Generated auth URL:', authUrl);
 
             // Store the current path to redirect back after OAuth
             sessionStorage.setItem('oauth_redirect_path', window.location.pathname);
-            console.log('[OAUTH] Stored redirect path:', window.location.pathname);
 
             // Open Google OAuth in the same window
-            console.log('[OAUTH] Redirecting to Google OAuth...');
             window.location.href = authUrl;
 
         } catch (error) {
@@ -63,12 +59,10 @@ export const useGoogleOAuth = () => {
      * Handle OAuth callback (called when user returns from Google)
      */
     const handleOAuthCallback = useCallback(async (code: string) => {
-        console.log('🔧 OAuth callback started with code:', code?.substring(0, 20) + '...');
 
         try {
             setState({ isLoading: true, error: null });
 
-            console.log('Step 1: Sending authorization code to backend...');
             // SECURITY: Send authorization code to backend
             // Backend will exchange code for token using client secret (kept secure on server)
             const authResponse = await apiRequest<GoogleAuthResponse>(
@@ -84,35 +78,29 @@ export const useGoogleOAuth = () => {
                     }),
                 }
             );
-            console.log('Backend auth response:', authResponse);
 
             // Store JWT token using storage utility
             // Use localStorage (rememberMe=true) for Google OAuth to enable cross-tab persistence
             // Google OAuth is typically used for convenience and users expect it to persist
             setAuthToken(authResponse.data.accessToken, true);
-            console.log('[OAUTH] Auth token stored in localStorage for cross-tab persistence');
 
             // Update auth context with the user data
             updateUser(authResponse.data.user);
-            console.log('✅ Auth context updated with user data');
             
             // Manually trigger checkAuthStatus to ensure auth state is properly verified
             // This ensures the user is immediately authenticated in this tab after OAuth
             // The storage event will handle cross-tab sync, but we need to verify in this tab too
             await checkAuthStatus();
-            console.log('✅ Auth status verified after OAuth');
 
             // Get the stored redirect path or default to explore
             const redirectPath = sessionStorage.getItem('oauth_redirect_path') || '/explore';
             sessionStorage.removeItem('oauth_redirect_path');
-            console.log('Redirecting to:', redirectPath);
 
             // Add a small delay to ensure context update propagates
             setTimeout(() => {
                 // Navigate to explore
                 navigate(redirectPath);
                 setState({ isLoading: false, error: null });
-                console.log('OAuth flow completed successfully!');
             }, 100);
 
         } catch (error) {
@@ -122,7 +110,6 @@ export const useGoogleOAuth = () => {
             const errorMessage = error instanceof Error ? error.message : 'Google OAuth authentication failed';
             
             if (errorMessage.includes('ERR_BLOCKED_BY_CLIENT')) {
-                console.log('ℹAd blocker detected - this is normal and won\'t affect login');
                 return;
             }
             

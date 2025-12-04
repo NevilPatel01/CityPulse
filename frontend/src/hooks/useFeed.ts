@@ -56,7 +56,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
         // Check if location permission was already denied in this session
         const locationDenied = localStorage.getItem('locationPermissionDenied');
         if (locationDenied === 'true') {
-            console.log('[Feed] Location permission was previously denied');
             return;
         }
 
@@ -69,7 +68,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
                     });
                     // Clear the denied flag if permission is granted
                     localStorage.removeItem('locationPermissionDenied');
-                    console.log('[Feed] Location enabled:', position.coords);
                 },
                 (error) => {
                     console.warn('[Feed] Location denied or unavailable:', error);
@@ -116,9 +114,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
                 totalAvailable
             });
 
-            console.log('[Feed] Initial feed loaded:', response.data.length, 'posts');
-            console.log('[Feed] Total available:', totalAvailable);
-            console.log('[Feed] Seen IDs:', seenIdsRef.current.size);
         } catch (error) {
             console.error('[Feed] Error loading initial feed:', error);
             setState(prev => ({
@@ -139,7 +134,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
     const loadMore = useCallback(async () => {
         // Prevent multiple simultaneous loads
         if (state.loading || isLoadingRef.current) {
-            console.log('[Feed] Skipping load - already loading');
             return;
         }
         
@@ -154,7 +148,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
             const shouldReset = seenIdsRef.current.size >= state.totalAvailable && state.totalAvailable > 0;
             
             if (shouldReset) {
-                console.log('[Feed] All posts seen (' + seenIdsRef.current.size + '/' + state.totalAvailable + '), resetting to cycle through again');
                 seenIdsRef.current.clear();
             }
 
@@ -186,8 +179,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
                 totalAvailable
             }));
 
-            console.log('[Feed] Loaded more:', response.data.length, 'posts. Total in view:', state.posts.length + response.data.length);
-            console.log('[Feed] Seen IDs count:', seenIdsRef.current.size, '/', totalAvailable);
         } catch (error) {
             console.error('[Feed] Error loading more posts:', error);
             setState(prev => ({ ...prev, loading: false }));
@@ -261,7 +252,6 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
         // Add timeout to load feed even if location is denied/delayed
         const timeout = setTimeout(() => {
             if (enableLocation && !location && state.posts.length === 0) {
-                console.log('[Feed] Loading feed without location after timeout');
                 loadInitialFeed();
             }
         }, 3000); // 3 second timeout

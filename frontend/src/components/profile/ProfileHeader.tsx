@@ -54,7 +54,6 @@ export function ProfileHeader({ profile, onEditProfile }: ProfileHeaderProps) {
         [type]: previewUrl
       }));
       
-      console.log('Uploading', type, 'image:', file.name);
       
       // Simulate upload delay
       await new Promise(resolve => setTimeout(resolve, 2000));

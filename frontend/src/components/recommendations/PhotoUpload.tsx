@@ -110,8 +110,6 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
       // Build full URL
       const url = `${apiConfig.baseUrl}/api/recommendations/${recommendationId}/photos`;
       
-      console.log('[PhotoUpload] Uploading to:', url);
-      console.log('[PhotoUpload] Files count:', selectedFiles.length);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -122,7 +120,6 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
         body: formData
       });
 
-      console.log('[PhotoUpload] Response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -141,7 +138,6 @@ export function PhotoUpload({ recommendationId, onUploadSuccess, maxPhotos = 10 
       }
 
       const data = await response.json() as UploadPhotosResponse;
-      console.log('[PhotoUpload] Response data:', data);
 
       if (data.success) {
         const newPhotos = data.data?.photos ?? [];

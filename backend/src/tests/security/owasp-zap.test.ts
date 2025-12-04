@@ -515,7 +515,6 @@ describe('OWASP Security Tests', () => {
         it('should have rate limiting on authentication endpoints', async () => {
             // Note: This test might be skipped in test environment if rate limiting is disabled
             if (process.env.NODE_ENV === 'test') {
-                console.log('Rate limiting test skipped in test environment');
                 return;
             }
 

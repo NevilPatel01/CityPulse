@@ -40,7 +40,6 @@ export const useInactivityTimeout = (options: UseInactivityTimeoutOptions = {}) 
     }, []);
 
     const handleTimeout = useCallback(async () => {
-        console.log('[INACTIVITY] Session timeout - logging out user');
 
         if (onTimeout) {
             onTimeout();
@@ -56,7 +55,6 @@ export const useInactivityTimeout = (options: UseInactivityTimeoutOptions = {}) 
     }, [logout, onTimeout, showWarning]);
 
     const handleWarning = useCallback(() => {
-        console.log('[INACTIVITY] Showing timeout warning');
 
         if (onWarning) {
             onWarning();
@@ -83,7 +81,6 @@ export const useInactivityTimeout = (options: UseInactivityTimeoutOptions = {}) 
         // Set timeout timer
         timeoutRef.current = setTimeout(handleTimeout, timeout);
 
-        console.log('[INACTIVITY] Timer reset - will timeout in', timeout / 1000 / 60, 'minutes');
     }, [isAuthenticated, timeout, warningTime, handleWarning, handleTimeout, clearTimers]);
 
     useEffect(() => {

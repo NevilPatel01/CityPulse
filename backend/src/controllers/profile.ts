@@ -10,8 +10,6 @@ export const getProfile = async (req: Request, res: Response) => {
         const { username } = req.params;
         const currentUserId = req.user?.userId;
 
-        console.log(`[PROFILE] Getting profile for username: ${username}`);
-        console.log(`[PROFILE] Current user ID: ${currentUserId}`);
 
         // Get user basic info with profile data
         const userResult = await query(
@@ -73,19 +71,14 @@ export const getProfile = async (req: Request, res: Response) => {
 
         // Combine both sources and remove duplicates
         const allCities = [...new Set([...citiesVisitedFromProfile, ...citiesFromRecommendations])];
-        console.log('[PROFILE] Cities from profile:', citiesVisitedFromProfile);
-        console.log('[PROFILE] Cities from recommendations:', citiesFromRecommendations);
-        console.log('[PROFILE] Combined cities:', allCities);
 
         // If user_profiles record doesn't exist, create it with default values
         if (!user.profile_photo_url && user.id === currentUserId) {
-            console.log(`[PROFILE] Creating user_profiles record for user: ${user.id}`);
             try {
                 await query(
                     `INSERT INTO user_profiles (user_id) VALUES ($1)`,
                     [user.id]
                 );
-                console.log(`[PROFILE] User profiles record created for user: ${user.id}`);
 
                 // Re-fetch user data with the new profile record
                 const updatedUserResult = await query(
@@ -131,15 +124,12 @@ export const getProfile = async (req: Request, res: Response) => {
 
                 // If they are travel buddies, allow full access
                 if (buddyCheckResult.rows.length > 0) {
-                    console.log(`[PROFILE] Allowing travel buddy ${currentUserId} to view private profile ${user.id}`);
                 } else {
                     // Not a buddy, return limited profile data (Instagram-like)
-                    console.log(`[PROFILE] Returning limited profile data for private account ${user.id}`);
                     isPrivateAccount = true;
                 }
             } else {
                 // Not authenticated, return limited profile data
-                console.log(`[PROFILE] Returning limited profile data for unauthenticated user viewing private account ${user.id}`);
                 isPrivateAccount = true;
             }
         }
@@ -235,7 +225,6 @@ export const getProfile = async (req: Request, res: Response) => {
         const canDisplayProfile = hasMinimumData && isProfileComplete;
 
         // For incomplete profiles, only show to the owner or buddies
-        console.log(`[PROFILE] Profile completion check: isComplete=${isProfileComplete}, user.id=${user.id}, currentUserId=${currentUserId}`);
 
         // Check if this is the user's own profile (by username match or user ID match)
         const isOwnProfile = currentUserId ? user.id === currentUserId : false;
@@ -255,22 +244,18 @@ export const getProfile = async (req: Request, res: Response) => {
         // Special case: If user is not authenticated but profile is incomplete,
         // I'll allow access but mark it as incomplete for the frontend to handle
         if (!isProfileComplete && !currentUserId) {
-            console.log(`[PROFILE] Unauthenticated access to incomplete profile - allowing with completion form`);
             // Don't block, let it continue to show the profile with completion status
         } else if (!isProfileComplete && !isOwnProfile && !isBuddy) {
-            console.log(`[PROFILE] Blocking incomplete profile for non-owner and non-buddy`);
             return res.status(403).json({
                 success: false,
                 message: 'This user profile is incomplete and not available for viewing',
                 code: 'PROFILE_INCOMPLETE'
             });
         } else if (!isProfileComplete && isBuddy) {
-            console.log(`[PROFILE] Allowing buddy ${currentUserId} to view incomplete profile ${user.id}`);
         }
 
         // If profile is incomplete and it's the owner, allow access but mark as incomplete
         if (!isProfileComplete && isOwnProfile) {
-            console.log(`[PROFILE] Incomplete profile for owner: ${user.id}, allowing access with completion form`);
         }
 
         // Prepare response data
@@ -466,8 +451,6 @@ export const updateProfile = async (req: Request, res: Response) => {
             citiesVisited
         } = req.body;
 
-        console.log(`[PROFILE] Updating profile for user: ${userId}`);
-        console.log(`[PROFILE] Cities visited update:`, citiesVisited);
 
         // Validate username if provided
         if (username !== undefined) {
@@ -636,7 +619,6 @@ export const updateProfile = async (req: Request, res: Response) => {
                 profileUpdateFields.push(`cities_visited = $${paramCount++}`);
                 // Ensure citiesVisited is properly formatted as JSON
                 const citiesJson = Array.isArray(citiesVisited) ? JSON.stringify(citiesVisited) : JSON.stringify([]);
-                console.log(`[PROFILE] Updating cities_visited to:`, citiesJson);
                 profileUpdateValues.push(citiesJson);
             }
 
@@ -696,7 +678,6 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
         const userId = req.user.userId;
         const { type } = req.body; // 'profile' or 'cover'
 
-        console.log(`[PROFILE] Uploading ${type} photo for user: ${userId}`);
 
         // Validate file
         const validation = validateImageFile(req.file);
@@ -709,7 +690,6 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
 
         // Get image metadata
         const metadata = await getImageMetadata(req.file.buffer);
-        console.log(`[PROFILE] Image metadata:`, metadata);
 
         // Generate filename and process image (new structure: uploads/{userId}/{type}/)
         const filename = generateFilename(req.file.originalname, type as 'profile' | 'cover');
@@ -751,11 +731,8 @@ export const uploadProfilePhoto = async (req: Request, res: Response) => {
                        (req.protocol + '://' + req.get('host')) ||
                        'http://localhost:5001';
         
-        console.log('[PROFILE] Base URL for image:', baseUrl);
-        console.log('[PROFILE] Image path:', imagePath);
         
         const fullImageUrl = `${baseUrl}${imagePath}`;
-        console.log('[PROFILE] Full image URL:', fullImageUrl);
 
         // Set CORS headers for the response
         res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'http://localhost:3001');
@@ -807,7 +784,6 @@ export const deleteProfilePhoto = async (req: Request, res: Response) => {
             });
         }
 
-        console.log(`[PROFILE] Deleting ${type} photo for user: ${userId}`);
 
         // Get current image URL
         const currentImageResult = await query(
@@ -862,7 +838,6 @@ export const getUserStats = async (req: Request, res: Response) => {
 
         const userId = Number(req.user.userId);
 
-        console.log(`[PROFILE] Getting stats for user: ${userId}`);
 
         const statsResult = await query(
             `SELECT 
@@ -927,7 +902,6 @@ export const getUserBadges = async (req: Request, res: Response) => {
 
         const userId = Number(req.user.userId);
 
-        console.log(`[PROFILE] Getting badges for user: ${userId}`);
 
         const badgesResult = await query(
             `SELECT 
@@ -1333,7 +1307,6 @@ export const requestDataDeletion = async (req: Request, res: Response) => {
         // Mark user for deletion
         await query('UPDATE users SET account_status = $1 WHERE id = $2', ['pending_deletion', userId]);
 
-        console.log(`[DATA DELETION] User ${user.username} (${userId}) requested account deletion`);
 
         return res.status(200).json({
             success: true,
@@ -1406,7 +1379,6 @@ export const deactivateAccount = async (req: Request, res: Response) => {
             ['pending_deletion', userId]
         );
 
-        console.log(`[ACCOUNT DEACTIVATION] User ${user.username} (${userId}) deactivated their account`);
 
         return res.status(200).json({
             success: true,

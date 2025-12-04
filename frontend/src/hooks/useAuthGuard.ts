@@ -19,7 +19,6 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}) {
 
     if (requireAuth && !isAuthenticated) {
       // User needs to be authenticated but isn't
-      console.log('🔒 [AUTH GUARD] User not authenticated, redirecting to login');
       onUnauthorized?.();
       navigate(redirectTo, { 
         state: { from: location },
@@ -27,7 +26,6 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}) {
       });
     } else if (!requireAuth && isAuthenticated) {
       // User is authenticated but shouldn't be on this page (e.g., login page)
-      console.log('🔒 [AUTH GUARD] User already authenticated, redirecting to explore');
       navigate('/explore', { replace: true });
     }
   }, [isAuthenticated, isLoading, requireAuth, redirectTo, navigate, location, onUnauthorized]);

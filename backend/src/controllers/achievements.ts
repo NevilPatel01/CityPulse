@@ -162,7 +162,6 @@ export const getMyAchievementProgress = async (req: Request, res: Response) => {
 // Check and award achievements for a user
 export const checkAndAwardAchievements = async (userId: number, achievementType: string) => {
     try {
-        console.log(`[ACHIEVEMENTS] Checking achievements for user ${userId}, type: ${achievementType}`);
 
         // Get user stats based on achievement type
         let currentValue = 0;
@@ -218,11 +217,9 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
                 break;
 
             default:
-                console.log(`[ACHIEVEMENTS] Unknown achievement type: ${achievementType}`);
                 return [];
         }
 
-        console.log(`[ACHIEVEMENTS] Current value for ${achievementType}: ${currentValue}`);
 
         // Get all achievements of this type
         const achievementsResult = await query(
@@ -249,7 +246,6 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
                 );
 
                 if (isCompleted) {
-                    console.log(`[ACHIEVEMENTS] ✨ User ${userId} earned achievement: ${achievement.name}`);
                     newlyEarned.push({
                         id: achievement.id,
                         name: achievement.name
@@ -268,7 +264,6 @@ export const checkAndAwardAchievements = async (userId: number, achievementType:
                         [currentValue, userId, achievement.id]
                     );
 
-                    console.log(`[ACHIEVEMENTS] ✨ User ${userId} earned achievement: ${achievement.name}`);
                     newlyEarned.push({
                         id: achievement.id,
                         name: achievement.name

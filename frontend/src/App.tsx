@@ -38,14 +38,9 @@ import { InactivityHandler } from './components/auth/InactivityHandler';
 
 function App() {
   useEffect(() => {
-    console.log('🚀 [APP] CityPulse App initialized');
-    console.log('🌍 [APP] Current URL:', window.location.href);
-    console.log('🔧 [APP] Environment:', import.meta.env.MODE);
-    console.log('🔌 [APP] API URL:', import.meta.env.VITE_API_URL);
     
     // Log navigation changes
     const handleLocationChange = () => {
-      console.log('🧭 [APP] Navigation to:', window.location.pathname);
     };
     
     window.addEventListener('popstate', handleLocationChange);

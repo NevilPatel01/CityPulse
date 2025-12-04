@@ -18,7 +18,6 @@ export const searchAll = async (req: Request, res: Response) => {
         const limitNum = Math.min(parseInt(limit as string) || 20, 50);
         const offsetNum = parseInt(offset as string) || 0;
 
-        console.log(`[SEARCH] Searching for: "${searchQuery}", type: ${type}, limit: ${limitNum}, offset: ${offsetNum}`);
 
         let results: any = {
             recommendations: [],
@@ -153,7 +152,6 @@ export const searchAll = async (req: Request, res: Response) => {
         // Calculate total results
         results.total = results.recommendations.length + results.users.length + results.cities.length;
 
-        console.log(`[SEARCH] Found ${results.total} results: ${results.recommendations.length} recommendations, ${results.users.length} users, ${results.cities.length} cities`);
 
         // Track search history asynchronously (fire and forget)
         const userId = req.user?.userId;

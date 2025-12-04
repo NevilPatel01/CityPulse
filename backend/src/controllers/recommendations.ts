@@ -287,9 +287,6 @@ export const getRecommendationById = async (req: Request, res: Response) => {
 
 // Create new recommendation
 export const createRecommendation = async (req: Request, res: Response) => {
-    console.log('[CREATE_REC] Request received:', req.method, req.url);
-    console.log('[CREATE_REC] Request headers:', JSON.stringify(req.headers, null, 2));
-    console.log('[CREATE_REC] Request body:', JSON.stringify(req.body, null, 2));
 
     try {
         // Check if photos are provided (required)
@@ -347,24 +344,19 @@ export const createRecommendation = async (req: Request, res: Response) => {
 
         const userId = (req as any).user?.userId;
 
-        console.log('[CREATE_REC] User from middleware:', (req as any).user);
-        console.log('[CREATE_REC] User ID:', userId);
 
         if (!userId) {
-            console.log('[CREATE_REC] Authentication failed - no user ID');
             return res.status(401).json({
                 success: false,
                 message: 'Authentication required'
             });
         }
 
-        console.log('[CREATE_REC] Starting recommendation creation...');
 
         try {
             // Handle custom category
             let finalCategoryId = category_id;
             if (custom_category && !category_id) {
-                console.log('[CREATE_REC] Creating custom category:', custom_category);
                 // Check if custom category already exists
                 const existingCategory = await query(
                     'SELECT id FROM recommendation_categories WHERE name = $1',
@@ -373,7 +365,6 @@ export const createRecommendation = async (req: Request, res: Response) => {
 
                 if (existingCategory.rows.length > 0) {
                     finalCategoryId = existingCategory.rows[0].id;
-                    console.log('[CREATE_REC] Using existing category:', finalCategoryId);
                 } else {
                     // Create new custom category
                     const newCategoryResult = await query(
@@ -381,7 +372,6 @@ export const createRecommendation = async (req: Request, res: Response) => {
                         [custom_category, `Custom category: ${custom_category}`]
                     );
                     finalCategoryId = newCategoryResult.rows[0].id;
-                    console.log('[CREATE_REC] Created new category:', finalCategoryId);
                 }
             }
 
@@ -389,7 +379,6 @@ export const createRecommendation = async (req: Request, res: Response) => {
             let finalCityId = null;
 
             if (city_name) {
-                console.log('[CREATE_REC] Processing selected city:', city_name);
                 // User selected an existing city from their visited cities
                 const existingCity = await query(
                     'SELECT id FROM cities WHERE name = $1',
@@ -398,7 +387,6 @@ export const createRecommendation = async (req: Request, res: Response) => {
 
                 if (existingCity.rows.length > 0) {
                     finalCityId = existingCity.rows[0].id;
-                    console.log('[CREATE_REC] Using existing city:', finalCityId);
                 } else {
                     // Create new city
                     const newCityResult = await query(
@@ -406,10 +394,8 @@ export const createRecommendation = async (req: Request, res: Response) => {
                         [city_name, '', latitude || 0, longitude || 0]
                     );
                     finalCityId = newCityResult.rows[0].id;
-                    console.log('[CREATE_REC] Created new city:', finalCityId);
                 }
             } else if (custom_city) {
-                console.log('[CREATE_REC] Processing custom city:', custom_city);
                 // User entered a custom city
                 // Parse custom city (format: "City, Country" or just "City")
                 const cityParts = custom_city.split(',').map((s: string) => s.trim());
@@ -424,7 +410,6 @@ export const createRecommendation = async (req: Request, res: Response) => {
 
                 if (existingCity.rows.length > 0) {
                     finalCityId = existingCity.rows[0].id;
-                    console.log('[CREATE_REC] Using existing custom city:', finalCityId);
                 } else {
                     // Create new custom city
                     const newCityResult = await query(
@@ -432,11 +417,9 @@ export const createRecommendation = async (req: Request, res: Response) => {
                         [cityName, country, latitude || 0, longitude || 0]
                     );
                     finalCityId = newCityResult.rows[0].id;
-                    console.log('[CREATE_REC] Created new custom city:', finalCityId);
                 }
             }
 
-            console.log('[CREATE_REC] Final values - Category ID:', finalCategoryId, 'City ID:', finalCityId);
 
             // Insert recommendation with only database schema fields
             const recommendationQuery = `
@@ -464,12 +447,6 @@ export const createRecommendation = async (req: Request, res: Response) => {
                 user_rating
             ];
 
-            console.log('[CREATE_REC] Inserting recommendation with values:', [
-                userId, place_name, description, finalCategoryId,
-                price_range_min, price_range_max, difficulty_level,
-                address, latitude, longitude,
-                best_time_to_visit, duration_suggestion, user_rating
-            ]);
 
             const recommendationResult = await query(recommendationQuery, [
                 userId, place_name, description, finalCategoryId,
@@ -479,20 +456,16 @@ export const createRecommendation = async (req: Request, res: Response) => {
             ]);
 
             const recommendationId = recommendationResult.rows[0].id;
-            console.log('[CREATE_REC] Created recommendation with ID:', recommendationId);
 
             // Link to city if we have one
             if (finalCityId) {
-                console.log('[CREATE_REC] Linking recommendation to city...');
                 await query(
                     'INSERT INTO recommendation_cities (recommendation_id, city_id) VALUES ($1, $2)',
                     [recommendationId, finalCityId]
                 );
-                console.log('[CREATE_REC] Successfully linked to city');
             }
 
             // Upload photos (required - already validated above)
-            console.log('[CREATE_REC] Uploading photos...');
             const uploadedPhotos = [];
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -511,11 +484,9 @@ export const createRecommendation = async (req: Request, res: Response) => {
                     is_primary: isPrimary
                 });
             }
-            console.log(`[CREATE_REC] Uploaded ${uploadedPhotos.length} photos`);
 
             // Handle tags
             if (tags && Array.isArray(tags) && tags.length > 0) {
-                console.log('[CREATE_REC] Processing tags...');
                 // Delete any existing tag links (shouldn't exist for new recommendation, but safety first)
                 await query(
                     'DELETE FROM recommendation_tag_links WHERE recommendation_id = $1',
@@ -549,10 +520,8 @@ export const createRecommendation = async (req: Request, res: Response) => {
                         [recommendationId, tagId]
                     );
                 }
-                console.log(`[CREATE_REC] Processed ${tags.length} tags`);
             }
 
-            console.log('[CREATE_REC] Recommendation created successfully');
 
             // Check and award achievements
             checkAndAwardAchievements(userId, 'recommendations_created').catch(err => {
@@ -625,8 +594,6 @@ export const updateRecommendation = async (req: Request, res: Response) => {
 
         const userId = (req as any).user?.userId;
 
-        console.log('[UPDATE_REC] Updating recommendation:', id);
-        console.log('[UPDATE_REC] Request body:', JSON.stringify(req.body, null, 2));
 
         // Check if recommendation exists and user owns it
         const existingRecommendation = await query(
@@ -656,7 +623,6 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             let finalCategoryId = category_id;
 
             if (!finalCategoryId && custom_category) {
-                console.log('[UPDATE_REC] Processing custom category:', custom_category);
                 const existingCategory = await query(
                     'SELECT id FROM recommendation_categories WHERE name = $1',
                     [custom_category]
@@ -664,14 +630,12 @@ export const updateRecommendation = async (req: Request, res: Response) => {
 
                 if (existingCategory.rows.length > 0) {
                     finalCategoryId = existingCategory.rows[0].id;
-                    console.log('[UPDATE_REC] Using existing category:', finalCategoryId);
                 } else {
                     const newCategoryResult = await query(
                         'INSERT INTO recommendation_categories (name, description) VALUES ($1, $2) RETURNING id',
                         [custom_category, `Custom category: ${custom_category}`]
                     );
                     finalCategoryId = newCategoryResult.rows[0].id;
-                    console.log('[UPDATE_REC] Created new category:', finalCategoryId);
                 }
             }
 
@@ -679,7 +643,6 @@ export const updateRecommendation = async (req: Request, res: Response) => {
             let finalCityId = city_id;
 
             if (!finalCityId && city_name) {
-                console.log('[UPDATE_REC] Processing selected city:', city_name);
                 const existingCity = await query(
                     'SELECT id FROM cities WHERE name = $1',
                     [city_name]
@@ -687,17 +650,14 @@ export const updateRecommendation = async (req: Request, res: Response) => {
 
                 if (existingCity.rows.length > 0) {
                     finalCityId = existingCity.rows[0].id;
-                    console.log('[UPDATE_REC] Using existing city:', finalCityId);
                 } else {
                     const newCityResult = await query(
                         'INSERT INTO cities (name, country, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id',
                         [city_name, '', latitude || 0, longitude || 0]
                     );
                     finalCityId = newCityResult.rows[0].id;
-                    console.log('[UPDATE_REC] Created new city:', finalCityId);
                 }
             } else if (!finalCityId && custom_city) {
-                console.log('[UPDATE_REC] Processing custom city:', custom_city);
                 // Parse custom city (format: "City, Country" or just "City")
                 const cityParts = custom_city.split(',').map((s: string) => s.trim());
                 const cityName = cityParts[0];
@@ -711,14 +671,12 @@ export const updateRecommendation = async (req: Request, res: Response) => {
 
                 if (existingCity.rows.length > 0) {
                     finalCityId = existingCity.rows[0].id;
-                    console.log('[UPDATE_REC] Using existing city:', finalCityId);
                 } else {
                     const newCityResult = await query(
                         'INSERT INTO cities (name, country, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id',
                         [cityName, country, latitude || 0, longitude || 0]
                     );
                     finalCityId = newCityResult.rows[0].id;
-                    console.log('[UPDATE_REC] Created new city:', finalCityId);
                 }
             }
 
@@ -749,7 +707,6 @@ export const updateRecommendation = async (req: Request, res: Response) => {
                 id
             ]);
 
-            console.log('[UPDATE_REC] Updated recommendation with city:', finalCityId);
 
             // Update city link
             await query(
@@ -762,7 +719,6 @@ export const updateRecommendation = async (req: Request, res: Response) => {
                     'INSERT INTO recommendation_cities (recommendation_id, city_id) VALUES ($1, $2)',
                     [id, finalCityId]
                 );
-                console.log('[UPDATE_REC] Linked recommendation to city:', finalCityId);
             }
 
             // Update tags
@@ -1099,25 +1055,19 @@ export const getCities = async (req: Request, res: Response) => {
         const { search } = req.query;
         const userId = (req as any).user?.userId; // Get user ID from auth middleware if available
 
-        console.log('[CITIES] Request headers:', JSON.stringify(req.headers, null, 2));
-        console.log('[CITIES] User from middleware:', (req as any).user);
-        console.log('[CITIES] User ID:', userId);
 
         let cities: any[] = [];
 
         if (userId) {
-            console.log('[CITIES] User authenticated, fetching cities for user:', userId);
             // If user is authenticated, get cities from their profile
             const profileResult = await query(
                 'SELECT cities_visited FROM user_profiles WHERE user_id = $1',
                 [userId]
             );
 
-            console.log('[CITIES] Profile query result:', profileResult.rows);
 
             if (profileResult.rows.length > 0 && profileResult.rows[0].cities_visited) {
                 const citiesVisited = profileResult.rows[0].cities_visited;
-                console.log('[CITIES] Cities visited from profile:', citiesVisited);
 
                 // Convert the JSON array to the expected format
                 cities = citiesVisited.map((cityName: string, index: number) => ({
@@ -1127,7 +1077,6 @@ export const getCities = async (req: Request, res: Response) => {
                     state_province: ''
                 }));
 
-                console.log('[CITIES] Formatted cities:', cities);
 
                 // Filter by search if provided
                 if (search) {
@@ -1137,13 +1086,10 @@ export const getCities = async (req: Request, res: Response) => {
                     );
                 }
             } else {
-                console.log('[CITIES] No profile found or no cities_visited data for user:', userId);
             }
         } else {
-            console.log('[CITIES] No user authenticated, returning empty cities');
         }
 
-        console.log('[CITIES] Final cities response:', cities);
         res.json({
             success: true,
             data: cities

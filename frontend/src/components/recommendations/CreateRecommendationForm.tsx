@@ -355,7 +355,6 @@ export function CreateRecommendationForm({
 
       if (isEditing) {
         // For editing, use JSON body (photos uploaded separately if needed)
-        console.log(`[FRONTEND] Updating recommendation:`, requestData);
         data = await apiRequest(endpoint, {
           method,
           body: JSON.stringify(requestData),
@@ -385,7 +384,6 @@ export function CreateRecommendationForm({
           formDataToSend.append('photos', file);
         });
 
-        console.log(`[FRONTEND] Creating recommendation with ${selectedFiles.length} photos`);
         data = await apiRequest(endpoint, {
           method,
           body: formDataToSend,
@@ -393,7 +391,6 @@ export function CreateRecommendationForm({
         }) as { success: boolean; data?: { id: number }; message?: string; errors?: Array<{ field: string; message: string }> };
       }
 
-      console.log(`[FRONTEND] ${isEditing ? 'Update' : 'Create'} recommendation response:`, data);
       if (data.success) {
         const targetId = isEditing 
           ? (recommendationId ? parseInt(recommendationId) : 0) 
@@ -412,7 +409,6 @@ export function CreateRecommendationForm({
               body: formData,
               isFormData: true
             });
-            console.log('[FRONTEND] Photos uploaded successfully');
           } catch (photoError) {
             console.error('[FRONTEND] Failed to upload photos:', photoError);
             showSuccess(`Recommendation updated but failed to upload some photos`);

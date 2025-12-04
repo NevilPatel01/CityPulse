@@ -57,12 +57,10 @@ export const useNotifications = () => {
     // Setup WebSocket connection
     useNotificationSocket({
         onConnect: () => {
-            console.log('✅ WebSocket connected - real-time notifications enabled');
             // Stop polling when socket connects
             stopPolling();
         },
         onDisconnect: () => {
-            console.log('❌ WebSocket disconnected - falling back to polling');
             // Resume polling when socket disconnects
             if (isAuthenticated) {
                 startPolling();
@@ -81,7 +79,6 @@ export const useNotifications = () => {
 
         // Check if already fetching
         if (isFetchingRef.current) {
-            console.log('📦 Already fetching notifications, skipping...');
             return;
         }
 
@@ -89,7 +86,6 @@ export const useNotifications = () => {
         const now = Date.now();
         const timeSinceLastFetch = now - lastFetchRef.current;
         if (!force && timeSinceLastFetch < CACHE_DURATION && notifications && notifications.length > 0) {
-            console.log('💾 Using cached notifications');
             return;
         }
 
@@ -105,7 +101,6 @@ export const useNotifications = () => {
                 setNotifications(notifications);
                 setUnreadCount(unreadCount);
                 lastFetchRef.current = now;
-                console.log('✅ Notifications fetched:', notifications.length);
             }
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to fetch notifications';

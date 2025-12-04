@@ -54,9 +54,7 @@ const AdvancedSearch: React.FC = () => {
     const performSearch = useCallback(async () => {
         setLoading(true);
         try {
-            console.log('[SEARCH] Sending filters:', filters);
             const searchResults = await searchApi.advancedSearch(filters);
-            console.log('[SEARCH] Received results:', searchResults);
             setResults(searchResults);
             
             // Save search history (backend auto-saves, but we can ensure it has filter info)

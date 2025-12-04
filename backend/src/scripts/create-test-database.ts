@@ -28,8 +28,6 @@ const createTestDatabase = async () => {
     url.pathname = '/postgres'; // Connect to default postgres database
     const adminUrl = url.toString();
 
-    console.log('📦 Creating test database:', testDbName);
-    console.log('📍 Using base connection:', adminUrl.replace(/:[^:@]+@/, ':***@'));
 
     const adminPool = new Pool({ connectionString: adminUrl });
 
@@ -41,9 +39,6 @@ const createTestDatabase = async () => {
         );
 
         if (checkResult.rows.length > 0) {
-            console.log(`⚠️  Test database "${testDbName}" already exists.`);
-            console.log('   If you want to recreate it, drop it first with:');
-            console.log(`   DROP DATABASE ${testDbName};`);
             
             // Terminate existing connections
             await adminPool.query(`
@@ -59,12 +54,10 @@ const createTestDatabase = async () => {
 
         // Create test database
         await adminPool.query(`CREATE DATABASE ${testDbName}`);
-        console.log(`✅ Test database "${testDbName}" created successfully!`);
 
         await adminPool.end();
 
         // Now apply schema to test database
-        console.log('📋 Applying schema to test database...');
         const testUrl = baseUrl.replace(`/${dbName}`, `/${testDbName}`);
         const testPool = new Pool({ connectionString: testUrl });
 
@@ -88,18 +81,12 @@ const createTestDatabase = async () => {
                     }
                 }
             }
-            console.log('✅ Schema applied to test database!');
         } else {
             console.warn('⚠️  Schema file not found at:', schemaPath);
-            console.log('   You may need to apply the schema manually.');
         }
 
         await testPool.end();
 
-        console.log('\n✅ Test database setup complete!');
-        console.log(`\n📝 Add this to your .env.test file:`);
-        console.log(`TEST_DATABASE_URL=${testUrl}`);
-        console.log('\nOr it will be automatically derived from DATABASE_URL when NODE_ENV=test');
 
     } catch (error: any) {
         console.error('❌ Error creating test database:', error.message);

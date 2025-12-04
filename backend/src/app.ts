@@ -23,10 +23,8 @@ import { healthCheck, schemaCheck } from './controllers/health';
 import { getUploadsBaseDir } from './utils/paths';
 
 export const createApp = (): express.Express => {
-    console.log('[APP] Creating Express application...');
     const app = express();
 
-    console.log('[APP] Setting up security middleware (Helmet)...');
     // Security middleware - I am using Helmet to adds security headers to prevent common attacks like XSS
     app.use(helmet({
         contentSecurityPolicy: {
@@ -94,7 +92,6 @@ export const createApp = (): express.Express => {
     });
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-    console.log('[APP] Setting up CORS with frontend URL:', frontendUrl);
 
     // CORS configuration - more permissive for development, strict for production
     const corsOptions = {
@@ -138,96 +135,65 @@ export const createApp = (): express.Express => {
 
     app.use(cors(corsOptions));
 
-    console.log('[APP] Setting up body parsing middleware...');
     // Body parsing middleware - It handles incoming request data parsing
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use(cookieParser());
 
-    // Add request logging middleware
-    app.use((req, res, next) => {
-        console.log(`[API] ${req.method} ${req.url} - IP: ${req.ip}`);
-        if (req.body && Object.keys(req.body).length > 0) {
-            // Log body but hide sensitive data
-            const safeBody = { ...req.body };
-            if (safeBody.password) safeBody.password = '***hidden***';
-            if (safeBody.accessToken) safeBody.accessToken = '***hidden***';
-            console.log(`📦 [API] Request body:`, safeBody);
-        }
-        next();
-    });
-
-    console.log('[APP] Setting up health check endpoints...');
     // Health check endpoint - It provides server status for monitoring/testing
     app.get('/api/health', healthCheck);
 
     // Database schema check endpoint
     app.get('/api/health/schema', schemaCheck);
 
-    console.log('[APP] Setting up authentication routes...');
     // Authentication routes - it has all auth endpoints are under /api/auth
     // It handles registration for new users, login, logout, profile, password change operations
     app.use('/api/auth', authRoutes);
 
-    console.log('[APP] Setting up profile routes...');
     // Profile routes - handles user profile management
     app.use('/api/profile', profileRoutes);
 
-    console.log('[APP] Setting up recommendation routes...');
     // Recommendation routes - handles recommendation CRUD operations
     app.use('/api/recommendations', recommendationRoutes);
 
-    console.log('[APP] Setting up search routes...');
     // Search routes - handles search across recommendations, users, and cities
     app.use('/api/search', searchRoutes);
 
-    console.log('[APP] Setting up advanced search routes...');
     // Advanced search routes - handles advanced filtering and search
     app.use('/api/advanced-search', advancedSearchRoutes);
 
-    console.log('[APP] Setting up search history routes...');
     // Search history routes - handles search history and saved searches
     app.use('/api/search', searchHistoryRoutes);
 
-    console.log('[APP] Setting up buddy routes...');
     // Buddy routes - handles travel buddy connections, blocking, and reporting
     app.use('/api/buddies', buddyRoutes);
 
-    console.log('[APP] Setting up notification routes...');
     // Notification routes - handles user notifications
     app.use('/api/notifications', notificationRoutes);
 
-    console.log('[APP] Setting up social routes...');
     // Social routes - handles bookmarks, shares, reports, interests, stats
     app.use('/api/social', socialRoutes);
 
-    console.log('[APP] Setting up feed routes...');
     // Feed routes - handles personalized feed algorithm
     app.use('/api/feed', feedRoutes);
 
-    console.log('[APP] Setting up cities routes...');
     // Cities routes - handles city pages and recommendations by city
     app.use('/api/cities', citiesRoutes);
 
-    console.log('[APP] Setting up trips routes...');
     // Trips routes - handles trip planning, itinerary, companions, and companion finder
     app.use('/api/trips', tripsRoutes);
 
-    console.log('[APP] Setting up achievement routes...');
     // Achievement routes - handles badges and gamification
     app.use('/api/achievements', achievementRoutes);
 
-    console.log('[APP] Setting up leaderboard routes...');
     // Leaderboard routes - handles user rankings by achievements
     app.use('/api/leaderboard', leaderboardRoutes);
 
-    console.log('[APP] Setting up moderation routes...');
     // Moderation routes - handles content moderation and user management (moderator only)
     app.use('/api/moderator', moderationRoutes);
 
     // === PRODUCTION SUBDOMAIN ROUTES (without /api/ prefix) ===
     // For api.city-pulse.app - duplicate routes without /api/ prefix
-    console.log('[APP] Setting up production subdomain routes (without /api/ prefix)...');
     app.use('/auth', authRoutes);
     app.use('/profile', profileRoutes);
     app.use('/recommendations', recommendationRoutes);
@@ -260,14 +226,11 @@ export const createApp = (): express.Express => {
     });
     app.get('/health/schema', schemaCheck);
 
-    console.log('[APP] Setting up static file serving for uploads...');
     const uploadsDir = getUploadsBaseDir();
-    console.log(`[APP] Serving uploads from: ${uploadsDir}`);
     
     // Ensure uploads directory exists
     if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
-        console.log(`[APP] Created uploads directory: ${uploadsDir}`);
     }
     
     // Serve uploaded images statically with proper CORS headers
@@ -289,7 +252,6 @@ export const createApp = (): express.Express => {
     }, express.static(uploadsDir, {
         setHeaders: (res, filePath) => {
             const relativePath = path.relative(uploadsDir, filePath);
-            console.log(`[STATIC] Serving: ${relativePath}`);
         }
     }));
     
@@ -302,7 +264,6 @@ export const createApp = (): express.Express => {
         });
     });
 
-    console.log('[APP] Setting up error handlers...');
     // Global error handler - it catches all unhandled errors and formats responses
     app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
         console.error('[ERROR] Global error handler:', err);
@@ -316,7 +277,6 @@ export const createApp = (): express.Express => {
 
         //  It handles validation errors from Zod or other validation libraries
         if (err.name === 'ValidationError') {
-            console.log('[ERROR] Validation error detected');
             return res.status(400).json({
                 success: false,
                 message: 'Validation failed',
@@ -333,13 +293,11 @@ export const createApp = (): express.Express => {
 
     // 404 Handler - it catches all undefined routes and returns JSON error
     app.use((req, res) => {
-        console.log(`[404] Route not found: ${req.method} ${req.url}`);
         res.status(404).json({
             success: false,
             message: 'Route not found'
         });
     });
 
-    console.log('[APP] Express application setup complete!');
     return app;
 };

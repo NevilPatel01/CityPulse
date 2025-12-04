@@ -83,7 +83,6 @@ export const buildApiUrl = (endpoint: string): string => {
     }
 
     const result = `${cleanBaseUrl}/${finalEndpoint}`;
-    console.log(`[API] buildApiUrl: ${endpoint} -> ${result} (subdomain: ${isApiSubdomain})`);
     return result;
 };
 
@@ -194,8 +193,6 @@ export const apiRequest = async <T = unknown>(
     // Build full URL if it's a relative path
     const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
 
-    console.log('[API] Making request to:', fullUrl);
-    console.log('[API] Request options:', fetchOptions);
 
     // Get auth token from storage (checks both sessionStorage and localStorage)
     // Check localStorage first for cross-tab persistence (Google OAuth uses localStorage)
@@ -204,7 +201,6 @@ export const apiRequest = async <T = unknown>(
         ? (localStorage.getItem('authToken') || sessionStorage.getItem('authToken'))
         : null;
     
-    console.log('[API] Auth token:', authToken ? 'Present' : 'Not found');
 
     const headers: Record<string, string> = {
         ...(authToken && { Authorization: `Bearer ${authToken}` }),
@@ -232,9 +228,7 @@ export const apiRequest = async <T = unknown>(
     // Retry logic
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            console.log(`[API] Attempt ${attempt + 1} for ${fullUrl}`);
             const response = await fetch(fullUrl, defaultOptions);
-            console.log('[API] Response received:', response.status, response.statusText);
             clearTimeout(timeoutId);
 
             // Handle HTTP errors

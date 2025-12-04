@@ -26,7 +26,6 @@ async function sendEmail(to: string, subject: string, htmlBody: string, textBody
     };
     try {
         await sgMail.send(msg);
-        console.log('✅ [EMAIL] Email sent successfully via SendGrid:', msg);
     } catch (error: any) {
         console.error('❌ [EMAIL] Failed to send email via SendGrid:', error?.response?.body || error);
         throw error;
@@ -49,12 +48,9 @@ export const sendPasswordResetEmail = async (
     securityCode: string,
     username?: string
 ): Promise<void> => {
-    console.log('📧 [EMAIL] Sending password reset email to:', email);
-    console.log('🔑 [EMAIL] Security Code:', securityCode);
 
     // In test mode, skip actual email sending
     if (process.env.NODE_ENV === 'test') {
-        console.log(`✅ [EMAIL] Test mode - skipping actual email send. Code: ${securityCode}`);
         return;
     }
 
@@ -127,7 +123,6 @@ If you didn't request a password reset, please ignore this email. Your account r
 
     try {
         await sendEmail(email, '🔐 CityPulse - Password Reset Code', htmlBody, textBody);
-        console.log(`✅ [EMAIL] Password reset email sent successfully to: ${email}`);
     } catch (error) {
         console.error('❌ [EMAIL] Failed to send password reset email:', error);
         throw new Error('Failed to send password reset email');
@@ -142,7 +137,6 @@ export const sendVerificationEmail = async (
 ): Promise<void> => {
     // In test mode, skip actual email sending
     if (process.env.NODE_ENV === 'test') {
-        console.log(`✅ [EMAIL] Test mode - skipping verification email send to: ${email}`);
         return;
     }
 
@@ -208,7 +202,6 @@ This link will expire in 24 hours.
 
     try {
         await sendEmail(email, '✉️ CityPulse - Verify Your Email', htmlBody, textBody);
-        console.log(`✅ [EMAIL] Verification email sent to: ${email}`);
     } catch (error) {
         console.error('❌ [EMAIL] Failed to send verification email:', error);
         // Don't throw error to avoid blocking registration, but log it
@@ -222,7 +215,6 @@ export const sendPasswordResetSuccessEmail = async (
 ): Promise<void> => {
     // In test mode, skip actual email sending
     if (process.env.NODE_ENV === 'test') {
-        console.log(`✅ [EMAIL] Test mode - skipping success email send to: ${email}`);
         return;
     }
 
@@ -287,7 +279,6 @@ Thank you for using CityPulse!
 
     try {
         await sendEmail(email, '✅ CityPulse - Password Successfully Reset', htmlBody, textBody);
-        console.log(`✅ [EMAIL] Password reset success email sent to: ${email}`);
     } catch (error) {
         console.error('❌ [EMAIL] Failed to send password reset success email:', error);
         // Don't throw error for success notifications

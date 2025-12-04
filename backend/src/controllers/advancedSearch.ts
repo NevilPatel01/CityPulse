@@ -46,7 +46,6 @@ export const advancedSearch = async (req: Request, res: Response) => {
             offset: parseInt(req.query.offset as string) || 0
         };
 
-        console.log('[ADVANCED_SEARCH] Filters:', JSON.stringify(filters, null, 2));
 
         const results: any = {
             recommendations: [],
@@ -334,8 +333,6 @@ async function searchRecommendations(filters: SearchFilters) {
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
-    console.log('[SEARCH_RECOMMENDATIONS] Query:', sqlQuery);
-    console.log('[SEARCH_RECOMMENDATIONS] Params:', queryParams);
 
     const result = await query(sqlQuery, queryParams);
 

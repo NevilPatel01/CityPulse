@@ -73,8 +73,6 @@ describe('Google OAuth Authentication', () => {
                 });
 
             if (response.status !== 200) {
-                console.log('Error response:', response.body);
-                console.log('Sent data:', { googleId: googleUser.google_id, email: googleUser.email, name: googleUser.full_name });
             }
 
             expect(response.status).toBe(200);

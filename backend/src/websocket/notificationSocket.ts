@@ -45,7 +45,6 @@ class NotificationSocketManager {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET!) as TokenPayload;
                 socket.userId = decoded.userId;
                 
-                console.log(`✅ Socket authenticated for user ${decoded.userId}`);
                 next();
             } catch (error) {
                 console.error('Socket authentication error:', error);
@@ -64,7 +63,6 @@ class NotificationSocketManager {
             }
             this.userSockets.get(userId)!.push(socket.id);
 
-            console.log(`🔌 User ${userId} connected (Socket: ${socket.id}, Total connections: ${this.userSockets.get(userId)?.length})`);
 
             // Join user's personal room
             socket.join(`user-${userId}`);
@@ -79,9 +77,7 @@ class NotificationSocketManager {
                     }
                     if (sockets.length === 0) {
                         this.userSockets.delete(userId);
-                        console.log(`👋 User ${userId} fully disconnected`);
                     } else {
-                        console.log(`🔌 User ${userId} disconnected one tab (${sockets.length} remaining)`);
                     }
                 }
             });
@@ -99,11 +95,9 @@ class NotificationSocketManager {
     public notifyUser(userId: number, notification: any) {
         const sockets = this.userSockets.get(userId);
         if (sockets && sockets.length > 0) {
-            console.log(`📤 Sending notification to user ${userId} (${sockets.length} tabs)`);
             this.io.to(`user-${userId}`).emit('notification', notification);
             return true;
         }
-        console.log(`⚠️  User ${userId} not connected, notification will be polled`);
         return false;
     }
 
@@ -138,7 +132,6 @@ let notificationSocketManager: NotificationSocketManager | null = null;
 export function setupNotificationSocket(httpServer: HTTPServer): NotificationSocketManager {
     if (!notificationSocketManager) {
         notificationSocketManager = new NotificationSocketManager(httpServer);
-        console.log('🚀 Notification WebSocket server initialized');
     }
     return notificationSocketManager;
 }

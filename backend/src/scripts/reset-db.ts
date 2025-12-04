@@ -6,12 +6,9 @@ import { query } from '../lib/database';
  * WARNING: This will delete all data!
  */
 export async function resetDatabase(): Promise<void> {
-    console.log('⚠️  WARNING: This will delete all data in the database!');
-    console.log('🔄 Starting database reset...');
     
     try {
         // Drop existing tables in reverse order of dependencies
-        console.log('🗑️  Dropping existing tables...');
         
         await query('DROP TABLE IF EXISTS user_profiles CASCADE');
         await query('DROP TABLE IF EXISTS password_reset_tokens CASCADE');
@@ -20,10 +17,8 @@ export async function resetDatabase(): Promise<void> {
         // Drop functions and triggers
         await query('DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE');
         
-        console.log('✅ Existing tables dropped');
         
         // Recreate the schema
-        console.log('🏗️  Creating new schema...');
         
         // Users table
         await query(`
@@ -83,7 +78,6 @@ export async function resetDatabase(): Promise<void> {
         `);
         
         // Create indexes
-        console.log('📋 Creating indexes...');
         await query('CREATE INDEX idx_users_email ON users(email)');
         await query('CREATE INDEX idx_users_username ON users(username)');
         await query('CREATE INDEX idx_users_google_id ON users(google_id)');
@@ -100,7 +94,6 @@ export async function resetDatabase(): Promise<void> {
         await query('CREATE INDEX idx_user_profiles_created_at ON user_profiles(created_at)');
         
         // Create functions and triggers
-        console.log('⚙️  Creating functions and triggers...');
         await query(`
             CREATE OR REPLACE FUNCTION update_updated_at_column()
             RETURNS TRIGGER AS $$
@@ -125,8 +118,6 @@ export async function resetDatabase(): Promise<void> {
                 EXECUTE FUNCTION update_updated_at_column()
         `);
         
-        console.log('✅ Database reset completed successfully!');
-        console.log('🎉 Database is ready for use');
         
     } catch (error: any) {
         console.error('❌ Database reset failed:', error);
@@ -138,7 +129,6 @@ export async function resetDatabase(): Promise<void> {
 if (require.main === module) {
     resetDatabase()
         .then(() => {
-            console.log('Database reset completed');
             process.exit(0);
         })
         .catch((error) => {

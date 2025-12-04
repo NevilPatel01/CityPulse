@@ -112,7 +112,6 @@ export function EditProfilePage() {
             return;
           }
         } catch (error) {
-          console.log('Username is available:', formData.username);
           console.error('Error checking username availability:', error);
         }
       }
@@ -132,7 +131,6 @@ export function EditProfilePage() {
         username: formData.username !== user?.username ? formData.username : undefined,
       };
 
-      console.log('[EditProfile] Sending update with cities:', formData.citiesVisited);
       await profileService.updateProfile(updateData);
       
       // Update auth context if username changed

@@ -15,7 +15,6 @@ interface AchievementType {
 
 async function recalculateAchievements() {
     try {
-        console.log('Starting achievement recalculation...');
 
         // Get all active achievements
         const achievementsResult = await query(
@@ -23,19 +22,16 @@ async function recalculateAchievements() {
         );
         const achievements: AchievementType[] = achievementsResult.rows;
 
-        console.log(`Found ${achievements.length} active achievements`);
 
         // Get all users
         const usersResult = await query('SELECT id, username FROM users');
         const users = usersResult.rows;
 
-        console.log(`Processing ${users.length} users...`);
 
         let totalAwarded = 0;
         let totalUpdated = 0;
 
         for (const user of users) {
-            console.log(`\nProcessing user: ${user.username} (ID: ${user.id})`);
 
             // Calculate stats for each achievement type
             const userStats: { [key: string]: number } = {};
@@ -81,7 +77,6 @@ async function recalculateAchievements() {
             );
             userStats.likes_received = parseInt(likeResult.rows[0].count);
 
-            console.log('User stats:', userStats);
 
             // Process each achievement
             for (const achievement of achievements) {
@@ -103,10 +98,8 @@ async function recalculateAchievements() {
                     );
 
                     if (isCompleted) {
-                        console.log(`  ✅ Awarded: ${achievement.name} (${currentValue}/${achievement.target_value})`);
                         totalAwarded++;
                     } else if (currentValue > 0) {
-                        console.log(`  📊 Progress: ${achievement.name} (${currentValue}/${achievement.target_value})`);
                     }
                 } else {
                     // Update existing record
@@ -124,10 +117,8 @@ async function recalculateAchievements() {
                         );
 
                         if (isCompleted && !existing.is_completed) {
-                            console.log(`  🎉 Newly completed: ${achievement.name}`);
                             totalAwarded++;
                         } else {
-                            console.log(`  🔄 Updated: ${achievement.name} (${currentValue}/${achievement.target_value})`);
                             totalUpdated++;
                         }
                     }
@@ -135,10 +126,6 @@ async function recalculateAchievements() {
             }
         }
 
-        console.log('\n=== Recalculation Complete ===');
-        console.log(`Total achievements awarded: ${totalAwarded}`);
-        console.log(`Total achievements updated: ${totalUpdated}`);
-        console.log(`Users processed: ${users.length}`);
 
     } catch (error) {
         console.error('Error recalculating achievements:', error);
@@ -150,7 +137,6 @@ async function recalculateAchievements() {
 if (require.main === module) {
     recalculateAchievements()
         .then(() => {
-            console.log('\n✨ Achievement recalculation completed successfully!');
             process.exit(0);
         })
         .catch((error) => {

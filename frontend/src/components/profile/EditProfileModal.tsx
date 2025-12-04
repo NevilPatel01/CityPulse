@@ -113,7 +113,6 @@ export function EditProfileModal({ isOpen, onClose, profile, onSave }: EditProfi
           }
         } catch (error) {
           // Username is available, continue
-          console.log('Username is available:', formData.username);
           console.error('Error checking username availability:', error);
         }
       }

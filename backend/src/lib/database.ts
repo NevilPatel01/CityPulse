@@ -42,7 +42,6 @@ export const testConnection = async (): Promise<void> => {
     try {
         const client = await pool.connect();
         const result = await client.query('SELECT NOW()');
-        console.log('✅ Database connected successfully at:', result.rows[0].now);
         client.release();
     } catch (err) {
         console.error('❌ Database connection failed:', err);

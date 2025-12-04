@@ -203,7 +203,6 @@ export const optionalAuthenticateToken = async (req: Request, res: Response, nex
                 }
             } catch (error) {
                 // If token is invalid, just continue without user info
-                console.log('Optional auth: Invalid token, continuing without user info');
             }
         }
 
