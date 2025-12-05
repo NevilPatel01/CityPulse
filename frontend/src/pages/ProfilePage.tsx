@@ -570,7 +570,7 @@ export default function ProfilePage() {
           </div>
 
                 {/* Profile Info Section */}
-                <div className="relative px-5 md:px-6 pb-6 bg-[#1a1a1a]">
+                <div className="relative px-5 md:px-6 pb-6 bg-[#252829]">
                   {/* Top row: Avatar space + Button on right */}
                   <div className="flex justify-end pt-3">
                     {/* Action Button - Right side */}
