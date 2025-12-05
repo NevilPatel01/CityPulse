@@ -215,6 +215,7 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
             description: 'Connect with verified locals in your destination',
             icon: '👥',
             color: 'from-blue-500 to-cyan-500',
+            action: () => window.location.href = '/feed',
         },
         {
             id: 'recommend',
@@ -222,6 +223,7 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
             description: 'Ask for personalized place recommendations',
             icon: '⭐',
             color: 'from-yellow-500 to-orange-500',
+            action: () => window.location.href = '/recommendations',
         },
         {
             id: 'checkin',
@@ -229,6 +231,7 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
             description: 'Share your current location and discoveries',
             icon: '📍',
             color: 'from-green-500 to-emerald-500',
+            action: () => window.location.href = '/feed',
         },
         {
             id: 'review',
@@ -236,6 +239,7 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
             description: 'Share your experience about a place',
             icon: '📝',
             color: 'from-purple-500 to-pink-500',
+            action: () => window.location.href = '/recommendations',
         },
         {
             id: 'plan',
@@ -243,6 +247,7 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
             description: 'Create itinerary for your next adventure',
             icon: '🗺️',
             color: 'from-indigo-500 to-blue-500',
+            action: () => window.location.href = '/trips',
         },
         {
             id: 'chat',
@@ -250,6 +255,7 @@ export const QuickActionModal = ({ isOpen, onClose }: QuickActionModalProps) => 
             description: 'Message locals or fellow travelers',
             icon: '💬',
             color: 'from-teal-500 to-cyan-500',
+            action: () => window.location.href = '/messages',
         },
     ];
 
