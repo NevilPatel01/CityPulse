@@ -28,6 +28,30 @@ services:
         reservations:
           memory: 256M
 
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: citypulse-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-domain.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    networks:
+      - citypulse-network
+    depends_on:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   # Backend API Service
   backend:
     image: ${BACKEND_IMAGE}
@@ -82,7 +106,7 @@ services:
     container_name: citypulse-frontend-prod
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "3001:80"
     environment:
       VITE_API_URL: ${BACKEND_URL}
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
