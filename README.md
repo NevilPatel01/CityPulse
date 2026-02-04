@@ -242,13 +242,14 @@ Rate limiting                 - DDoS protection
 
 ### **High-Level Architecture**
 
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                            CI/CD PIPELINE (GitHub Actions)                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │   Code   │→ │  Lint &  │→ │   Test   │→ │  Build   │→ │  Deploy  │    │
-│  │   Push   │  │  Format  │  │ (230+ )  │  │  Docker  │  │  to Prod │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
+│                            CI/CD PIPELINE (GitHub Actions)                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
+│  │   Code   │→ │  Lint &  │→ │   Test   │→ │  Build   │→ │  Deploy  │       │
+│  │   Push   │  │  Format  │  │ (230+ )  │  │  Docker  │  │  to Prod │       │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
 │       Security Scanning (OWASP ZAP) • Accessibility Audits (Axe/Lighthouse) │
 └─────────────────────────────────────────────────────────────────────────────┘
                                         │
@@ -256,70 +257,70 @@ Rate limiting                 - DDoS protection
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    PRODUCTION ENVIRONMENT (DigitalOcean)                     │
 │                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐   │
-│  │                    CLOUDFLARE CDN                                  │   │
-│  │              DNS • DDoS Protection • Edge Caching                   │   │
-│  └─────────────────────────────┬──────────────────────────────────────┘   │
-│                                 │                                           │
-│  ┌──────────────────────────────▼──────────────────────────────────────┐  │
-│  │                    NGINX REVERSE PROXY                               │  │
-│  │  • SSL/TLS Termination (Let's Encrypt)  • Load Balancing            │  │
-│  │  • Rate Limiting  • Gzip Compression  • Static File Serving         │  │
-│  └───────────────────┬─────────────────────┬────────────────────────────┘  │
-│                      │                     │                                │
-│        ┌─────────────▼──────────┐  ┌──────▼────────────────┐              │
-│        │   FRONTEND CONTAINER    │  │   BACKEND CONTAINER    │              │
-│        │  ┌──────────────────┐  │  │  ┌─────────────────┐  │              │
-│        │  │  React SPA       │  │  │  │  Express.js API │  │              │
-│        │  │  • Vite Build    │  │  │  │  • TypeScript   │  │              │
-│        │  │  • TailwindCSS   │  │  │  │  • REST Routes  │  │              │
-│        │  │  • React Router  │  │  │  │  • Middleware   │  │              │
-│        │  └──────────────────┘  │  │  └─────────────────┘  │              │
-│        │  Port: 3001            │  │  ┌─────────────────┐  │              │
-│        └────────────────────────┘  │  │  Socket.io WSS  │  │              │
-│                                     │  │  • Real-time    │  │              │
-│                                     │  │  • Notifications│  │              │
-│                                     │  └─────────────────┘  │              │
-│                                     │  Port: 5001           │              │
-│                                     └───────────┬───────────┘              │
-│                                                 │                           │
-│  ┌──────────────────────────────────────────────▼───────────────────────┐ │
-│  │                    DATABASE LAYER (PostgreSQL 14+)                    │ │
-│  │  ┌────────────────────────────────────────────────────────────────┐  │ │
-│  │  │  📊 21+ Tables  •  Indexed  •  Parameterized Queries           │  │ │
-│  │  ├────────────────────────────────────────────────────────────────┤  │ │
-│  │  │  • Users & Authentication    • Recommendations & Media         │  │ │
-│  │  │  • Trip Planning & Itinerary • Social Connections              │  │ │
-│  │  │  • Achievements & Badges     • Content Moderation              │  │ │
-│  │  │  • Notifications & Alerts    • Activity Tracking               │  │ │
-│  │  └────────────────────────────────────────────────────────────────┘  │ │
-│  │  Managed Service • Automated Backups • Point-in-Time Recovery       │ │
-│  └────────────────────────────────────────────────────────────────────┘ │ │
-│                                                                            │
-│  ┌────────────────────────────────────────────────────────────────────┐  │
-│  │                    FILE STORAGE & SERVICES                          │  │
-│  │  • Multer File Uploads  • Sharp Image Processing                   │  │
-│  │  • SendGrid Email Service  • Local/Volume Storage                  │  │
-│  └────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+│  ┌────────────────────────────────────────────────────────────────────┐      │
+│  │                    CLOUDFLARE CDN                                  │      │
+│  │              DNS • DDoS Protection • Edge Caching                  │      │
+│  └─────────────────────────────┬──────────────────────────────────────┘      │
+│                                 │                                            │
+│  ┌──────────────────────────────▼──────────────────────────────────────┐     │
+│  │                    NGINX REVERSE PROXY                              │     │
+│  │  • SSL/TLS Termination (Let's Encrypt)  • Load Balancing            │     │
+│  │  • Rate Limiting  • Gzip Compression  • Static File Serving         │     │
+│  └───────────────────┬─────────────────────┬────────────────────────────┘    │
+│                      │                     │                                 │
+│        ┌─────────────▼──────────┐  ┌──────▼────────────────┐                 │
+│        │   FRONTEND CONTAINER    │  │   BACKEND CONTAINER    │               │
+│        │  ┌──────────────────┐  │  │  ┌─────────────────┐  │                 │
+│        │  │  React SPA       │  │  │  │  Express.js API │  │                 │
+│        │  │  • Vite Build    │  │  │  │  • TypeScript   │  │                 │
+│        │  │  • TailwindCSS   │  │  │  │  • REST Routes  │  │                 │
+│        │  │  • React Router  │  │  │  │  • Middleware   │  │                 │
+│        │  └──────────────────┘  │  │  └─────────────────┘  │                 │
+│        │  Port: 3001            │  │  ┌─────────────────┐  │                 │
+│        └────────────────────────┘  │  │  Socket.io WSS  │  │                 │
+│                                     │  │  • Real-time    │  │                │
+│                                     │  │  • Notifications│  │                │
+│                                     │  └─────────────────┘  │                │
+│                                     │  Port: 5001           │                │
+│                                     └───────────┬───────────┘                │
+│                                                 │                            │
+│  ┌──────────────────────────────────────────────▼───────────────────────┐    │
+│  │                    DATABASE LAYER (PostgreSQL 14+)                   │    │
+│  │  ┌────────────────────────────────────────────────────────────────┐  │    │
+│  │  │  📊 21+ Tables  •  Indexed  •  Parameterized Queries           │  │    │
+│  │  ├────────────────────────────────────────────────────────────────┤  │    │
+│  │  │  • Users & Authentication    • Recommendations & Media         │  │    │
+│  │  │  • Trip Planning & Itinerary • Social Connections              │  │    │
+│  │  │  • Achievements & Badges     • Content Moderation              │  │    │
+│  │  │  • Notifications & Alerts    • Activity Tracking               │  │    │
+│  │  └────────────────────────────────────────────────────────────────┘  │    │
+│  │  Managed Service • Automated Backups • Point-in-Time Recovery        │    │
+│  └────────────────────────────────────────────────────────────────────--┘    │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────┐      │
+│  │                    FILE STORAGE & SERVICES                         │      │
+│  │  • Multer File Uploads  • Sharp Image Processing                   │      │
+│  │  • SendGrid Email Service  • Local/Volume Storage                  │      │
+│  └────────────────────────────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────────────-┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         CONTAINERIZATION (Docker)                            │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐         │
-│  │  frontend:prod   │  │  backend:prod    │  │  postgres:14     │         │
-│  │  Multi-stage     │  │  Multi-stage     │  │  Official Image  │         │
-│  │  Optimized Build │  │  Optimized Build │  │  + Custom Schema │         │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘         │
+│                         CONTAINERIZATION (Docker)                           │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐           │
+│  │  frontend:prod   │  │  backend:prod    │  │  postgres:14     │           │
+│  │  Multi-stage     │  │  Multi-stage     │  │  Official Image  │           │
+│  │  Optimized Build │  │  Optimized Build │  │  + Custom Schema │           │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘           │
 │           Docker Compose Orchestration • Volume Management                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    MONITORING & SECURITY (DevOps Best Practices)             │
-│  • Health Check Endpoints (/health)  • Automated Logging                   │
-│  • JWT Token Management (15min expiry)  • Rate Limiting                    │
-│  • SQL Injection Protection (Parameterized)  • XSS Prevention              │
-│  • CORS Configuration  • Helmet.js Security Headers                        │
-│  • Environment Variable Management  • Secret Management                    │
+│                    MONITORING & SECURITY (DevOps Best Practices)            │
+│  • Health Check Endpoints (/health)  • Automated Logging                    │
+│  • JWT Token Management (15min expiry)  • Rate Limiting                     │
+│  • SQL Injection Protection (Parameterized)  • XSS Prevention               │
+│  • CORS Configuration  • Helmet.js Security Headers                         │
+│  • Environment Variable Management  • Secret Management                     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
