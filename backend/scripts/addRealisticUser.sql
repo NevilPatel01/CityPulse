@@ -497,6 +497,24 @@ BEGIN
     (sarah_user_id, entertainment_cat_id)
     ON CONFLICT (user_id, category_id) DO NOTHING;
 
+    -- Sarah travel preferences
+    INSERT INTO travel_preferences (user_id, travel_style, activity_level, preferred_difficulty)
+    VALUES (sarah_user_id, 'cultural', 'moderate', 'easy')
+    ON CONFLICT (user_id) DO UPDATE SET
+        travel_style = EXCLUDED.travel_style,
+        activity_level = EXCLUDED.activity_level,
+        preferred_difficulty = EXCLUDED.preferred_difficulty;
+
+    -- Sarah city visits
+    INSERT INTO user_city_visits (user_id, city_id, visit_date) VALUES
+    (sarah_user_id, toronto_city_id, '2023-08-15'),
+    (sarah_user_id, mexico_city_id, '2024-03-10'),
+    (sarah_user_id, barcelona_city_id, '2024-09-15'),
+    (sarah_user_id, tokyo_city_id, '2024-05-20'),
+    (sarah_user_id, paris_city_id, '2024-09-20'),
+    (sarah_user_id, istanbul_city_id, '2024-09-25')
+    ON CONFLICT (user_id, city_id) DO NOTHING;
+
 -- =====================================================
 -- CREATE 5 DETAILED RECOMMENDATIONS
 -- =====================================================
@@ -786,6 +804,23 @@ BEGIN
     (marcus_user_id, entertainment_cat_id)
     ON CONFLICT (user_id, category_id) DO NOTHING;
 
+    -- Marcus travel preferences
+    INSERT INTO travel_preferences (user_id, travel_style, activity_level, preferred_difficulty)
+    VALUES (marcus_user_id, 'adventure', 'high', 'challenging')
+    ON CONFLICT (user_id) DO UPDATE SET
+        travel_style = EXCLUDED.travel_style,
+        activity_level = EXCLUDED.activity_level,
+        preferred_difficulty = EXCLUDED.preferred_difficulty;
+
+    -- Marcus city visits
+    INSERT INTO user_city_visits (user_id, city_id, visit_date) VALUES
+    (marcus_user_id, singapore_city_id, '2023-06-10'),
+    (marcus_user_id, hongkong_city_id, '2024-01-15'),
+    (marcus_user_id, seoul_city_id, '2024-04-20'),
+    (marcus_user_id, bangkok_city_id, '2024-07-08'),
+    (marcus_user_id, queenstown_city_id, '2024-10-12')
+    ON CONFLICT (user_id, city_id) DO NOTHING;
+
     -- Marcus Recommendation 1: Singapore Street Food
     INSERT INTO recommendations (
         user_id, title, description, category_id, 
@@ -1072,6 +1107,22 @@ BEGIN
     (isabella_user_id, entertainment_cat_id)
     ON CONFLICT (user_id, category_id) DO NOTHING;
 
+    -- Isabella travel preferences
+    INSERT INTO travel_preferences (user_id, travel_style, activity_level, preferred_difficulty)
+    VALUES (isabella_user_id, 'cultural', 'relaxed', 'easy')
+    ON CONFLICT (user_id) DO UPDATE SET
+        travel_style = EXCLUDED.travel_style,
+        activity_level = EXCLUDED.activity_level,
+        preferred_difficulty = EXCLUDED.preferred_difficulty;
+
+    -- Isabella city visits
+    INSERT INTO user_city_visits (user_id, city_id, visit_date) VALUES
+    (isabella_user_id, florence_city_id, '2023-04-20'),
+    (isabella_user_id, vienna_city_id, '2024-02-14'),
+    (isabella_user_id, rome_city_id, '2024-06-05'),
+    (isabella_user_id, amsterdam_city_id, '2024-09-18')
+    ON CONFLICT (user_id, city_id) DO NOTHING;
+
     -- Isabella Recommendation 1: Attraction in Florence
     INSERT INTO recommendations (
         user_id, title, description, category_id,
@@ -1356,6 +1407,22 @@ BEGIN
     (aiden_user_id, attraction_cat_id),
     (aiden_user_id, restaurant_cat_id)
     ON CONFLICT (user_id, category_id) DO NOTHING;
+
+    -- Aiden travel preferences
+    INSERT INTO travel_preferences (user_id, travel_style, activity_level, preferred_difficulty)
+    VALUES (aiden_user_id, 'backpacking', 'high', 'challenging')
+    ON CONFLICT (user_id) DO UPDATE SET
+        travel_style = EXCLUDED.travel_style,
+        activity_level = EXCLUDED.activity_level,
+        preferred_difficulty = EXCLUDED.preferred_difficulty;
+
+    -- Aiden city visits
+    INSERT INTO user_city_visits (user_id, city_id, visit_date) VALUES
+    (aiden_user_id, reykjavik_city_id, '2023-07-22'),
+    (aiden_user_id, capetown_city_id, '2024-01-05'),
+    (aiden_user_id, cusco_city_id, '2024-08-10'),
+    (aiden_user_id, lisbon_city_id, '2024-10-25')
+    ON CONFLICT (user_id, city_id) DO NOTHING;
 
     -- Aiden Recommendation 1: Activity in Reykjavik
     INSERT INTO recommendations (
@@ -1642,6 +1709,21 @@ BEGIN
     (zara_user_id, attraction_cat_id),
     (zara_user_id, entertainment_cat_id)
     ON CONFLICT (user_id, category_id) DO NOTHING;
+
+    -- Zara travel preferences
+    INSERT INTO travel_preferences (user_id, travel_style, activity_level, preferred_difficulty)
+    VALUES (zara_user_id, 'luxury', 'relaxed', 'easy')
+    ON CONFLICT (user_id) DO UPDATE SET
+        travel_style = EXCLUDED.travel_style,
+        activity_level = EXCLUDED.activity_level,
+        preferred_difficulty = EXCLUDED.preferred_difficulty;
+
+    -- Zara city visits
+    INSERT INTO user_city_visits (user_id, city_id, visit_date) VALUES
+    (zara_user_id, dubai_city_id, '2023-09-30'),
+    (zara_user_id, santorini_city_id, '2024-06-15'),
+    (zara_user_id, tulum_city_id, '2024-11-03')
+    ON CONFLICT (user_id, city_id) DO NOTHING;
 
     -- Zara Recommendation 1: Restaurant in Dubai
     INSERT INTO recommendations (

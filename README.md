@@ -242,87 +242,207 @@ Rate limiting                 - DDoS protection
 
 ### **High-Level Architecture**
 
-
+```mermaid
+flowchart TB
+    %% ============================================
+    %% Internet & Client Layer
+    %% ============================================
+    CLIENT["🌐 Client Browser"]
+    DOMAIN["🔗 city-pulse.app<br/>SSL/TLS (Let's Encrypt)"]
+    
+    %% ============================================
+    %% CI/CD Pipeline (GitHub Actions)
+    %% ============================================
+    subgraph CICD["☁️ GitHub Actions CI/CD Pipeline"]
+        direction TB
+        
+        TRIGGER["⚡ Triggers<br/>• Push: main, production<br/>• PR: main"]
+        
+        subgraph JOB1["🧪 Job 1: Test & Quality"]
+            direction LR
+            T1["📦 Checkout<br/>actions/checkout@v4"]
+            T2["🟢 Setup Node 20<br/>pnpm 10.10.0"]
+            T3["📥 Install deps<br/>pnpm install"]
+            T4["🔍 Lint<br/>frontend + backend"]
+            T5["🏗️ Build<br/>TypeScript compile"]
+        end
+        
+        subgraph JOB2["🐳 Job 2: Build Images"]
+            direction LR
+            B1["🔡 Prepare names<br/>REPO_LOWER"]
+            B2["🏗️ Docker Buildx<br/>linux/amd64"]
+            B3["🔐 Login GHCR<br/>ghcr.io"]
+            B4["📦 Build Backend<br/>backend/Dockerfile.prod"]
+            B5["📦 Build Frontend<br/>frontend/Dockerfile.prod"]
+            B6["⬆️ Push to GHCR<br/>ghcr.io/${repo}-backend:${sha}<br/>ghcr.io/${repo}-frontend:${sha}"]
+        end
+        
+        subgraph JOB3["🚀 Job 3: Deploy"]
+            direction LR
+            D1["📁 Create package<br/>.env + docker-compose<br/>nginx + sql"]
+            D2["📦 Tar archive<br/>deploy.tar.gz"]
+            D3["📤 SCP Upload<br/>→ /opt/citypulse"]
+            D4["🔐 SSH Deploy<br/>user@my-droplet-ip"]
+            D5["🐳 Docker compose up<br/>--env-file .env"]
+            D6["✅ Health check<br/>timeout 300s"]
+        end
+        
+        JOB4["📢 Job 4: Notify<br/>✅ https://city-pulse.app"]
+        
+        TRIGGER --> T1
+        T1 --> T2 --> T3 --> T4 --> T5
+        T5 -.-> B1
+        B1 --> B2 --> B3 --> B4 --> B5 --> B6
+        B6 -.-> D1
+        D1 --> D2 --> D3 --> D4 --> D5 --> D6
+        D6 -.-> JOB4
+    end
+    
+    %% ============================================
+    %% DigitalOcean Droplet Infrastructure
+    %% ============================================
+    subgraph DROPLET["🟦 DigitalOcean Droplet: my-droplet-ip<br/>📁 /opt/citypulse"]
+        direction TB
+        
+        %% Nginx Layer
+        subgraph NGINX_LAYER["⚙️ Nginx Reverse Proxy Layer"]
+            NGINX["🔀 citypulse-nginx-prod<br/>nginx:1.25-alpine<br/>Ports: 80, 443<br/>/etc/nginx/nginx-domain.conf<br/>Let's Encrypt SSL<br/>Rate Limiting: 10r/s API, 5r/m login"]
+        end
+        
+        %% Docker Network
+        subgraph DOCKER_NET["🔗 Docker Network: citypulse-network (bridge)"]
+            direction TB
+            
+            %% Application Services
+            subgraph APP_SERVICES["🎯 Application Services"]
+                direction LR
+                
+                BACKEND["🔧 citypulse-backend-prod<br/>Image: ${BACKEND_IMAGE}<br/>Port: 5000<br/>Env: NODE_ENV=production<br/>Health: /health endpoint<br/>Memory: 512M-1G<br/>Volume: uploads_data"]
+                
+                FRONTEND["⚛️ citypulse-frontend-prod<br/>Image: ${FRONTEND_IMAGE}<br/>Port: 3001→80<br/>VITE_API_URL=${BACKEND_URL}<br/>Health: wget localhost:80<br/>Memory: 128M-256M"]
+            end
+            
+            %% Database
+            POSTGRES["🗄️ citypulse-postgres-prod<br/>postgres:15-alpine<br/>Port: 5432<br/>DB: ${POSTGRES_DB}<br/>User: ${POSTGRES_USER}<br/>Health: pg_isready<br/>Volume: postgres_data<br/>Init: schema.sql<br/>Memory: 256M-512M"]
+        end
+        
+        %% Persistent Storage
+        subgraph VOLUMES["💾 Persistent Volumes"]
+            VOL1["📊 postgres_data<br/>/var/lib/postgresql/data"]
+            VOL2["📁 uploads_data<br/>/app/backend/uploads"]
+            VOL3["🔐 SSL Certs<br/>/etc/letsencrypt"]
+        end
+        
+        NGINX --> BACKEND
+        NGINX --> FRONTEND
+        BACKEND --> POSTGRES
+        FRONTEND -.depends.-> BACKEND
+        
+        POSTGRES -.mount.-> VOL1
+        BACKEND -.mount.-> VOL2
+        NGINX -.mount.-> VOL3
+    end
+    
+    %% ============================================
+    %% External Services
+    %% ============================================
+    subgraph EXTERNAL["🌍 External Services"]
+        direction TB
+        GOOGLE["🔐 Google OAuth<br/>CLIENT_ID<br/>CLIENT_SECRET<br/>REDIRECT_URI"]
+        EMAIL["📧 Email Service<br/>HOST: ${EMAIL_HOST}<br/>PORT: ${EMAIL_PORT}<br/>USER: ${EMAIL_USER}<br/>SendGrid API"]
+        GHCR["📦 GitHub Container Registry<br/>ghcr.io<br/>Backend: ghcr.io/${repo}-backend:${sha}<br/>Frontend: ghcr.io/${repo}-frontend:${sha}"]
+    end
+    
+    %% ============================================
+    %% Main Flow Connections
+    %% ============================================
+    CLIENT -->|HTTPS| DOMAIN
+    DOMAIN -->|Port 443| NGINX
+    
+    BACKEND -->|OAuth| GOOGLE
+    BACKEND -->|Send emails| EMAIL
+    
+    D4 -.SSH deploy.-> DROPLET
+    GHCR -.docker pull.-> DOCKER_NET
+    JOB2 -.push images.-> GHCR
+    
+    %% ============================================
+    %% Environment Variables Flow
+    %% ============================================
+    ENVVARS["⚙️ Environment Variables<br/>JWT_SECRET, JWT_REFRESH_SECRET<br/>POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD<br/>GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET<br/>EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS<br/>FRONTEND_URL, BACKEND_URL, VITE_API_URL"]
+    
+    ENVVARS -.inject.-> BACKEND
+    ENVVARS -.inject.-> FRONTEND
+    ENVVARS -.inject.-> POSTGRES
+    
+    %% ============================================
+    %% Health Check Flow
+    %% ============================================
+    HC["❤️ Health Checks<br/>Postgres: pg_isready (10s/5s/5)<br/>Backend: /health (30s/10s/3)<br/>Frontend: wget localhost (30s/5s/3)<br/>Nginx: /health (30s/10s/3)"]
+    
+    HC -.monitor.-> POSTGRES
+    HC -.monitor.-> BACKEND
+    HC -.monitor.-> FRONTEND
+    HC -.monitor.-> NGINX
+    
+    %% ============================================
+    %% Styling
+    %% ============================================
+    style CLIENT fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style DOMAIN fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    style CICD fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style DROPLET fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    style NGINX_LAYER fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style DOCKER_NET fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style APP_SERVICES fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style VOLUMES fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px
+    style EXTERNAL fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style NGINX fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
+    style BACKEND fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#000
+    style FRONTEND fill:#2196f3,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style POSTGRES fill:#9c27b0,stroke:#4a148c,stroke-width:2px,color:#fff
+    style GOOGLE fill:#db4437,stroke:#c62828,stroke-width:2px,color:#fff
+    style EMAIL fill:#34a853,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style GHCR fill:#24292e,stroke:#000,stroke-width:2px,color:#fff
+    style JOB1 fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    style JOB2 fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style JOB3 fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style ENVVARS fill:#ede7f6,stroke:#673ab7,stroke-width:2px
+    style HC fill:#ffebee,stroke:#f44336,stroke-width:2px
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            CI/CD PIPELINE (GitHub Actions)                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │   Code   │→ │  Lint &  │→ │   Test   │→ │  Build   │→ │  Deploy  │       │
-│  │   Push   │  │  Format  │  │ (230+ )  │  │  Docker  │  │  to Prod │       │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
-│       Security Scanning (OWASP ZAP) • Accessibility Audits (Axe/Lighthouse) │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    PRODUCTION ENVIRONMENT (DigitalOcean)                     │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐      │
-│  │                    CLOUDFLARE CDN                                  │      │
-│  │              DNS • DDoS Protection • Edge Caching                  │      │
-│  └─────────────────────────────┬──────────────────────────────────────┘      │
-│                                 │                                            │
-│  ┌──────────────────────────────▼──────────────────────────────────────┐     │
-│  │                    NGINX REVERSE PROXY                              │     │
-│  │  • SSL/TLS Termination (Let's Encrypt)  • Load Balancing            │     │
-│  │  • Rate Limiting  • Gzip Compression  • Static File Serving         │     │
-│  └───────────────────┬─────────────────────┬────────────────────────────┘    │
-│                      │                     │                                 │
-│        ┌─────────────▼──────────┐  ┌──────▼────────────────┐                 │
-│        │   FRONTEND CONTAINER    │  │   BACKEND CONTAINER    │               │
-│        │  ┌──────────────────┐  │  │  ┌─────────────────┐  │                 │
-│        │  │  React SPA       │  │  │  │  Express.js API │  │                 │
-│        │  │  • Vite Build    │  │  │  │  • TypeScript   │  │                 │
-│        │  │  • TailwindCSS   │  │  │  │  • REST Routes  │  │                 │
-│        │  │  • React Router  │  │  │  │  • Middleware   │  │                 │
-│        │  └──────────────────┘  │  │  └─────────────────┘  │                 │
-│        │  Port: 3001            │  │  ┌─────────────────┐  │                 │
-│        └────────────────────────┘  │  │  Socket.io WSS  │  │                 │
-│                                     │  │  • Real-time    │  │                │
-│                                     │  │  • Notifications│  │                │
-│                                     │  └─────────────────┘  │                │
-│                                     │  Port: 5001           │                │
-│                                     └───────────┬───────────┘                │
-│                                                 │                            │
-│  ┌──────────────────────────────────────────────▼───────────────────────┐    │
-│  │                    DATABASE LAYER (PostgreSQL 14+)                   │    │
-│  │  ┌────────────────────────────────────────────────────────────────┐  │    │
-│  │  │  📊 21+ Tables  •  Indexed  •  Parameterized Queries           │  │    │
-│  │  ├────────────────────────────────────────────────────────────────┤  │    │
-│  │  │  • Users & Authentication    • Recommendations & Media         │  │    │
-│  │  │  • Trip Planning & Itinerary • Social Connections              │  │    │
-│  │  │  • Achievements & Badges     • Content Moderation              │  │    │
-│  │  │  • Notifications & Alerts    • Activity Tracking               │  │    │
-│  │  └────────────────────────────────────────────────────────────────┘  │    │
-│  │  Managed Service • Automated Backups • Point-in-Time Recovery        │    │
-│  └────────────────────────────────────────────────────────────────────--┘    │
-│                                                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐      │
-│  │                    FILE STORAGE & SERVICES                         │      │
-│  │  • Multer File Uploads  • Sharp Image Processing                   │      │
-│  │  • SendGrid Email Service  • Local/Volume Storage                  │      │
-│  └────────────────────────────────────────────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────────────────────-┘
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         CONTAINERIZATION (Docker)                           │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐           │
-│  │  frontend:prod   │  │  backend:prod    │  │  postgres:14     │           │
-│  │  Multi-stage     │  │  Multi-stage     │  │  Official Image  │           │
-│  │  Optimized Build │  │  Optimized Build │  │  + Custom Schema │           │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘           │
-│           Docker Compose Orchestration • Volume Management                  │
-└─────────────────────────────────────────────────────────────────────────────┘
+**Architecture Highlights:**
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    MONITORING & SECURITY (DevOps Best Practices)            │
-│  • Health Check Endpoints (/health)  • Automated Logging                    │
-│  • JWT Token Management (15min expiry)  • Rate Limiting                     │
-│  • SQL Injection Protection (Parameterized)  • XSS Prevention               │
-│  • CORS Configuration  • Helmet.js Security Headers                         │
-│  • Environment Variable Management  • Secret Management                     │
-└─────────────────────────────────────────────────────────────────────────────┘
+🌐 **Request Flow**:
 ```
+User → city-pulse.app → Nginx (SSL/TLS) → Route by Path:
+  • / → Frontend Container (React SPA)
+  • /api/* → Backend Container (Express API)
+  • /socket.io → Backend Container (WebSocket)
+```
+
+🐳 **Containerized Application** (Docker Compose):
+- **Frontend Container** (Port 3001): React 19.1 SPA with TailwindCSS, optimized Vite builds
+- **Backend Container** (Port 5001): Express.js + TypeScript API with integrated Socket.io WebSocket server
+
+💾 **Data & Services**:
+- **PostgreSQL 15**: Managed DigitalOcean database with 21+ normalized tables, automated daily backups
+- **Volume Storage**: Persistent uploads directory with Sharp image processing
+- **SendGrid API**: Transactional email service for notifications
+
+🔒 **Security & Performance**:
+- SSL/TLS certificates via Let's Encrypt with automated renewal
+- Nginx rate limiting, security headers, and Gzip compression
+- JWT authentication (15-minute expiry) with refresh token rotation
+- Parameterized SQL queries preventing injection attacks
+- CORS configuration for trusted origins only
+
+🚀 **CI/CD Pipeline**:
+- GitHub Actions automated deployment on tagged releases
+- 230+ test cases (unit, integration, E2E) with 85%+ coverage
+- Security scanning (OWASP ZAP) and accessibility audits
+- Multi-stage Docker builds for optimized images
+- Health check monitoring at `/health` endpoint
 
 ### **Technology Stack Breakdown**
 
@@ -382,7 +502,7 @@ Ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/NevilPatel01/CityPulse
    cd capstone-project-NevilPatel01
    ```
 
@@ -616,7 +736,7 @@ Coverage reports are automatically generated in:
 - **Database**: Managed PostgreSQL
 - **Reverse Proxy**: Nginx
 - **SSL/TLS**: Let's Encrypt (Auto-renewal)
-- **CDN**: Cloudflare
+- **CDN**: Not used
 
 ### Deployment Process
 
