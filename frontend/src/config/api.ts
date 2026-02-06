@@ -72,17 +72,8 @@ export const buildApiUrl = (endpoint: string): string => {
         ? apiConfig.baseUrl.slice(0, -1)
         : apiConfig.baseUrl;
 
-    // Check if we're using API subdomain (production)
-    const isApiSubdomain = cleanBaseUrl.includes('api.');
-    
-    // For API subdomain, remove 'api/' prefix to avoid double API in URL
-    // For local development, keep the 'api/' prefix
-    let finalEndpoint = cleanEndpoint;
-    if (isApiSubdomain && cleanEndpoint.startsWith('api/')) {
-        finalEndpoint = cleanEndpoint.substring(4); // Remove 'api/' prefix
-    }
-
-    const result = `${cleanBaseUrl}/${finalEndpoint}`;
+    // Keep /api prefix consistent across environments (backend routes are under /api)
+    const result = `${cleanBaseUrl}/${cleanEndpoint}`;
     return result;
 };
 

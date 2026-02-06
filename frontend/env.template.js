@@ -8,5 +8,10 @@ window.ENV = {
 };
 
 if (!window.ENV.VITE_API_URL) {
-  window.ENV.VITE_API_URL = window.location.origin;
+  var hostname = window.location.hostname;
+  if (hostname === 'city-pulse.app' || hostname === 'www.city-pulse.app') {
+    window.ENV.VITE_API_URL = 'https://api.city-pulse.app';
+  } else {
+    window.ENV.VITE_API_URL = window.location.origin;
+  }
 }

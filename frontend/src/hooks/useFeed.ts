@@ -186,7 +186,7 @@ export const useFeed = ({ limit = 10, enableLocation = false }: UseFeedOptions =
         } finally {
             isLoadingRef.current = false;
         }
-    }, [state.loading, state.totalAvailable, state.posts.length, limit, location, showError]);
+    }, [state.loading, state.totalAvailable, limit, location, showError]);
 
     /**
      * Refresh feed (pull to refresh or manual refresh)
