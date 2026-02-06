@@ -253,18 +253,18 @@ flowchart TB
     %% ============================================
     %% CI/CD Pipeline (GitHub Actions)
     %% ============================================
-    subgraph CICD["☁️ GitHub Actions CI/CD Pipeline"]
+    subgraph CICD["⚡ GitHub Actions CI/CD Pipeline"]
         direction TB
         
-        TRIGGER["⚡ Triggers<br/>• Push: main, production<br/>• PR: main"]
+        TRIGGER["🔔 Triggers<br/>• Push: main, production<br/>• PR: main"]
         
         subgraph JOB1["🧪 Job 1: Test & Quality"]
             direction LR
             T1["📦 Checkout<br/>actions/checkout@v4"]
-            T2["🟢 Setup Node 20<br/>pnpm 10.10.0"]
+            T2["🔧 Setup Node 20<br/>pnpm 10.10.0"]
             T3["📥 Install deps<br/>pnpm install"]
-            T4["🔍 Lint<br/>frontend + backend"]
-            T5["🏗️ Build<br/>TypeScript compile"]
+            T4["🔍 Lint<br/>ESLint + Prettier"]
+            T5["🏗️ Build<br/>TypeScript + Vite"]
         end
         
         subgraph JOB2["🐳 Job 2: Build Images"]
@@ -274,20 +274,20 @@ flowchart TB
             B3["🔐 Login GHCR<br/>ghcr.io"]
             B4["📦 Build Backend<br/>backend/Dockerfile.prod"]
             B5["📦 Build Frontend<br/>frontend/Dockerfile.prod"]
-            B6["⬆️ Push to GHCR<br/>ghcr.io/${repo}-backend:${sha}<br/>ghcr.io/${repo}-frontend:${sha}"]
+            B6["⬆️ Push to GHCR<br/>ghcr.io/citypulse-backend:v1.2.3<br/>ghcr.io/citypulse-frontend:v1.2.3"]
         end
         
         subgraph JOB3["🚀 Job 3: Deploy"]
             direction LR
-            D1["📁 Create package<br/>.env + docker-compose<br/>nginx + sql"]
-            D2["📦 Tar archive<br/>deploy.tar.gz"]
+            D1["📁 Create package<br/>.env.prod + docker-compose.prod.yml"]
+            D2["📦 Tar archive<br/>deploy-v1.2.3.tar.gz"]
             D3["📤 SCP Upload<br/>→ /opt/citypulse"]
-            D4["🔐 SSH Deploy<br/>user@my-droplet-ip"]
-            D5["🐳 Docker compose up<br/>--env-file .env"]
+            D4["🔐 SSH Deploy<br/>root@[Production Droplet]"]
+            D5["🐳 Docker compose up<br/>--env-file .env.prod"]
             D6["✅ Health check<br/>timeout 300s"]
         end
         
-        JOB4["📢 Job 4: Notify<br/>✅ https://city-pulse.app"]
+        JOB4["📢 Job 4: Notify<br/>✅ city-pulse.app/health"]
         
         TRIGGER --> T1
         T1 --> T2 --> T3 --> T4 --> T5
@@ -301,43 +301,37 @@ flowchart TB
     %% ============================================
     %% DigitalOcean Droplet Infrastructure
     %% ============================================
-    subgraph DROPLET["🟦 DigitalOcean Droplet: my-droplet-ip<br/>📁 /opt/citypulse"]
+    subgraph DROPLET["🟦 DigitalOcean Droplet<br/>Production Server • /opt/citypulse"]
         direction TB
         
-        %% Nginx Layer
-        subgraph NGINX_LAYER["⚙️ Nginx Reverse Proxy Layer"]
-            NGINX["🔀 citypulse-nginx-prod<br/>nginx:1.25-alpine<br/>Ports: 80, 443<br/>/etc/nginx/nginx-domain.conf<br/>Let's Encrypt SSL<br/>Rate Limiting: 10r/s API, 5r/m login"]
+        subgraph NGINX_LAYER["🔀 Nginx Reverse Proxy"]
+            NGINX["citypulse-nginx-prod<br/>nginx:1.25-alpine<br/>Ports: 80, 443<br/>nginx-domain.conf<br/>Rate Limit: 10r/s"]
         end
         
-        %% Docker Network
-        subgraph DOCKER_NET["🔗 Docker Network: citypulse-network (bridge)"]
+        subgraph DOCKER_NET["🔗 Docker Network: citypulse-network"]
             direction TB
             
-            %% Application Services
             subgraph APP_SERVICES["🎯 Application Services"]
                 direction LR
                 
-                BACKEND["🔧 citypulse-backend-prod<br/>Image: ${BACKEND_IMAGE}<br/>Port: 5000<br/>Env: NODE_ENV=production<br/>Health: /health endpoint<br/>Memory: 512M-1G<br/>Volume: uploads_data"]
+                BACKEND["🔧 citypulse-backend-prod<br/>ghcr.io/citypulse-backend:v1.2.3<br/>Port: 5000<br/>JWT + WebSocket<br/>Health: /health"]
                 
-                FRONTEND["⚛️ citypulse-frontend-prod<br/>Image: ${FRONTEND_IMAGE}<br/>Port: 3001→80<br/>VITE_API_URL=${BACKEND_URL}<br/>Health: wget localhost:80<br/>Memory: 128M-256M"]
+                FRONTEND["⚛️ citypulse-frontend-prod<br/>ghcr.io/citypulse-frontend:v1.2.3<br/>Port: 3001→80<br/>Vite + Tailwind<br/>Health: localhost:80"]
             end
             
-            %% Database
-            POSTGRES["🗄️ citypulse-postgres-prod<br/>postgres:15-alpine<br/>Port: 5432<br/>DB: ${POSTGRES_DB}<br/>User: ${POSTGRES_USER}<br/>Health: pg_isready<br/>Volume: postgres_data<br/>Init: schema.sql<br/>Memory: 256M-512M"]
+            POSTGRES["🗄️ citypulse-postgres-prod<br/>postgres:15-alpine<br/>Port: 5432<br/>21+ Tables<br/>Health: pg_isready"]
         end
         
-        %% Persistent Storage
         subgraph VOLUMES["💾 Persistent Volumes"]
-            VOL1["📊 postgres_data<br/>/var/lib/postgresql/data"]
-            VOL2["📁 uploads_data<br/>/app/backend/uploads"]
-            VOL3["🔐 SSL Certs<br/>/etc/letsencrypt"]
+            VOL1["postgres_data"]
+            VOL2["uploads_data"]
+            VOL3["letsencrypt"]
         end
         
         NGINX --> BACKEND
         NGINX --> FRONTEND
-        BACKEND --> POSTGRES
+        BACKEND <--> POSTGRES
         FRONTEND -.depends.-> BACKEND
-        
         POSTGRES -.mount.-> VOL1
         BACKEND -.mount.-> VOL2
         NGINX -.mount.-> VOL3
@@ -348,67 +342,66 @@ flowchart TB
     %% ============================================
     subgraph EXTERNAL["🌍 External Services"]
         direction TB
-        GOOGLE["🔐 Google OAuth<br/>CLIENT_ID<br/>CLIENT_SECRET<br/>REDIRECT_URI"]
-        EMAIL["📧 Email Service<br/>HOST: ${EMAIL_HOST}<br/>PORT: ${EMAIL_PORT}<br/>USER: ${EMAIL_USER}<br/>SendGrid API"]
-        GHCR["📦 GitHub Container Registry<br/>ghcr.io<br/>Backend: ghcr.io/${repo}-backend:${sha}<br/>Frontend: ghcr.io/${repo}-frontend:${sha}"]
+        GOOGLE["🔐 Google OAuth"]
+        EMAIL["📧 SendGrid API"]
+        GHCR["📦 GitHub Container Registry<br/>ghcr.io/citypulse-*"]
     end
     
     %% ============================================
     %% Main Flow Connections
     %% ============================================
     CLIENT -->|HTTPS| DOMAIN
-    DOMAIN -->|Port 443| NGINX
-    
+    DOMAIN -->|443| NGINX
     BACKEND -->|OAuth| GOOGLE
-    BACKEND -->|Send emails| EMAIL
+    BACKEND -->|Emails| EMAIL
     
-    D4 -.SSH deploy.-> DROPLET
-    GHCR -.docker pull.-> DOCKER_NET
-    JOB2 -.push images.-> GHCR
+    D4 -.SSH.-> DROPLET
+    GHCR -.docker-pull.-> DOCKER_NET
+    JOB2 -.images.-> GHCR
     
     %% ============================================
-    %% Environment Variables Flow
+    %% Environment & Health
     %% ============================================
-    ENVVARS["⚙️ Environment Variables<br/>JWT_SECRET, JWT_REFRESH_SECRET<br/>POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD<br/>GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET<br/>EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS<br/>FRONTEND_URL, BACKEND_URL, VITE_API_URL"]
+    ENVVARS["⚙️ .env.prod<br/>JWT_SECRET • POSTGRES_*<br/>GOOGLE_* • EMAIL_*"]
+    HC["❤️ Health Dashboard<br/>pg_isready • /health<br/>wget localhost • nginx"]
     
     ENVVARS -.inject.-> BACKEND
     ENVVARS -.inject.-> FRONTEND
     ENVVARS -.inject.-> POSTGRES
-    
-    %% ============================================
-    %% Health Check Flow
-    %% ============================================
-    HC["❤️ Health Checks<br/>Postgres: pg_isready (10s/5s/5)<br/>Backend: /health (30s/10s/3)<br/>Frontend: wget localhost (30s/5s/3)<br/>Nginx: /health (30s/10s/3)"]
-    
     HC -.monitor.-> POSTGRES
     HC -.monitor.-> BACKEND
     HC -.monitor.-> FRONTEND
     HC -.monitor.-> NGINX
     
     %% ============================================
-    %% Styling
+    %% Production-Grade Color Scheme (High Contrast)
     %% ============================================
-    style CLIENT fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
-    style DOMAIN fill:#fff3e0,stroke:#f57c00,stroke-width:3px
-    style CICD fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style DROPLET fill:#fff3e0,stroke:#f57c00,stroke-width:3px
-    style NGINX_LAYER fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style DOCKER_NET fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    style APP_SERVICES fill:#fff9c4,stroke:#f9a825,stroke-width:2px
-    style VOLUMES fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px
-    style EXTERNAL fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    style NGINX fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
-    style BACKEND fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#000
-    style FRONTEND fill:#2196f3,stroke:#0d47a1,stroke-width:2px,color:#fff
-    style POSTGRES fill:#9c27b0,stroke:#4a148c,stroke-width:2px,color:#fff
-    style GOOGLE fill:#db4437,stroke:#c62828,stroke-width:2px,color:#fff
-    style EMAIL fill:#34a853,stroke:#1b5e20,stroke-width:2px,color:#fff
-    style GHCR fill:#24292e,stroke:#000,stroke-width:2px,color:#fff
-    style JOB1 fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
-    style JOB2 fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
-    style JOB3 fill:#fff3e0,stroke:#ff9800,stroke-width:2px
-    style ENVVARS fill:#ede7f6,stroke:#673ab7,stroke-width:2px
-    style HC fill:#ffebee,stroke:#f44336,stroke-width:2px
+    style CLIENT fill:#dbeafe,stroke:#1e40af,stroke-width:3px
+    style DOMAIN fill:#fef3c7,stroke:#b45309,stroke-width:3px
+    style CICD fill:#f8fafc,stroke:#1e293b,stroke-width:3px
+    style DROPLET fill:#fefce8,stroke:#a16207,stroke-width:4px
+    style NGINX_LAYER fill:#dcfce7,stroke:#166534,stroke-width:2px
+    style DOCKER_NET fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px
+    style APP_SERVICES fill:#fef3c7,stroke:#b45309,stroke-width:2px
+    style VOLUMES fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
+    style EXTERNAL fill:#fecaca,stroke:#b91c1c,stroke-width:2px
+    
+    style NGINX fill:#10b981,stroke:#047857,stroke-width:3px,color:#000
+    style BACKEND fill:#f97316,stroke:#c2410c,stroke-width:3px,color:#fff
+    style FRONTEND fill:#3b82f6,stroke:#1d4ed8,stroke-width:3px,color:#fff
+    style POSTGRES fill:#8b5cf6,stroke:#6d28d9,stroke-width:3px,color:#fff
+    
+    style GOOGLE fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style EMAIL fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    style GHCR fill:#1f2937,stroke:#111827,stroke-width:2px,color:#fff
+    
+    style JOB1 fill:#dcfce7,stroke:#166534,stroke-width:2px
+    style JOB2 fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px
+    style JOB3 fill:#fef3c7,stroke:#b45309,stroke-width:2px
+    style JOB4 fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    
+    style ENVVARS fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
+    style HC fill:#fecaca,stroke:#b91c1c,stroke-width:2px
 ```
 
 **Architecture Highlights:**
@@ -502,7 +495,7 @@ Ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/NevilPatel01/CityPulse
+   git clone https://github.com/NevilPatel01/CityPulse.git
    cd capstone-project-NevilPatel01
    ```
 
