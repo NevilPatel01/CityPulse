@@ -244,10 +244,14 @@ Rate limiting                 - DDoS protection
 
 <div align="center">
 
-[![View in Mermaid Live](https://img.shields.io/badge/📊_Open_Interactive_Viewer-Mermaid_Live-FF3670?style=for-the-badge&logo=mermaid)](https://mermaid.live/)
-[![Copy Diagram Code](https://img.shields.io/badge/📋_Copy_Code-Raw_File-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/NevilPatel01/CityPulse/main/architecture-diagram.mmd)
+**📊 View the full architecture diagram interactively:**
 
-**Quick Access:** [📄 View Diagram Source](architecture-diagram.mmd) | **One-Click Copy:** Click "Copy Diagram Code" → Click "Select All" + Copy → Paste in Mermaid Live
+1. **Click** → [![Copy Raw Diagram](https://img.shields.io/badge/📋_Step_1:_Copy_Raw_Diagram-Click_Here-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/NevilPatel01/CityPulse/main/architecture-diagram.mmd)
+2. **Press** `Ctrl+A` (Select All) then `Ctrl+C` (Copy)
+3. **Click** → [![Open Mermaid Live](https://img.shields.io/badge/📊_Step_2:_Open_Mermaid_Live-Paste_Here-FF3670?style=for-the-badge&logo=mermaid)](https://mermaid.live/)
+4. **Press** `Ctrl+V` (Paste) → Enjoy the interactive diagram with zoom & pan! 🎉
+
+*Alternative:* [View diagram source file](architecture-diagram.mmd) in this repository
 
 </div>
 

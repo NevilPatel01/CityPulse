@@ -25,6 +25,11 @@ import { getUploadsBaseDir } from './utils/paths';
 export const createApp = (): express.Express => {
     const app = express();
 
+    // Trust Nginx reverse proxy - CRITICAL for production behind load balancer/reverse proxy
+    // This allows Express to correctly identify client IPs from X-Forwarded-For header
+    // Without this, rate limiting and security features won't work properly
+    app.set('trust proxy', 1);
+
     // Security middleware - I am using Helmet to adds security headers to prevent common attacks like XSS
     app.use(helmet({
         contentSecurityPolicy: {
