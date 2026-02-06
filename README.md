@@ -242,6 +242,18 @@ Rate limiting                 - DDoS protection
 
 ### **High-Level Architecture**
 
+<div align="center">
+
+[![View in Mermaid Live](https://img.shields.io/badge/📊_Open_Interactive_Viewer-Mermaid_Live-FF3670?style=for-the-badge&logo=mermaid)](https://mermaid.live/)
+[![Copy Diagram Code](https://img.shields.io/badge/📋_Copy_Code-Raw_File-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/NevilPatel01/CityPulse/main/architecture-diagram.mmd)
+
+**Quick Access:** [📄 View Diagram Source](architecture-diagram.mmd) | **One-Click Copy:** Click "Copy Diagram Code" → Click "Select All" + Copy → Paste in Mermaid Live
+
+</div>
+
+<details>
+<summary><b>🔍 Click to expand/collapse architecture diagram</b></summary>
+
 ```mermaid
 flowchart TB
     %% ============================================
@@ -403,6 +415,8 @@ flowchart TB
     style ENVVARS fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
     style HC fill:#fecaca,stroke:#b91c1c,stroke-width:2px
 ```
+
+</details>
 
 **Architecture Highlights:**
 

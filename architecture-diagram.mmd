@@ -1,0 +1,159 @@
+flowchart TB
+    %% ============================================
+    %% Internet & Client Layer
+    %% ============================================
+    CLIENT["🌐 Client Browser"]
+    DOMAIN["🔗 city-pulse.app<br/>SSL/TLS (Let's Encrypt)"]
+    
+    %% ============================================
+    %% CI/CD Pipeline (GitHub Actions)
+    %% ============================================
+    subgraph CICD["⚡ GitHub Actions CI/CD Pipeline"]
+        direction TB
+        
+        TRIGGER["🔔 Triggers<br/>• Push: main, production<br/>• PR: main"]
+        
+        subgraph JOB1["🧪 Job 1: Test & Quality"]
+            direction LR
+            T1["📦 Checkout<br/>actions/checkout@v4"]
+            T2["🔧 Setup Node 20<br/>pnpm 10.10.0"]
+            T3["📥 Install deps<br/>pnpm install"]
+            T4["🔍 Lint<br/>ESLint + Prettier"]
+            T5["🏗️ Build<br/>TypeScript + Vite"]
+        end
+        
+        subgraph JOB2["🐳 Job 2: Build Images"]
+            direction LR
+            B1["🔡 Prepare names<br/>REPO_LOWER"]
+            B2["🏗️ Docker Buildx<br/>linux/amd64"]
+            B3["🔐 Login GHCR<br/>ghcr.io"]
+            B4["📦 Build Backend<br/>backend/Dockerfile.prod"]
+            B5["📦 Build Frontend<br/>frontend/Dockerfile.prod"]
+            B6["⬆️ Push to GHCR<br/>ghcr.io/citypulse-backend:v1.2.3<br/>ghcr.io/citypulse-frontend:v1.2.3"]
+        end
+        
+        subgraph JOB3["🚀 Job 3: Deploy"]
+            direction LR
+            D1["📁 Create package<br/>.env.prod + docker-compose.prod.yml"]
+            D2["📦 Tar archive<br/>deploy-v1.2.3.tar.gz"]
+            D3["📤 SCP Upload<br/>→ /opt/citypulse"]
+            D4["🔐 SSH Deploy<br/>root@[Production Droplet]"]
+            D5["🐳 Docker compose up<br/>--env-file .env.prod"]
+            D6["✅ Health check<br/>timeout 300s"]
+        end
+        
+        JOB4["📢 Job 4: Notify<br/>✅ city-pulse.app/health"]
+        
+        TRIGGER --> T1
+        T1 --> T2 --> T3 --> T4 --> T5
+        T5 -.-> B1
+        B1 --> B2 --> B3 --> B4 --> B5 --> B6
+        B6 -.-> D1
+        D1 --> D2 --> D3 --> D4 --> D5 --> D6
+        D6 -.-> JOB4
+    end
+    
+    %% ============================================
+    %% DigitalOcean Droplet Infrastructure
+    %% ============================================
+    subgraph DROPLET["🟦 DigitalOcean Droplet<br/>Production Server • /opt/citypulse"]
+        direction TB
+        
+        subgraph NGINX_LAYER["🔀 Nginx Reverse Proxy"]
+            NGINX["citypulse-nginx-prod<br/>nginx:1.25-alpine<br/>Ports: 80, 443<br/>nginx-domain.conf<br/>Rate Limit: 10r/s"]
+        end
+        
+        subgraph DOCKER_NET["🔗 Docker Network: citypulse-network"]
+            direction TB
+            
+            subgraph APP_SERVICES["🎯 Application Services"]
+                direction LR
+                
+                BACKEND["🔧 citypulse-backend-prod<br/>ghcr.io/citypulse-backend:v1.2.3<br/>Port: 5000<br/>JWT + WebSocket<br/>Health: /health"]
+                
+                FRONTEND["⚛️ citypulse-frontend-prod<br/>ghcr.io/citypulse-frontend:v1.2.3<br/>Port: 3001→80<br/>Vite + Tailwind<br/>Health: localhost:80"]
+            end
+            
+            POSTGRES["🗄️ citypulse-postgres-prod<br/>postgres:15-alpine<br/>Port: 5432<br/>21+ Tables<br/>Health: pg_isready"]
+        end
+        
+        subgraph VOLUMES["💾 Persistent Volumes"]
+            VOL1["postgres_data"]
+            VOL2["uploads_data"]
+            VOL3["letsencrypt"]
+        end
+        
+        NGINX --> BACKEND
+        NGINX --> FRONTEND
+        BACKEND <--> POSTGRES
+        FRONTEND -.depends.-> BACKEND
+        POSTGRES -.mount.-> VOL1
+        BACKEND -.mount.-> VOL2
+        NGINX -.mount.-> VOL3
+    end
+    
+    %% ============================================
+    %% External Services
+    %% ============================================
+    subgraph EXTERNAL["🌍 External Services"]
+        direction TB
+        GOOGLE["🔐 Google OAuth"]
+        EMAIL["📧 SendGrid API"]
+        GHCR["📦 GitHub Container Registry<br/>ghcr.io/citypulse-*"]
+    end
+    
+    %% ============================================
+    %% Main Flow Connections
+    %% ============================================
+    CLIENT -->|HTTPS| DOMAIN
+    DOMAIN -->|443| NGINX
+    BACKEND -->|OAuth| GOOGLE
+    BACKEND -->|Emails| EMAIL
+    
+    D4 -.SSH.-> DROPLET
+    GHCR -.docker-pull.-> DOCKER_NET
+    JOB2 -.images.-> GHCR
+    
+    %% ============================================
+    %% Environment & Health
+    %% ============================================
+    ENVVARS["⚙️ .env.prod<br/>JWT_SECRET • POSTGRES_*<br/>GOOGLE_* • EMAIL_*"]
+    HC["❤️ Health Dashboard<br/>pg_isready • /health<br/>wget localhost • nginx"]
+    
+    ENVVARS -.inject.-> BACKEND
+    ENVVARS -.inject.-> FRONTEND
+    ENVVARS -.inject.-> POSTGRES
+    HC -.monitor.-> POSTGRES
+    HC -.monitor.-> BACKEND
+    HC -.monitor.-> FRONTEND
+    HC -.monitor.-> NGINX
+    
+    %% ============================================
+    %% Production-Grade Color Scheme (High Contrast)
+    %% ============================================
+    style CLIENT fill:#dbeafe,stroke:#1e40af,stroke-width:3px
+    style DOMAIN fill:#fef3c7,stroke:#b45309,stroke-width:3px
+    style CICD fill:#f8fafc,stroke:#1e293b,stroke-width:3px
+    style DROPLET fill:#fefce8,stroke:#a16207,stroke-width:4px
+    style NGINX_LAYER fill:#dcfce7,stroke:#166534,stroke-width:2px
+    style DOCKER_NET fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px
+    style APP_SERVICES fill:#fef3c7,stroke:#b45309,stroke-width:2px
+    style VOLUMES fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
+    style EXTERNAL fill:#fecaca,stroke:#b91c1c,stroke-width:2px
+    
+    style NGINX fill:#10b981,stroke:#047857,stroke-width:3px,color:#000
+    style BACKEND fill:#f97316,stroke:#c2410c,stroke-width:3px,color:#fff
+    style FRONTEND fill:#3b82f6,stroke:#1d4ed8,stroke-width:3px,color:#fff
+    style POSTGRES fill:#8b5cf6,stroke:#6d28d9,stroke-width:3px,color:#fff
+    
+    style GOOGLE fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style EMAIL fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    style GHCR fill:#1f2937,stroke:#111827,stroke-width:2px,color:#fff
+    
+    style JOB1 fill:#dcfce7,stroke:#166534,stroke-width:2px
+    style JOB2 fill:#eff6ff,stroke:#1d4ed8,stroke-width:2px
+    style JOB3 fill:#fef3c7,stroke:#b45309,stroke-width:2px
+    style JOB4 fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    
+    style ENVVARS fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
+    style HC fill:#fecaca,stroke:#b91c1c,stroke-width:2px
