@@ -16,9 +16,22 @@ class NotificationSocketManager {
     private userSockets: Map<number, string[]> = new Map(); // userId -> socketIds (multiple tabs)
 
     constructor(httpServer: HTTPServer) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        
         this.io = new Server(httpServer, {
             cors: {
-                origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+                origin: (origin, callback) => {
+                    // Allow requests with no origin (mobile apps) or from allowed origins
+                    if (!origin || 
+                        origin === frontendUrl || 
+                        origin === 'https://city-pulse.app' || 
+                        origin.endsWith('.city-pulse.app') ||
+                        (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:'))) {
+                        callback(null, true);
+                    } else {
+                        callback(null, false);
+                    }
+                },
                 methods: ['GET', 'POST'],
                 credentials: true
             },
