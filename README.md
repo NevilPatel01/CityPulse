@@ -242,22 +242,6 @@ Rate limiting                 - DDoS protection
 
 ### **High-Level Architecture**
 
-<div align="center">
-
-**📊 View the full architecture diagram interactively:**
-
-1. **Click** → [![Copy Raw Diagram](https://img.shields.io/badge/📋_Step_1:_Copy_Raw_Diagram-Click_Here-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/NevilPatel01/CityPulse/main/architecture-diagram.mmd)
-2. **Press** `Ctrl+A` (Select All) then `Ctrl+C` (Copy)
-3. **Click** → [![Open Mermaid Live](https://img.shields.io/badge/📊_Step_2:_Open_Mermaid_Live-Paste_Here-FF3670?style=for-the-badge&logo=mermaid)](https://mermaid.live/)
-4. **Press** `Ctrl+V` (Paste) → Enjoy the interactive diagram with zoom & pan! 🎉
-
-*Alternative:* [View diagram source file](architecture-diagram.mmd) in this repository
-
-</div>
-
-<details>
-<summary><b>🔍 Click to expand/collapse architecture diagram</b></summary>
-
 ```mermaid
 flowchart TB
     %% ============================================
@@ -419,6 +403,22 @@ flowchart TB
     style ENVVARS fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px
     style HC fill:#fecaca,stroke:#b91c1c,stroke-width:2px
 ```
+
+<details>
+<summary><b>📊 View in interactive full-screen editor (click to expand instructions)</b></summary>
+
+<div align="center">
+
+**How to view this diagram interactively with zoom & pan:**
+
+1. **Click** → [![Copy Raw Diagram](https://img.shields.io/badge/📋_Step_1:_Copy_Raw_Diagram-Click_Here-2ea44f?style=for-the-badge)](https://raw.githubusercontent.com/NevilPatel01/CityPulse/main/architecture-diagram.mmd)
+2. **Press** `Ctrl+A` (Select All) then `Ctrl+C` (Copy)
+3. **Click** → [![Open Mermaid Live](https://img.shields.io/badge/📊_Step_2:_Open_Mermaid_Live-Paste_Here-FF3670?style=for-the-badge&logo=mermaid)](https://mermaid.live/)
+4. **Press** `Ctrl+V` (Paste) → Enjoy the interactive diagram! 🎉
+
+*Alternative:* [View diagram source file](architecture-diagram.mmd) in this repository
+
+</div>
 
 </details>
 
